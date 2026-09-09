@@ -1,0 +1,172 @@
+# PROJECT — Smart Agent Research Experiment
+
+## 1. Purpose
+
+هذا مشروع ويب بحثي صغير لتجربة ماجستير مع طلاب جامعيين.
+
+الهدف هو تدريب الطالب على **مهارة اكتشاف الفرص الرقمية** داخل سيناريو متفرع، بينما يعمل Gemini كوكيل ذكي يفسر إجابة الطالب ويقدم تغذية راجعة تكيفية.
+
+هذا المشروع **ليس منصة تعليمية عامة** وليس منتج Chatbot عام.
+
+---
+
+## 2. Research Scope
+
+### Included
+
+- سيناريو واحد فقط: Digital Opportunity Discovery.
+- إجابات الطالب الأساسية Free-text باللغة العربية.
+- Agent feedback تكيفي.
+- Branching حسب قواعد السيناريو.
+- Hint / Rescue paths المعتمدة.
+- Student Code فقط للتعريف داخل التجربة.
+- تخزين التفاعلات المطلوبة للبحث.
+- الطالب لا يرى Score أو Performance Level نهائي.
+
+### Research Design
+
+خارج التطبيق:
+
+Pre-test → Web Experiment → Post-test
+
+يستخدم الباحث نفس Student Code للربط بين الأدوات.
+
+---
+
+## 3. AI Role
+
+Gemini مسؤول فقط عن:
+
+1. فهم معنى إجابة الطالب.
+2. تصنيف الإجابة:
+   - `advanced`
+   - `medium`
+   - `weak`
+3. كتابة Feedback عربي قصير، داعم، مرتبط بالعقدة الحالية.
+
+Gemini غير مسؤول عن:
+
+- اختيار العقدة التالية.
+- تعديل السيناريو.
+- إنشاء أهداف تعليمية جديدة.
+- تغيير Rubric.
+- إعطاء Score للطالب.
+- البحث على الويب.
+- الاحتفاظ بذاكرة طويلة المدى.
+
+---
+
+## 4. Application Role
+
+الكود مسؤول عن:
+
+- Current node.
+- Scenario transitions.
+- Attempts / hints / rescue flow.
+- Session state.
+- Persistence.
+- Technical validation.
+- Completion.
+
+قاعدة حاسمة:
+
+```text
+Gemini = understand + classify + feedback
+Code   = branch + state + persistence
+```
+
+---
+
+## 5. Planned Technology
+
+- Next.js
+- TypeScript
+- Gemini API
+- Supabase / PostgreSQL
+
+يُفضل Repository واحد وDeployment واحد في V1.
+
+---
+
+## 6. Planned Data
+
+الحد الأدنى:
+
+### sessions
+
+- id
+- student_code
+- status
+- current_node
+- scenario_version
+- prompt_version
+- model_id
+- started_at
+- finished_at
+
+### interactions
+
+- id
+- session_id
+- node_id
+- student_answer
+- classification
+- agent_feedback
+- next_node
+- decision_time_ms
+- created_at
+
+لا نخزن اسم الطالب أو البريد أو رقم الهاتف إلا إذا غير الباحث التصميم صراحة.
+
+---
+
+## 7. Out of Scope — V1
+
+لا تضف أيًا من التالي دون طلب صريح:
+
+- RAG
+- Vector database
+- Embeddings
+- LangChain
+- LangGraph
+- Multi-agent product architecture
+- Voice
+- Avatar
+- Gamification
+- LMS
+- Teacher portal
+- Student authentication/password system
+- Dashboard
+- Charts
+- Scenario Builder
+- Mobile app
+- WebSocket
+- Redis
+- Queue workers
+- Microservices
+- Fine-tuning
+- AI web search
+- Complex analytics UI
+
+---
+
+## 8. Research Reproducibility
+
+قبل التجربة الفعلية يتم تثبيت:
+
+- Scenario version
+- Prompt version
+- Exact Gemini model ID
+- Application version
+
+لا يتم تعديل السيناريو أو الـRubric أو Prompt أثناء جمع العينة إلا لعطل تقني قهري موثق.
+
+---
+
+## 9. Core Engineering Principle
+
+اختر دائمًا أبسط تنفيذ يحقق الـResearch Requirement.
+
+إذا كان هناك غموض تربوي أو بحثي:
+
+**توقف واسأل. لا تخمّن.**
