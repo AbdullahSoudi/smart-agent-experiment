@@ -1,7 +1,9 @@
 # SCENARIO SPECIFICATION
-## Digital Opportunity Discovery — Draft Normalization
+## Digital Opportunity Discovery
 
-**Status:** DRAFT (Decisions approved per T02; awaiting Scenario v1.0 freeze in T03)
+**Scenario Version:** 1.0
+
+**Status:** FROZEN FOR PILOT
 
 **Target skill:** اكتشاف الفرص الرقمية  
 **Domain:** ريادة الأعمال الرقمية والتمكين الاقتصادي  
@@ -622,5 +624,9 @@ weak     → N4_H
 - [x] END: اعتماد رسالة الإنهاء الحالية دون إظهار أي Score أو درجة أو نسبة إتقان أو تصنيف للطالب.
 - [x] تأكيد أن `N1_F` يبقى عقدة Rescue مبسطة باختيار من متعدد، بينما تظل جميع العقد الأخرى Free-text.
 
-الخطوة التالية:
-تجميد مواصفة السيناريو كـ Scenario v1.0 عند تنفيذ المهمة T03.
+تم تجميد مواصفة السيناريو:
+
+```text
+Scenario Version = 1.0
+Status = FROZEN FOR PILOT
+```

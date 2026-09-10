@@ -6,7 +6,7 @@
 
 - [x] T01 — Review and approve `PROJECT.md`
 - [x] T02 — Review all researcher-approval notes in `SCENARIO_SPEC.md`
-- [ ] T03 — Freeze `SCENARIO_SPEC.md` as Scenario v1.0
+- [x] T03 — Freeze `SCENARIO_SPEC.md` as Scenario v1.0
 - [ ] T04 — Researcher labels `data/n1_eval_template.csv`
 
 ## Phase 1 — Highest-Risk AI Spike
