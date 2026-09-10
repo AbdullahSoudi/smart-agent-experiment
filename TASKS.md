@@ -4,8 +4,8 @@
 
 ## Phase 0 — Research Specification
 
-- [ ] T01 — Review and approve `PROJECT.md`
-- [ ] T02 — Review all researcher-approval notes in `SCENARIO_SPEC.md`
+- [x] T01 — Review and approve `PROJECT.md`
+- [x] T02 — Review all researcher-approval notes in `SCENARIO_SPEC.md`
 - [ ] T03 — Freeze `SCENARIO_SPEC.md` as Scenario v1.0
 - [ ] T04 — Researcher labels `data/n1_eval_template.csv`
 
@@ -54,7 +54,7 @@
 
 - [ ] T29 — Implement/evaluate N2
 - [ ] T30 — Implement/evaluate N3
-- [ ] T31 — Implement/evaluate N4
+- [ ] T31 — Implement/evaluate N4 (including N4_REV substep)
 - [ ] T32 — Implement/evaluate N5
 - [ ] T33 — Implement END
 

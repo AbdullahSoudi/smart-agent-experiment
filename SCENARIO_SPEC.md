@@ -1,7 +1,7 @@
 # SCENARIO SPECIFICATION
 ## Digital Opportunity Discovery — Draft Normalization
 
-**Status:** DRAFT — requires researcher approval before Scenario v1.0 freeze.
+**Status:** DRAFT (Decisions approved per T02; awaiting Scenario v1.0 freeze in T03)
 
 **Target skill:** اكتشاف الفرص الرقمية  
 **Domain:** ريادة الأعمال الرقمية والتمكين الاقتصادي  
@@ -48,7 +48,7 @@ current_node + classification
 
 ## 1.4 Rescue exception
 
-`N1_F` هو Rescue مبسط ويحتفظ بفكرة السؤال الرقمي الواردة في السيناريو الأصلي.
+`N1_F` هو استثناء Rescue مبسط معتمد باختيار من متعدد (Simplified Choice)، بينما تظل جميع العقد الأساسية في السيناريو قائمة على الإجابات الحرة (Free-text).
 
 بعد إجابة الطالب ينتقل المسار إلى `N2` للحفاظ على التدفق.
 
@@ -276,22 +276,17 @@ weak     → N2_H
 
 تقديم تلميح موجه يدفع الطالب للتفكير في القصور بالحلول الحالية، ثم الانتقال إلى N3.
 
-## Recommended Agent Message — RESEARCHER APPROVAL REQUIRED
+## Agent Message
 
 > قبل أن تبحث عن حل جديد، ركز على ما يفعله الطلاب حاليًا: ما الحلول التي يستخدمونها؟ وما أوجه القصور أو الشيء المفقود فيها؟
 
-## Recommended behavior — RESEARCHER APPROVAL REQUIRED
+## Behavior
 
-أبسط تنفيذ مطابق لوظيفة المصدر:
+عرض التلميح المعتمد ثم الانتقال تلقائيًا إلى N3 دون طلب إجابة منفصلة من الطالب:
 
 ```text
 Show hint → continue to N3
 ```
-
-بدون إجابة مستقلة داخل N2_H.
-
-**Alternative:** طلب إجابة Free-text جديدة ثم الانتقال إلى N3.  
-يجب أن يختار الباحث أحد الخيارين قبل Freeze.
 
 ---
 
@@ -350,7 +345,7 @@ weak     → N2_H
 **Type:** Hint / retry  
 **Source status:** المصدر يحدد التوجيه "حدد: لمن؟ ما المشكلة؟ ما القيمة؟" ولا يقدم Rubric تفصيليًا مستقلًا.
 
-## Recommended Student Prompt — RESEARCHER APPROVAL REQUIRED
+## Student Prompt
 
 فكرتك ممكنة، لكنها ما زالت عامة.
 
@@ -360,7 +355,7 @@ weak     → N2_H
 - ما المشكلة المحددة؟
 - ما القيمة التي يمكن أن يقدمها الحل؟
 
-## Recommended Rubric — RESEARCHER APPROVAL REQUIRED
+## Rubric
 
 ### advanced / medium
 يحدد الفئة + المشكلة + قيمة واضحة بما يكفي للانتقال لصياغة الفرصة.
@@ -368,7 +363,7 @@ weak     → N2_H
 ### weak
 يظل عامًا ولا يحدد الفجوة.
 
-## Recommended Transitions — RESEARCHER APPROVAL REQUIRED
+## Transitions
 
 ```text
 advanced → N4
@@ -411,28 +406,19 @@ weak     → N2_H
 
 ---
 
-## N4 executable normalization — RESEARCHER APPROVAL REQUIRED
+## N4 Executable Normalization (Approved: Option A)
 
-المصدر يحتوي عمليًا على **خطوتين حواريتين داخل N4**:
-1. صياغة الفرصة والقيمة.
-2. سؤال متابعة عن الإيراد والجدوى.
+تم اعتماد Option A للحفاظ على التسلسل الحواري الأصلي:
+- `N4`: صياغة الفرصة والقيمة المقدمة للعميل (`opportunity + value`).
+- `N4_REV`: خطوة حوارية تقنية مخصصة للاستدامة المالية وتوليد العائد وجدوى التطوير (`monetization + why worth developing`). `N4_REV` هي عقدة تقنية فقط لتسهيل تدفق الحوار وليست مهارة تعليمية جديدة.
 
-لمنع اختراع السلوك أثناء البرمجة، نحتاج اعتماد أحد الخيارين:
-
-### Option A — Recommended
-نستخدم Technical Substep داخليًا:
+## Transitions
 
 ```text
-N4      = opportunity + value
-N4_REV  = monetization + why worth developing
+advanced → N4_REV
+medium   → N4_REV
+weak     → N4_H
 ```
-
-`N4_REV` عقدة تقنية فقط لتسهيل التطبيق، وليست مهارة جديدة.
-
-### Option B
-ندمج السؤالين في Prompt واحد أطول.
-
-**التوصية:** Option A لأنها تحافظ أكثر على التسلسل الحواري الأصلي دون تعقيد كبير.
 
 ---
 
@@ -452,23 +438,22 @@ N4_REV  = monetization + why worth developing
 - الحل الرقمي: ما هو مشروعك؟
 - القيمة المقدمة: ما الفائدة المباشرة التي سيحصلون عليها؟
 
-## Recommended behavior
+## Behavior
 
-بعد إجابة الطالب المحسنة، ينتقل إلى N5 حسب المصدر.
+تُستخدم هذه العقدة كتدخل تعليمي داعم (Scaffolding) وليس كمحاولة إعادة تقييم تصنيفية:
+- يتم حفظ إجابة الطالب المحسنة.
+- يقدم الوكيل تغذية راجعة داعمة وموجزة.
+- ينتقل الطالب مباشرة إلى N5 دون اشتراط تصنيف (`advanced` / `medium` / `weak`) للتوجيه.
 
 ```text
-ANSWER → N5
+ANY ANSWER → N5
 ```
-
-**RESEARCHER APPROVAL REQUIRED:** هل نحتاج Gemini لتقييم إعادة الصياغة هنا أم نستخدمها كتدخل Scaffolding ثم ننتقل مباشرة؟  
-التوصية الأبسط: حفظ الإجابة + Feedback قصير + الانتقال إلى N5.
 
 ---
 
 # 12. N4_REV — Technical Substep for Monetization
-## Only if N4 Option A is approved
 
-**Type:** Technical substep under N4  
+**Type:** Technical substep under N4 (approved under Option A; not a new learning skill)  
 **Input:** Free text
 
 ## Student Prompt
@@ -477,7 +462,7 @@ ANSWER → N5
 
 كيف يمكن لهذه الفرصة أن تولد عائدًا ماديًا لك؟ ولماذا تعتقد أنها تستحق التطوير؟
 
-## Recommended Rubric — RESEARCHER APPROVAL REQUIRED
+## Rubric
 
 ### advanced
 يقترح آلية دخل واضحة ومناسبة للفكرة ويبرر جدوى التطوير.
@@ -488,7 +473,7 @@ ANSWER → N5
 ### weak
 لا يقدم تصورًا واقعيًا للدخل أو لا يربط العائد بالفرصة.
 
-## Recommended Transitions
+## Transitions
 
 ```text
 advanced → N5
@@ -564,7 +549,7 @@ weak     → N4_H
 
 وضّح السبب.
 
-## Recommended Rubric — RESEARCHER APPROVAL REQUIRED
+## Rubric
 
 ### advanced / medium
 يربط الاختيار بالمشكلة/العميل + إمكانية القيمة الاقتصادية.
@@ -572,7 +557,7 @@ weak     → N4_H
 ### weak
 يظل التبرير ذاتيًا أو غير مرتبط بالمشكلة والجدوى.
 
-## Recommended Transitions — RESEARCHER APPROVAL REQUIRED
+## Transitions
 
 ```text
 advanced → END
@@ -599,11 +584,11 @@ weak     → N4_H
 
 ## Student-visible result
 
+تم اعتماد رسالة الإنهاء أعلاه.
+
 في V1 البحثية:
 
-**لا يتم إظهار Score أو مستوى الإتقان للطالب.**
-
-يمكن إظهار رسالة الشكر/الإنهاء فقط حسب قرار الباحث.
+**لا يتم إظهار أي Score أو درجة أو نسبة إتقان أو تصنيف للطالب نهائيًا.** تظهر فقط رسالة الشكر والإنهاء دون تقييم كمي.
 
 ---
 
@@ -626,20 +611,16 @@ weak     → N4_H
 
 # 17. Researcher Approval Checklist
 
-يجب حسم العناصر التالية قبل Scenario v1.0:
+تم حسم واعتماد جميع القرارات البحثية (T02):
 
-- [ ] N2_H: هل يعرض Hint ثم ينتقل تلقائيًا إلى N3، أم يطلب إجابة جديدة؟
-- [ ] N3_H: اعتماد النص والـtransitions المقترحة.
-- [ ] N4: اعتماد Option A (`N4` + technical `N4_REV`) أو Option B (سؤال واحد مدمج).
-- [ ] N4_H: هل إعادة الصياغة تُقيّم أم ننتقل بعدها مباشرة إلى N5؟
-- [ ] N4_REV: إذا اعتمد، اعتماد Rubric/Transitions.
-- [ ] N5_H: اعتماد Rubric/Transitions المقترحة.
-- [ ] END: اعتماد النص الظاهر للطالب.
-- [ ] تأكيد أن `N1_F` يبقى rescue choice بينما باقي المسار Free-text.
+- [x] N2_H: عرض التلميح المعتمد ثم الانتقال تلقائيًا إلى N3 دون طلب إجابة منفصلة.
+- [x] N3_H: اعتماد نص السؤال والـ Rubric والـ Transitions المقترحة (`advanced` / `medium` → N4، `weak` → N2_H).
+- [x] N4: اعتماد Option A (الإبقاء على N4 للفرصة والقيمة المقدمة، وإضافة N4_REV كخطوة فنية للعائد والجدوى وليست مهارة جديدة).
+- [x] N4_REV: اعتماد الـ Rubric والـ Transitions (`advanced` / `medium` → N5، `weak` → N4_H).
+- [x] N4_H: اعتمادها كتدخل داعم (Scaffolding)؛ حفظ إجابة الطالب وتقديم feedback موجز ثم الانتقال إلى N5 دون اشتراط تصنيف للتوجيه.
+- [x] N5_H: اعتماد الـ Rubric والـ Transitions (`advanced` / `medium` → END، `weak` → N4_H).
+- [x] END: اعتماد رسالة الإنهاء الحالية دون إظهار أي Score أو درجة أو نسبة إتقان أو تصنيف للطالب.
+- [x] تأكيد أن `N1_F` يبقى عقدة Rescue مبسطة باختيار من متعدد، بينما تظل جميع العقد الأخرى Free-text.
 
-بعد اعتماد هذه النقاط:
-
-```text
-Scenario Version = 1.0
-Status = FROZEN FOR PILOT
-```
+الخطوة التالية:
+تجميد مواصفة السيناريو كـ Scenario v1.0 عند تنفيذ المهمة T03.
