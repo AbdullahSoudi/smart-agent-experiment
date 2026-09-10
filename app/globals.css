@@ -1,27 +1,49 @@
 /* ==========================================================================
-   Design Tokens & Base Styles — Smart Agent Experiment
-   Identity: Academic Entrepreneurial Studio (Arabic-first, RTL)
-   Follows: UI_DIRECTION.md and .agents/skills/frontend-design/SKILL.md
+   Design System: Venture Research Workspace (Pass 8 Refined)
+   Source: UI_DIRECTION.md and .agents/skills/frontend-design/SKILL.md
+   Language: Arabic-first (RTL)
    ========================================================================== */
 
 :root {
-  --color-canvas: #F8F6F1;
-  --color-surface: #FFFFFF;
-  --color-border: #E5E0D8;
-  --color-border-subtle: #EDE8E1;
-  --color-border-input: #D1CAC0;
-  --color-border-focus: #1B4D3E;
-  --color-ink-primary: #181F25;
-  --color-ink-secondary: #4A5568;
-  --color-ink-muted: #6E7987;
-  --color-accent: #1B4D3E;
-  --color-accent-hover: #153E32;
-  --color-accent-active: #0E2B23;
+  /* Surface Layers */
+  --surface-outer: #1C2428;          /* Rich architectural slate-charcoal */
+  --surface-workspace: #F4F1EA;      /* Warm mineral / stone desk */
+  --surface-paper: #FAF8F4;          /* Soft primary paper reading surface */
+  --surface-quiet: #EBE5DB;          /* Subtle warm sand for student written reflections */
+  --surface-note: #F6F3EC;           /* Marginalia coaching wash */
+  --surface-anchor: #14231F;         /* Deep ink-forest for active mentor challenge */
 
-  --font-family-base: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Arabic", Tahoma, Arial, sans-serif;
-  --line-height-base: 1.75;
-  --radius-surface: 8px;
-  --radius-input: 6px;
+  /* Text Inks */
+  --text-primary: #151D21;           /* Deep charcoal ink */
+  --text-secondary: #3D4854;         /* Muted stone slate */
+  --text-muted: #6C7885;             /* Gentle caption slate */
+  --text-inverse: #FAF7F0;           /* Warm high-contrast parchment text */
+  --text-inverse-muted: #D0C6B8;     /* Subtle warm text on dark anchor */
+  --text-accent-forest: #1B4D3E;     /* Editorial forest label ink */
+
+  /* Structural Boundaries */
+  --border-subtle: #E0DACF;          /* Fine warm hairline */
+  --border-strong: #CDC6B8;          /* Grounded architectural boundary */
+  --border-focus: #1B4D3E;           /* Focused input indicator */
+  --border-brass: #A88746;           /* Restrained brass micro-accent */
+
+  /* Accents */
+  --accent-forest: #1B4D3E;          /* Primary interactive & brand forest */
+  --accent-forest-hover: #143D31;    /* Forest hover */
+  --accent-forest-active: #0E2B23;   /* Forest tap */
+  --accent-brass: #A88746;           /* Secondary micro-accent */
+
+  /* Radii & Depth */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --shadow-workspace: 0 16px 48px -8px rgba(12, 18, 22, 0.4), 0 4px 16px -2px rgba(12, 18, 22, 0.25);
+  --shadow-panel: 0 2px 8px -1px rgba(20, 27, 30, 0.05);
+
+  /* Typography */
+  --font-family-base: var(--font-ibm-plex-sans-arabic), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --line-height-body: 1.8;
+  --line-height-prompt: 1.9;
 }
 
 *, *::before, *::after {
@@ -30,17 +52,22 @@
   padding: 0;
 }
 
+html, body {
+  width: 100%;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
 html {
   font-size: 16px;
   -webkit-text-size-adjust: 100%;
 }
 
 body {
-  min-height: 100vh;
   font-family: var(--font-family-base);
-  line-height: var(--line-height-base);
-  color: var(--color-ink-primary);
-  background-color: var(--color-canvas);
+  line-height: var(--line-height-body);
+  color: var(--text-primary);
+  background-color: var(--surface-outer);
   direction: rtl;
   text-align: right;
   -webkit-font-smoothing: antialiased;
@@ -48,67 +75,186 @@ body {
 }
 
 /* ==========================================================================
-   Start Screen Layout & Hierarchy (Quiet Editorial Studio)
+   Global Workspace Desk Frame
    ========================================================================== */
 
-.start-container {
+.viewport-canvas {
+  width: 100%;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
   align-items: center;
-  padding: clamp(3.5rem, 8vh, 6.5rem) 1.5rem 3rem;
+  justify-content: flex-start;
+  padding: clamp(1.5rem, 3.5vh, 3.5rem) clamp(0.75rem, 2.5vw, 2.5rem);
+  overflow-x: hidden;
 }
 
-.start-card {
+.workspace-frame {
   width: 100%;
-  max-width: 600px;
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-top: 3px solid var(--color-accent);
-  border-radius: var(--radius-surface);
-  box-shadow: none;
-  padding: 3rem 2.75rem;
+  max-width: 1140px;
+  margin-inline: auto;
+  background-color: var(--surface-workspace);
+  border: 1px solid var(--border-strong);
+  border-top: 3px solid var(--accent-forest);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-workspace);
+  padding: clamp(1.75rem, 3.5vw, 3rem) clamp(1.25rem, 3.5vw, 3rem);
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  box-sizing: border-box;
 }
 
-.start-header {
-  margin-bottom: 2.25rem;
+/* Common Workspace Masthead */
+
+.workspace-masthead {
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
-.context-meta {
-  margin-bottom: 1rem;
-}
-
-.context-label {
-  display: inline-block;
+.masthead-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.625rem;
   font-size: 0.84375rem;
   font-weight: 600;
-  color: var(--color-accent);
-  letter-spacing: 0.01em;
+  color: var(--text-accent-forest);
+  letter-spacing: 0.02em;
 }
 
-.start-title {
-  font-size: 2.125rem;
+.masthead-badge {
+  color: var(--text-accent-forest);
+}
+
+.masthead-divider {
+  color: var(--border-brass);
+  font-weight: 700;
+}
+
+.masthead-context {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.workspace-title {
+  font-size: clamp(1.75rem, 2.8vw, 2.25rem);
   font-weight: 700;
   line-height: 1.35;
-  color: var(--color-ink-primary);
-  margin-bottom: 1rem;
+  color: var(--text-primary);
 }
 
-.start-description {
-  font-size: 1.0625rem;
-  line-height: 1.8;
-  color: var(--color-ink-secondary);
+/* Shared Primary Action */
+
+.btn-primary {
+  height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #FFFFFF;
+  background-color: var(--accent-forest);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  padding: 0 1.75rem;
+  transition: background-color 0.15s ease, transform 0.08s ease;
+}
+
+.btn-primary:hover {
+  background-color: var(--accent-forest-hover);
+}
+
+.btn-primary:active {
+  background-color: var(--accent-forest-active);
+  transform: translateY(1px);
+}
+
+.btn-primary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(27, 77, 62, 0.25), 0 0 0 5px rgba(27, 77, 62, 0.1);
 }
 
 /* ==========================================================================
-   Form Components
+   Start Screen (/) — Asymmetric Two-Zone Composition
    ========================================================================== */
+
+.start-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  gap: clamp(1.75rem, 3.5vw, 3.25rem);
+  align-items: start;
+}
+
+/* Zone 1: Research Intro & Premise (RTL Right) */
+.start-intro-zone {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+}
+
+.start-main-title {
+  font-size: clamp(1.875rem, 2.5vw, 2.25rem);
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--text-primary);
+}
+
+.start-lead {
+  font-size: 1.125rem;
+  line-height: 1.85;
+  color: var(--text-secondary);
+}
+
+.start-assurance-box {
+  background-color: var(--surface-paper);
+  border: 1px solid var(--border-subtle);
+  border-inline-start: 3px solid var(--accent-forest);
+  border-radius: var(--radius-sm);
+  padding: 1.125rem 1.35rem;
+}
+
+.assurance-text {
+  font-size: 0.875rem;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+/* Zone 2: Code Interaction Desk (RTL Left) */
+.start-action-zone {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.desk-panel {
+  background-color: var(--surface-paper);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-panel);
+  padding: clamp(1.5rem, 2.2vw, 2rem);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  box-sizing: border-box;
+}
+
+.desk-panel-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
 
 .start-form {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1.25rem;
 }
 
 .form-group {
@@ -118,9 +264,9 @@ body {
 }
 
 .form-label {
-  font-size: 0.9375rem;
+  font-size: 0.95rem;
   font-weight: 600;
-  color: var(--color-ink-primary);
+  color: var(--text-primary);
 }
 
 .form-input {
@@ -129,286 +275,155 @@ body {
   padding: 0 1rem;
   font-family: inherit;
   font-size: 1rem;
-  color: var(--color-ink-primary);
-  background-color: #FAFAFA;
-  border: 1px solid var(--color-border-input);
-  border-radius: var(--radius-input);
+  color: var(--text-primary);
+  background-color: #FFFFFF;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
   direction: rtl;
   text-align: right;
-  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-sizing: border-box;
 }
 
 .form-input::placeholder {
-  color: var(--color-ink-muted);
+  color: var(--text-muted);
   opacity: 0.85;
 }
 
 .form-input:focus {
   outline: none;
-  background-color: #FFFFFF;
-  border-color: var(--color-border-focus);
+  border-color: var(--border-focus);
   box-shadow: 0 0 0 3px rgba(27, 77, 62, 0.14);
 }
 
 .form-hint {
   font-size: 0.84375rem;
   line-height: 1.55;
-  color: var(--color-ink-muted);
+  color: var(--text-muted);
 }
 
-.submit-btn {
+.start-submit-btn {
   width: 100%;
-  height: 48px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-family: inherit;
-  font-size: 1.0625rem;
-  font-weight: 600;
-  color: #FFFFFF;
-  background-color: var(--color-accent);
-  border: 1px solid transparent;
-  border-radius: var(--radius-input);
-  cursor: pointer;
-  padding: 0 1.5rem;
-  transition: background-color 0.15s ease, transform 0.08s ease;
-}
-
-.submit-btn:hover {
-  background-color: var(--color-accent-hover);
-}
-
-.submit-btn:active {
-  background-color: var(--color-accent-active);
-  transform: translateY(1px);
-}
-
-.submit-btn:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(27, 77, 62, 0.25), 0 0 0 5px rgba(27, 77, 62, 0.1);
 }
 
 /* ==========================================================================
-   Footer & Reassurance
+   Chat Screen (/chat) — Venture Research Workspace
    ========================================================================== */
 
-.start-footer {
-  margin-top: 2rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid var(--color-border-subtle);
-}
-
-.privacy-note {
-  font-size: 0.84375rem;
-  line-height: 1.65;
-  color: var(--color-ink-muted);
-  text-align: right;
-}
-
-/* ==========================================================================
-   Responsive & Accessibility
-   ========================================================================== */
-
-@media (max-width: 640px) {
-  .start-container {
-    padding: 2rem 1rem 2rem;
-  }
-
-  .start-card {
-    padding: 2rem 1.25rem;
-    border-radius: 6px;
-  }
-
-  .start-title {
-    font-size: 1.875rem;
-  }
-
-  .start-description {
-    font-size: 1rem;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    transition: none !important;
-    animation: none !important;
-  }
-}
-
-
-/* ==========================================================================
-   Chat Screen Styles (Academic Entrepreneurial Studio) — T17 Refined
-   ========================================================================== */
-
-.chat-container {
-  --chat-canvas: #F0ECE3;
-  --chat-surface: #FAF8F4;
-  --chat-border: #DCD5C9;
-  --chat-border-subtle: #E8E2D7;
-  --chat-border-input: #D0C9BD;
-  --chat-border-focus: #1B4D3E;
-  --chat-ink-primary: #1A2026;
-  --chat-ink-secondary: #4A5565;
-  --chat-ink-muted: #6F7B8A;
-  --chat-accent: #1B4D3E;
-  --chat-accent-hover: #153E32;
-  --chat-accent-active: #0E2B23;
-  --chat-student-bg: #EFEBE2;
-  --chat-student-border: #E0DACD;
-  --chat-feedback-bg: #F5F2EB;
-  --chat-feedback-accent: #2E5A44;
-
-  min-height: 100vh;
-  background-color: var(--chat-canvas);
+.chat-flow {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  padding: clamp(2.5rem, 5vh, 4rem) 1.5rem 5rem;
+  gap: 1.75rem;
 }
 
-.chat-workspace {
-  width: 100%;
-  max-width: 760px;
-  background-color: var(--chat-surface);
-  border: 1px solid var(--chat-border);
-  border-top: 3px solid var(--chat-accent);
-  border-radius: 8px;
-  padding: clamp(2.25rem, 4vw, 3.25rem) clamp(1.75rem, 4vw, 3rem);
-  display: flex;
-  flex-direction: column;
-  gap: 2.25rem;
-}
-
-/* Session Header */
-
-.chat-header {
-  padding-bottom: 1.5rem;
-  border-bottom: 1px solid var(--chat-border-subtle);
-}
-
-.chat-header-meta {
-  margin-bottom: 0.5rem;
-}
-
-.chat-context-label {
-  display: inline-block;
-  font-size: 0.84375rem;
-  font-weight: 600;
-  color: var(--chat-accent);
-  letter-spacing: 0.02em;
-}
-
-.chat-title {
-  font-size: 2rem;
-  font-weight: 700;
-  line-height: 1.35;
-  color: var(--chat-ink-primary);
-}
-
-/* Conversational Flow */
-
-.conversation-flow {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-}
-
-.turn-section {
+.turn-block {
   position: relative;
+  min-width: 0;
 }
 
-.turn-meta {
-  margin-bottom: 0.625rem;
-}
-
-.turn-role {
+.role-tag {
   display: inline-block;
   font-size: 0.8125rem;
   font-weight: 700;
   letter-spacing: 0.02em;
+  margin-bottom: 0.5rem;
 }
 
-.turn-role-advisor {
-  color: var(--chat-accent);
+/* 1. Active Mentor Challenge Anchor (The Bold Moment) */
+.prompt-anchor-surface {
+  background-color: var(--surface-anchor);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-inline-start: 4px solid var(--border-brass);
+  border-radius: var(--radius-md);
+  padding: clamp(1.5rem, 2.5vw, 2.25rem) clamp(1.25rem, 2.5vw, 2rem);
+  box-shadow: 0 8px 24px -4px rgba(15, 25, 22, 0.4);
 }
 
-.turn-role-student {
-  color: var(--chat-ink-secondary);
+.role-tag-anchor {
+  color: var(--accent-brass);
 }
 
-.turn-role-feedback {
-  color: var(--chat-feedback-accent);
-}
-
-.turn-body {
-  position: relative;
-}
-
-.turn-text {
-  font-size: 1.0625rem;
-  line-height: 1.85;
-  color: var(--chat-ink-primary);
-}
-
-.turn-text-prompt {
-  font-size: 1.125rem;
-  line-height: 1.9;
+.prompt-text-anchor {
+  color: var(--text-inverse);
+  font-size: 1.15rem;
+  line-height: var(--line-height-prompt);
   white-space: pre-line;
 }
 
-.turn-text-feedback {
+/* 2. Student Reflection Note (Working Material) */
+.student-reflection-zone {
+  margin-inline-start: clamp(1rem, 4vw, 3.5rem);
+}
+
+.student-note-surface {
+  background-color: var(--surface-quiet);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 1.25rem 1.5rem;
+}
+
+.role-tag-student {
+  color: var(--text-secondary);
+}
+
+.student-reflection-text {
+  color: var(--text-primary);
+  font-size: 1.0625rem;
+  line-height: var(--line-height-body);
+}
+
+/* 3. Mentor Coaching Marginalia */
+.mentor-coaching-zone {
+  margin-inline-end: clamp(1rem, 4vw, 3.5rem);
+}
+
+.coaching-note-surface {
+  background-color: var(--surface-note);
+  border-inline-start: 3px solid var(--accent-forest);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding: 1rem 1.35rem;
+}
+
+.role-tag-coaching {
+  color: var(--accent-forest);
+}
+
+.coaching-text {
+  color: var(--text-secondary);
   font-size: 1rem;
   line-height: 1.75;
-  color: var(--chat-ink-secondary);
 }
 
-/* Advisor Question: Largely unboxed, anchored by quiet right accent rule */
-.turn-advisor {
-  padding: 0 1.25rem 0 0;
-  border-right: 3px solid var(--chat-accent);
-}
-
-/* Student Turn: Quiet warm reflective note, slight visual indentation */
-.turn-student {
-  background-color: var(--chat-student-bg);
-  border: 1px solid var(--chat-student-border);
-  border-radius: 6px;
-  padding: 1.25rem 1.5rem;
-  margin-right: 0.5rem;
-}
-
-/* Advisor Feedback: Lightweight coaching marginalia note */
-.turn-feedback {
-  background-color: var(--chat-feedback-bg);
-  border-right: 2px solid var(--chat-feedback-accent);
-  padding: 1rem 1.25rem;
-  border-radius: 0 4px 4px 0;
-  margin-right: 0.5rem;
-}
-
-/* Integrated Answer Composer */
-
-.composer-section {
-  padding-top: 2rem;
-  border-top: 1px solid var(--chat-border-subtle);
+/* 4. Integrated Response Composer */
+.composer-desk {
+  padding-top: 1.75rem;
+  border-top: 1px solid var(--border-subtle);
+  margin-top: 0.5rem;
 }
 
 .composer-form {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1.125rem;
 }
 
-.composer-group {
+.composer-header {
   display: flex;
-  flex-direction: column;
-  gap: 0.625rem;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.25rem;
 }
 
 .composer-label {
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--chat-ink-primary);
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.composer-sublabel {
+  font-size: 0.84375rem;
+  color: var(--text-muted);
 }
 
 .composer-textarea {
@@ -417,110 +432,96 @@ body {
   padding: 1rem 1.125rem;
   font-family: inherit;
   font-size: 1.0625rem;
-  line-height: 1.8;
-  color: var(--chat-ink-primary);
+  line-height: var(--line-height-body);
+  color: var(--text-primary);
   background-color: #FFFFFF;
-  border: 1px solid var(--chat-border-input);
-  border-radius: var(--radius-input);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
   resize: vertical;
   direction: rtl;
   text-align: right;
-  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-sizing: border-box;
 }
 
 .composer-textarea::placeholder {
-  color: var(--chat-ink-muted);
+  color: var(--text-muted);
   opacity: 0.85;
 }
 
 .composer-textarea:focus {
   outline: none;
-  background-color: #FFFFFF;
-  border-color: var(--chat-border-focus);
-  box-shadow: 0 0 0 3px rgba(27, 77, 62, 0.14);
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(27, 77, 62, 0.16);
 }
 
-.composer-actions {
+.composer-footer {
   display: flex;
   justify-content: flex-end;
 }
 
-.composer-submit-btn {
-  height: 48px;
-  min-width: 140px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-family: inherit;
-  font-size: 1rem;
-  font-weight: 600;
-  color: #FFFFFF;
-  background-color: var(--chat-accent);
-  border: 1px solid transparent;
-  border-radius: var(--radius-input);
-  cursor: pointer;
-  padding: 0 1.75rem;
-  transition: background-color 0.15s ease, transform 0.08s ease;
+.composer-btn {
+  min-width: 150px;
 }
 
-.composer-submit-btn:hover {
-  background-color: var(--chat-accent-hover);
-}
+/* ==========================================================================
+   Responsive Adaptations
+   ========================================================================== */
 
-.composer-submit-btn:active {
-  background-color: var(--chat-accent-active);
-  transform: translateY(1px);
-}
+@media (max-width: 860px) {
+  .start-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.75rem;
+  }
 
-.composer-submit-btn:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(27, 77, 62, 0.25), 0 0 0 5px rgba(27, 77, 62, 0.1);
-}
+  .student-reflection-zone {
+    margin-inline-start: 0;
+  }
 
-/* Responsive Overrides for Chat */
+  .mentor-coaching-zone {
+    margin-inline-end: 0;
+  }
+}
 
 @media (max-width: 640px) {
-  .chat-container {
-    padding: 1.5rem 0.875rem 2.5rem;
+  .viewport-canvas {
+    padding: 0.75rem 0.5rem 2rem;
   }
 
-  .chat-workspace {
-    padding: 1.5rem 1.125rem;
-    gap: 1.75rem;
-    border-radius: 6px;
+  .workspace-frame {
+    padding: 1.25rem 0.875rem;
+    gap: 1.5rem;
+    border-radius: var(--radius-md);
   }
 
-  .chat-title {
-    font-size: 1.625rem;
+  .prompt-anchor-surface {
+    padding: 1.125rem 1rem;
   }
 
-  .turn-advisor {
-    padding-right: 0.875rem;
-  }
-
-  .turn-student {
-    margin-right: 0;
-    padding: 1rem 1.125rem;
-  }
-
-  .turn-feedback {
-    margin-right: 0;
-    padding: 0.875rem 1rem;
-  }
-
-  .turn-text-prompt {
+  .prompt-text-anchor {
     font-size: 1.0625rem;
   }
 
-  .turn-text {
-    font-size: 1rem;
+  .student-note-surface {
+    padding: 1rem 1.125rem;
   }
 
-  .composer-section {
-    padding-top: 1.5rem;
+  .student-reflection-text {
+    font-size: 0.9875rem;
   }
 
-  .composer-submit-btn {
+  .composer-textarea {
+    min-height: 120px;
+  }
+
+  .composer-btn {
     width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition: none !important;
+    animation: none !important;
   }
 }

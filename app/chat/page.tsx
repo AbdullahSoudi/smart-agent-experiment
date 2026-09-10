@@ -19,68 +19,66 @@ export default function ChatPage() {
   const advisorPrompt = "prompt" in n1Node ? n1Node.prompt : "";
 
   return (
-    <main className="chat-container">
-      <div className="chat-workspace">
-        {/* Session Header */}
-        <header className="chat-header">
-          <div className="chat-header-meta">
-            <span className="chat-context-label">جلسة الإرشاد</span>
+    <main className="viewport-canvas">
+      <div className="workspace-frame">
+        {/* Session Masthead */}
+        <header className="workspace-masthead">
+          <div className="masthead-meta">
+            <span className="masthead-badge">جلسة الإرشاد</span>
+            <span className="masthead-divider" aria-hidden="true">·</span>
+            <span className="masthead-context">المحطة 01: نقطة البداية</span>
           </div>
-          <h1 className="chat-title">اكتشاف الفرص الرقمية</h1>
+          <h1 className="workspace-title">اكتشاف الفرص الرقمية</h1>
         </header>
 
-        {/* Conversational Transcript */}
-        <section className="conversation-flow" aria-label="سجل الحوار التعليمي">
-          {/* Advisor Question: Largely unboxed with quiet editorial accent */}
-          <article className="turn-section turn-advisor">
-            <div className="turn-meta">
-              <span className="turn-role turn-role-advisor">المرشد</span>
-            </div>
-            <div className="turn-body">
-              <p className="turn-text turn-text-prompt">{advisorPrompt}</p>
+        {/* Conversational Transcript Flow */}
+        <section className="chat-flow" aria-label="سجل الحوار التعليمي">
+          {/* 1. Active Mentor Challenge Anchor (The One Bold Moment) */}
+          <article className="turn-block">
+            <div className="prompt-anchor-surface">
+              <span className="role-tag role-tag-anchor">المرشد · التحدي النشط</span>
+              <p className="prompt-text-anchor">{advisorPrompt}</p>
             </div>
           </article>
 
-          {/* Student Response: Quiet warm reflective note */}
-          <article className="turn-section turn-student">
-            <div className="turn-meta">
-              <span className="turn-role turn-role-student">إجابتك</span>
-            </div>
-            <div className="turn-body">
-              <p className="turn-text">{MOCK_STUDENT_RESPONSE}</p>
+          {/* 2. Student Reflection Note */}
+          <article className="turn-block student-reflection-zone">
+            <div className="student-note-surface">
+              <span className="role-tag role-tag-student">إجابتك المسجلة</span>
+              <p className="student-reflection-text">{MOCK_STUDENT_RESPONSE}</p>
             </div>
           </article>
 
-          {/* Advisor Feedback: Lightweight coaching observation */}
-          <article className="turn-section turn-feedback">
-            <div className="turn-meta">
-              <span className="turn-role turn-role-feedback">ملاحظة المرشد</span>
-            </div>
-            <div className="turn-body">
-              <p className="turn-text turn-text-feedback">{MOCK_ADVISOR_FEEDBACK}</p>
+          {/* 3. Mentor Coaching Marginalia */}
+          <article className="turn-block mentor-coaching-zone">
+            <div className="coaching-note-surface">
+              <span className="role-tag role-tag-coaching">ملاحظة المرشد</span>
+              <p className="coaching-text">{MOCK_ADVISOR_FEEDBACK}</p>
             </div>
           </article>
         </section>
 
-        {/* Current Answer Composer: Integrated into the workspace */}
-        <section className="composer-section" aria-label="كتابة الإجابة">
+        {/* 4. Integrated Response Composer */}
+        <section className="composer-desk" aria-label="كتابة الإجابة">
           <form className="composer-form">
-            <div className="composer-group">
+            <div className="composer-header">
               <label htmlFor="student-answer" className="composer-label">
                 اكتب إجابتك
               </label>
-              <textarea
-                id="student-answer"
-                name="answer"
-                rows={5}
-                className="composer-textarea"
-                placeholder="اكتب إجابتك هنا..."
-                dir="rtl"
-              />
+              <span className="composer-sublabel">صياغة تفسيرية وتأملية</span>
             </div>
 
-            <div className="composer-actions">
-              <button type="button" className="composer-submit-btn">
+            <textarea
+              id="student-answer"
+              name="answer"
+              rows={5}
+              className="composer-textarea"
+              placeholder="اكتب إجابتك هنا..."
+              dir="rtl"
+            />
+
+            <div className="composer-footer">
+              <button type="button" className="btn-primary composer-btn">
                 إرسال الإجابة
               </button>
             </div>
