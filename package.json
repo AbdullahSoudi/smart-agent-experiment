@@ -1,0 +1,16 @@
+{
+  "name": "smart-agent-experiment",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "spike:n1": "tsx spike/evaluate-n1.ts"
+  },
+  "dependencies": {
+    "@google/genai": "^2.21.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.13",
+    "typescript": "^7.0.2"
+  }
+}
