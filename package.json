@@ -7,6 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "test:transitions": "tsx --test tests/transitions.test.ts",
     "spike:n1": "tsx spike/evaluate-n1.ts",
     "eval:n1": "tsx spike/run-n1-eval.ts"
   },
