@@ -46,7 +46,7 @@
   - Do not implement the UI during T15A; activation and design-direction preparation only.
 - [x] T16 — Student Code start screen
 - [x] T17 — Chat screen with mock data
-- [ ] T18 — Completion screen
+- [x] T18 — Completion screen
 - [ ] T19 — Verify RTL/mobile/basic loading states
 
 ## Phase 4 — Persistence
