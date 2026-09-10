@@ -30,6 +30,14 @@
 
 ## Phase 3 — Basic UI
 
+- [ ] T15A — Add and activate frontend-design skill for UI work
+  - This task must be completed before T16.
+  - Use a workspace skill under `.agents/skills/frontend-design/`.
+  - The skill is for visual/design quality only.
+  - It must not override `PROJECT.md`, `SCENARIO_SPEC.md`, or project scope.
+  - It must not introduce unnecessary features, animations, dependencies, dashboards, gamification, or scope expansion.
+  - The UI must remain Arabic-first, RTL, simple, research-focused, and mobile-friendly.
+  - Do not implement the UI during T15A; activation and design-direction preparation only.
 - [ ] T16 — Student Code start screen
 - [ ] T17 — Chat screen with mock data
 - [ ] T18 — Completion screen
