@@ -17,3 +17,8 @@ export type NodeId =
   | "N5"
   | "N5_H"
   | "END";
+
+export type EvaluationResult = {
+  classification: Classification;
+  feedback: string;
+};

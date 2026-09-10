@@ -13,7 +13,7 @@
 
 - [x] T05 — Create minimal Node/Classification TypeScript types
 - [x] T06 — Create Gemini N1 evaluation script
-- [ ] T07 — Enforce structured output: classification + feedback
+- [x] T07 — Enforce structured output: classification + feedback
 - [ ] T08 — Run N1 labelled examples
 - [ ] T09 — Review mismatches with researcher
 - [ ] T10 — Approve N1 evaluator behavior
