@@ -36,7 +36,7 @@
 
 ## Phase 3 — Basic UI
 
-- [ ] T15A — Add and activate frontend-design skill for UI work
+- [x] T15A — Add and activate frontend-design skill for UI work
   - This task must be completed before T16.
   - Use a workspace skill under `.agents/skills/frontend-design/`.
   - The skill is for visual/design quality only.
