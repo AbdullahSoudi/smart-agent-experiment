@@ -28,7 +28,7 @@
 
 ## Phase 2 — Web Scaffold
 
-- [ ] T11 — Scaffold Next.js + TypeScript
+- [x] T11 — Scaffold Next.js + TypeScript
 - [ ] T12 — Add `.env.local` from `.env.example`
 - [ ] T13 — Implement scenario data
 - [ ] T14 — Implement deterministic `getNextNode()`
