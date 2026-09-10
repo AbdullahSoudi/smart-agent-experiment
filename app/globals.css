@@ -16,7 +16,7 @@
   /* Text Inks */
   --text-primary: #151D21;           /* Deep charcoal ink */
   --text-secondary: #3D4854;         /* Muted stone slate */
-  --text-muted: #6C7885;             /* Gentle caption slate */
+  --text-muted: #546270;             /* Gentle caption slate */
   --text-inverse: #FAF7F0;           /* Warm high-contrast parchment text */
   --text-inverse-muted: #D0C6B8;     /* Subtle warm text on dark anchor */
   --text-accent-forest: #1B4D3E;     /* Editorial forest label ink */
@@ -176,8 +176,26 @@ body {
 }
 
 .btn-primary:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(27, 77, 62, 0.25), 0 0 0 5px rgba(27, 77, 62, 0.1);
+  outline: 2px solid var(--accent-forest);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px rgba(27, 77, 62, 0.25);
+}
+
+.btn-primary:disabled,
+button:disabled {
+  background-color: #5E7A71;
+  color: #FFFFFF;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+  pointer-events: none;
+}
+
+.btn-primary[aria-busy="true"],
+button[aria-busy="true"] {
+  cursor: wait;
+  opacity: 0.85;
+  pointer-events: none;
 }
 
 /* ==========================================================================
@@ -290,10 +308,11 @@ body {
   opacity: 0.85;
 }
 
-.form-input:focus {
+.form-input:focus,
+.form-input:focus-visible {
   outline: none;
   border-color: var(--border-focus);
-  box-shadow: 0 0 0 3px rgba(27, 77, 62, 0.14);
+  box-shadow: 0 0 0 3px rgba(27, 77, 62, 0.2);
 }
 
 .form-hint {
@@ -449,10 +468,11 @@ body {
   opacity: 0.85;
 }
 
-.composer-textarea:focus {
+.composer-textarea:focus,
+.composer-textarea:focus-visible {
   outline: none;
   border-color: var(--border-focus);
-  box-shadow: 0 0 0 3px rgba(27, 77, 62, 0.16);
+  box-shadow: 0 0 0 3px rgba(27, 77, 62, 0.2);
 }
 
 .composer-footer {
