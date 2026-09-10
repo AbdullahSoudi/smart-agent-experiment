@@ -45,7 +45,7 @@
   - The UI must remain Arabic-first, RTL, simple, research-focused, and mobile-friendly.
   - Do not implement the UI during T15A; activation and design-direction preparation only.
 - [x] T16 — Student Code start screen
-- [ ] T17 — Chat screen with mock data
+- [x] T17 — Chat screen with mock data
 - [ ] T18 — Completion screen
 - [ ] T19 — Verify RTL/mobile/basic loading states
 

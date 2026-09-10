@@ -234,3 +234,249 @@ body {
     animation: none !important;
   }
 }
+
+
+/* ==========================================================================
+   Chat Screen Styles (Academic Entrepreneurial Studio) — T17 Mock
+   ========================================================================== */
+
+.chat-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: clamp(2.5rem, 5vh, 4rem) 1.5rem 4rem;
+}
+
+.chat-workspace {
+  width: 100%;
+  max-width: 740px;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.chat-header {
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.chat-header-meta {
+  margin-bottom: 0.5rem;
+}
+
+.chat-context-label {
+  display: inline-block;
+  font-size: 0.84375rem;
+  font-weight: 600;
+  color: var(--color-accent);
+  letter-spacing: 0.01em;
+}
+
+.chat-title {
+  font-size: 1.875rem;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--color-ink-primary);
+}
+
+/* Conversational Flow */
+
+.conversation-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.turn-section {
+  padding: 1.5rem 1.75rem;
+  border-radius: 6px;
+}
+
+.turn-meta {
+  margin-bottom: 0.75rem;
+}
+
+.turn-role {
+  display: inline-block;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.turn-role-advisor {
+  color: var(--color-accent);
+}
+
+.turn-role-student {
+  color: var(--color-ink-secondary);
+}
+
+.turn-role-feedback {
+  color: #2D6A4F;
+}
+
+.turn-body {
+  position: relative;
+}
+
+.turn-text {
+  font-size: 1.03125rem;
+  line-height: 1.8;
+  color: var(--color-ink-primary);
+}
+
+.turn-text-prompt {
+  white-space: pre-line;
+}
+
+/* Advisor Turn: Academic Guidance Unit */
+.turn-advisor {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-right: 3px solid var(--color-accent);
+}
+
+/* Student Turn: Quiet Neutral Reflective Unit */
+.turn-student {
+  background-color: #F3EFE8;
+  border: 1px solid #E2DBD0;
+  margin-right: 0.5rem;
+}
+
+/* Advisor Feedback: Pedagogical Observation Unit */
+.turn-feedback {
+  background-color: #FAF8F3;
+  border: 1px solid #EAE4D8;
+  border-right: 3px solid #2D6A4F;
+}
+
+/* Answer Composer */
+
+.composer-section {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 1.75rem 1.75rem;
+  margin-top: 0.5rem;
+}
+
+.composer-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.composer-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.composer-label {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-ink-primary);
+}
+
+.composer-textarea {
+  width: 100%;
+  min-height: 120px;
+  padding: 0.875rem 1rem;
+  font-family: inherit;
+  font-size: 1rem;
+  line-height: 1.75;
+  color: var(--color-ink-primary);
+  background-color: #FAFAFA;
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-input);
+  resize: vertical;
+  direction: rtl;
+  text-align: right;
+  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.composer-textarea::placeholder {
+  color: var(--color-ink-muted);
+  opacity: 0.85;
+}
+
+.composer-textarea:focus {
+  outline: none;
+  background-color: #FFFFFF;
+  border-color: var(--color-border-focus);
+  box-shadow: 0 0 0 3px rgba(27, 77, 62, 0.14);
+}
+
+.composer-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.composer-submit-btn {
+  height: 48px;
+  min-width: 140px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #FFFFFF;
+  background-color: var(--color-accent);
+  border: 1px solid transparent;
+  border-radius: var(--radius-input);
+  cursor: pointer;
+  padding: 0 1.5rem;
+  transition: background-color 0.15s ease, transform 0.08s ease;
+}
+
+.composer-submit-btn:hover {
+  background-color: var(--color-accent-hover);
+}
+
+.composer-submit-btn:active {
+  background-color: var(--color-accent-active);
+  transform: translateY(1px);
+}
+
+.composer-submit-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(27, 77, 62, 0.25), 0 0 0 5px rgba(27, 77, 62, 0.1);
+}
+
+/* Responsive Overrides for Chat */
+
+@media (max-width: 640px) {
+  .chat-container {
+    padding: 1.5rem 0.875rem 2.5rem;
+  }
+
+  .chat-workspace {
+    gap: 1.5rem;
+  }
+
+  .chat-title {
+    font-size: 1.5rem;
+  }
+
+  .turn-section {
+    padding: 1.25rem 1rem;
+  }
+
+  .turn-student {
+    margin-right: 0;
+  }
+
+  .turn-text {
+    font-size: 0.96875rem;
+  }
+
+  .composer-section {
+    padding: 1.25rem 1rem;
+  }
+
+  .composer-submit-btn {
+    width: 100%;
+  }
+}
