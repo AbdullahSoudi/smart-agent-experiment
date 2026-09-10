@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Smart Agent Experiment",
-  description: "Smart Agent Experiment Web Application",
+  title: "ابدأ التجربة · تجربة الوكيل الذكي",
+  description: "بيئة تعلم ذكية قائمة على المحادثة لاستكشاف الفرص الرقمية",
 };
 
 export default function RootLayout({
