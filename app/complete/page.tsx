@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import { SCENARIO_NODES } from "@/lib/scenario";
 
 export const metadata: Metadata = {
-  title: "اكتملت التجربة · تجربة الوكيل الذكي",
+  title: `${SCENARIO_NODES.END.title} · تجربة الوكيل الذكي`,
   description: "اكتمال سيناريو استكشاف الفرص الرقمية وتطوير الفكرة الريادية",
 };
 
 export default function CompletePage() {
   const endNode = SCENARIO_NODES.END;
+  const completionTitle = endNode.title;
   const completionMessage = "message" in endNode ? endNode.message : "";
 
   return (
@@ -20,7 +21,7 @@ export default function CompletePage() {
             <span className="masthead-divider" aria-hidden="true">·</span>
             <span className="masthead-context">نهاية السيناريو</span>
           </div>
-          <h1 className="workspace-title">اكتملت التجربة</h1>
+          <h1 className="workspace-title">{completionTitle}</h1>
         </header>
 
         {/* Completion Content Layout */}
