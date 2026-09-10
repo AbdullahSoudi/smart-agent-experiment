@@ -20,7 +20,7 @@
   - Approved model ID: `openai/gpt-oss-120b`.
   - Enforce native strict structured output with JSON schema.
   - Retain local validation and exact N1 prompt/rubric.
-- [ ] T08 — Run N1 labelled examples
+- [x] T08 — Run N1 labelled examples
 - [ ] T09 — Review mismatches with researcher
 - [ ] T10 — Approve N1 evaluator behavior
 

@@ -88,7 +88,7 @@ async function main() {
   }
 
   console.log(`Loaded ${rows.length} reference examples from data/n1_eval_template.csv.`);
-  console.log(`Starting sequential Gemini evaluations using model: ${process.env.AI_MODEL || "openai/gpt-oss-120b"}\n`);
+  console.log(`Starting sequential Groq evaluations using model: ${process.env.AI_MODEL || "openai/gpt-oss-120b"}\n`);
 
   const results: EvalResultRow[] = [];
   let technicalFailures = 0;
@@ -136,7 +136,7 @@ async function main() {
         match: isMatch ? "true" : "false",
         feedback: evalResult.feedback,
       });
-      console.log(`  -> Gemini: ${evalResult.classification} | Ref: ${row.researcher_label} | Match: ${isMatch}`);
+      console.log(`  -> Groq: ${evalResult.classification} | Ref: ${row.researcher_label} | Match: ${isMatch}`);
     } else {
       technicalFailures++;
       results.push({
@@ -156,7 +156,7 @@ async function main() {
   }
 
   // Write results to data/n1_eval_results.csv
-  const csvLines = ["id,student_answer,researcher_label,gemini_classification,match,feedback"];
+  const csvLines = ["id,student_answer,reference_label,groq_classification,match,feedback"];
   for (const r of results) {
     csvLines.push(
       [
@@ -225,7 +225,7 @@ async function main() {
     console.log(`  - ${c.padEnd(8)}: ${s.matched}/${s.total} (${acc.toFixed(1)}%)`);
   }
   console.log("--------------------------------------------------");
-  console.log("Confusion Matrix (Rows = Reference, Columns = Gemini):");
+  console.log("Confusion Matrix (Rows = Reference, Columns = Groq):");
   console.log("Ref \\ Pred  | advanced | medium | weak | ERROR");
   console.log("------------+----------+--------+------+------");
   for (const c of classes) {
