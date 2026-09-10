@@ -4,12 +4,14 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "spike:n1": "tsx spike/evaluate-n1.ts"
+    "spike:n1": "tsx spike/evaluate-n1.ts",
+    "eval:n1": "tsx spike/run-n1-eval.ts"
   },
   "dependencies": {
-    "@google/genai": "^2.21.0"
+    "groq-sdk": "^1.6.0"
   },
   "devDependencies": {
+    "@types/node": "^22.20.2",
     "tsx": "^4.23.13",
     "typescript": "^7.0.2"
   }

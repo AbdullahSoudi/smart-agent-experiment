@@ -4,7 +4,7 @@
 
 هذا مشروع ويب بحثي صغير لتجربة ماجستير مع طلاب جامعيين.
 
-الهدف هو تدريب الطالب على **مهارة اكتشاف الفرص الرقمية** داخل سيناريو متفرع، بينما يعمل Gemini كوكيل ذكي يفسر إجابة الطالب ويقدم تغذية راجعة تكيفية.
+الهدف هو تدريب الطالب على **مهارة اكتشاف الفرص الرقمية** داخل سيناريو متفرع، بينما يعمل الـAI Evaluator (المعتمد حاليًا: Groq - openai/gpt-oss-120b) كوكيل ذكي يفسر إجابة الطالب ويقدم تغذية راجعة تكيفية.
 
 هذا المشروع **ليس منصة تعليمية عامة** وليس منتج Chatbot عام.
 
@@ -33,9 +33,9 @@ Pre-test → Web Experiment → Post-test
 
 ---
 
-## 3. AI Role
+## 3. AI Evaluator Role
 
-Gemini مسؤول فقط عن:
+النموذج الذكي (AI Evaluator) مسؤول فقط عن:
 
 1. فهم معنى إجابة الطالب.
 2. تصنيف الإجابة:
@@ -44,7 +44,7 @@ Gemini مسؤول فقط عن:
    - `weak`
 3. كتابة Feedback عربي قصير، داعم، مرتبط بالعقدة الحالية.
 
-Gemini غير مسؤول عن:
+النموذج غير مسؤول عن:
 
 - اختيار العقدة التالية.
 - تعديل السيناريو.
@@ -71,7 +71,7 @@ Gemini غير مسؤول عن:
 قاعدة حاسمة:
 
 ```text
-Gemini = understand + classify + feedback
+AI Model = understand + classify + feedback
 Code   = branch + state + persistence
 ```
 
@@ -81,7 +81,7 @@ Code   = branch + state + persistence
 
 - Next.js
 - TypeScript
-- Gemini API
+- LLM API (Groq - openai/gpt-oss-120b)
 - Supabase / PostgreSQL
 
 يُفضل Repository واحد وDeployment واحد في V1.
@@ -100,6 +100,7 @@ Code   = branch + state + persistence
 - current_node
 - scenario_version
 - prompt_version
+- provider
 - model_id
 - started_at
 - finished_at
@@ -156,7 +157,8 @@ Code   = branch + state + persistence
 
 - Scenario version
 - Prompt version
-- Exact Gemini model ID
+- Provider (Groq)
+- Exact model ID (openai/gpt-oss-120b)
 - Application version
 
 لا يتم تعديل السيناريو أو الـRubric أو Prompt أثناء جمع العينة إلا لعطل تقني قهري موثق.

@@ -1,98 +1,80 @@
 import fs from "node:fs";
-import { GoogleGenAI, Type } from "@google/genai";
+import Groq from "groq-sdk";
 import type { Classification, EvaluationResult } from "./types.js";
 
 // Optionally load .env.local or .env if present
-for (const envFile of [".env.local", ".env"]) {
-  if (fs.existsSync(envFile) && typeof process.loadEnvFile === "function") {
-    try {
-      process.loadEnvFile(envFile);
-    } catch {
-      // Ignore unreadable or malformed env files
+export function loadEnv(): void {
+  for (const envFile of [".env.local", ".env"]) {
+    if (fs.existsSync(envFile) && typeof process.loadEnvFile === "function") {
+      try {
+        process.loadEnvFile(envFile);
+      } catch {
+        // Ignore unreadable or malformed env files
+      }
     }
   }
 }
 
-// 1. Accept student answer from command line
-const studentAnswer = process.argv[2];
+loadEnv();
 
-// 2. Validate that the answer is not empty
-if (!studentAnswer || !studentAnswer.trim()) {
-  console.error("Error: Student answer is required as a command-line argument.");
-  process.exit(1);
-}
+// Grounded N1 prompt elements from SCENARIO_SPEC.md & prompts/evaluator_prompt.md
+const systemInstruction = `أنت وكيل تعليمي ذكي يساعد طالبًا جامعيًا على التدريب على اكتشاف الفرص الرقمية.
 
-// 3. Read GEMINI_API_KEY from process.env
-const apiKey = process.env.GEMINI_API_KEY;
-if (!apiKey || !apiKey.trim()) {
-  console.error("Error: GEMINI_API_KEY environment variable is missing.");
-  process.exit(1);
-}
+مهمتك في هذه الرسالة محدودة جدًا:
 
-// 4. Read GEMINI_MODEL from process.env
-const model = process.env.GEMINI_MODEL;
-if (!model || !model.trim()) {
-  console.error("Error: GEMINI_MODEL environment variable is missing.");
-  process.exit(1);
-}
-
-// Grounded N1 prompt elements from SCENARIO_SPEC.md & prompts/gemini_evaluator_prompt.md
-const systemInstruction = `Ø£Ù†Øª ÙˆÙƒÙŠÙ„ ØªØ¹Ù„ÙŠÙ…ÙŠ Ø°ÙƒÙŠ ÙŠØ³Ø§Ø¹Ø¯ Ø·Ø§Ù„Ø¨Ù‹Ø§ Ø¬Ø§Ù…Ø¹ÙŠÙ‹Ø§ Ø¹Ù„Ù‰ Ø§Ù„ØªØ¯Ø±ÙŠØ¨ Ø¹Ù„Ù‰ Ø§ÙƒØªØ´Ø§Ù Ø§Ù„ÙØ±Øµ Ø§Ù„Ø±Ù‚Ù…ÙŠØ©.
-
-Ù…Ù‡Ù…ØªÙƒ ÙÙŠ Ù‡Ø°Ù‡ Ø§Ù„Ø±Ø³Ø§Ù„Ø© Ù…Ø­Ø¯ÙˆØ¯Ø© Ø¬Ø¯Ù‹Ø§:
-
-1. Ø§Ù‚Ø±Ø£ Ù‡Ø¯Ù Ø§Ù„Ø¹Ù‚Ø¯Ø© Ø§Ù„Ø­Ø§Ù„ÙŠØ© ÙˆÙ…Ø¹Ø§ÙŠÙŠØ± Ø§Ù„ØªØµÙ†ÙŠÙ.
-2. Ø§ÙÙ‡Ù… Ø¥Ø¬Ø§Ø¨Ø© Ø§Ù„Ø·Ø§Ù„Ø¨ Ø¯Ù„Ø§Ù„ÙŠÙ‹Ø§ØŒ ÙˆÙ„Ø§ ØªØ¹ØªÙ…Ø¯ Ø¹Ù„Ù‰ Ø§Ù„ØªØ·Ø§Ø¨Ù‚ Ø§Ù„Ø­Ø±ÙÙŠ Ù„Ù„ÙƒÙ„Ù…Ø§Øª ÙÙ‚Ø·.
-3. ØµÙ†Ù Ø§Ù„Ø¥Ø¬Ø§Ø¨Ø© Ø¥Ù„Ù‰ Ù‚ÙŠÙ…Ø© ÙˆØ§Ø­Ø¯Ø© ÙÙ‚Ø·:
+1. اقرأ هدف العقدة الحالية ومعايير التصنيف.
+2. افهم إجابة الطالب دلاليًا، ولا تعتمد على التطابق الحرفي للكلمات فقط.
+3. صنف الإجابة إلى قيمة واحدة فقط:
    advanced
    medium
    weak
-4. Ø§ÙƒØªØ¨ ØªØºØ°ÙŠØ© Ø±Ø§Ø¬Ø¹Ø© Ø¹Ø±Ø¨ÙŠØ© Ù‚ØµÙŠØ±Ø© ÙˆØ¯Ø§Ø¹Ù…Ø© Ù…Ø±ØªØ¨Ø·Ø© Ù…Ø¨Ø§Ø´Ø±Ø© Ø¨Ø¥Ø¬Ø§Ø¨Ø© Ø§Ù„Ø·Ø§Ù„Ø¨ (1 Ø¥Ù„Ù‰ 3 Ø¬Ù…Ù„).
+4. اكتب تغذية راجعة عربية قصيرة وداعمة مرتبطة مباشرة بإجابة الطالب (1 إلى 3 جمل).
 
-Ù‚ÙˆØ§Ø¹Ø¯ Ø¥Ù„Ø²Ø§Ù…ÙŠØ©:
-- ÙŠØ¬Ø¨ Ø£Ù† ÙŠÙƒÙˆÙ† Ø§Ù„Ø¥Ø®Ø±Ø§Ø¬ Ù…Ø·Ø§Ø¨Ù‚Ù‹Ø§ ØªÙ…Ø§Ù…Ù‹Ø§ Ù„Ù…Ø®Ø·Ø· JSON Ø§Ù„Ù…Ø­Ø¯Ø¯ (classification Ùˆ feedback ÙÙ‚Ø·).
-- Ù„Ø§ ØªØ­Ø¯Ø¯ Ø§Ù„Ø¹Ù‚Ø¯Ø© Ø§Ù„ØªØ§Ù„ÙŠØ©.
-- Ù„Ø§ ØªÙ‚ØªØ±Ø­ next_node.
-- Ù„Ø§ ØªÙ‚Ø¯Ù… Ø£ÙŠ Ø¯Ø±Ø¬Ø© Ø£Ùˆ ØªÙ‚ÙŠÙŠÙ… Ø±Ù‚Ù…ÙŠ (score Ø£Ùˆ grade).
-- Ù„Ø§ ØªØºÙŠØ± Ù‚ÙˆØ§Ø¹Ø¯ Ø§Ù„Ø³ÙŠÙ†Ø§Ø±ÙŠÙˆ.
-- Ù„Ø§ ØªØ¹Ø±Ø¶ Ø§Ù„ØªØµÙ†ÙŠÙ Ù„Ù„Ø·Ø§Ù„Ø¨ Ø¯Ø§Ø®Ù„ feedback.
-- Ù„Ø§ ØªØ¹Ø±Ø¶ Ø¯Ø±Ø¬Ø© Ø±Ù‚Ù…ÙŠØ©.
-- Ù„Ø§ ØªØ¹Ø·Ù Ø§Ù„Ø¥Ø¬Ø§Ø¨Ø© Ø§Ù„Ø¬Ø§Ù‡Ø²Ø© Ù…Ø¨Ø§Ø´Ø±Ø© Ø¥Ù„Ø§ Ø¥Ø°Ø§ ÙƒØ§Ù†Øª ØªØ¹Ù„ÙŠÙ…Ø§Øª Ø§Ù„Ø¹Ù‚Ø¯Ø© Ø§Ù„Ø­Ø§Ù„ÙŠØ© ØªÙ‚ÙˆÙ„ ØµØ±Ø§Ø­Ø© Ø¥Ù†Ù‡Ø§ Rescue.
-- Ù„Ø§ ØªØ³ØªØ®Ø¯Ù… Ù…Ø¹Ù„ÙˆÙ…Ø§Øª Ø®Ø§Ø±Ø¬ Ø§Ù„Ø³ÙŠØ§Ù‚ Ø§Ù„Ù…Ø±Ø³Ù„ Ø¥Ù„ÙŠÙƒ.
-- Ø¥Ø°Ø§ ÙƒØ§Ù†Øª Ø§Ù„Ø¥Ø¬Ø§Ø¨Ø© Ù…Ø®ØªØµØ±Ø© Ù„ÙƒÙ† Ù…Ø¹Ù†Ø§Ù‡Ø§ ÙˆØ§Ø¶Ø­ØŒ Ù‚ÙŠÙ‘Ù… Ø§Ù„Ù…Ø¹Ù†Ù‰ ÙˆÙ„ÙŠØ³ Ø·ÙˆÙ„ Ø§Ù„Ù†Øµ.`;
+قواعد إلزامية:
+- يجب أن يكون الإخراج مطابقًا تمامًا لمخطط JSON المحدد (classification و feedback فقط).
+- لا تحدد العقدة التالية.
+- لا تقترح next_node.
+- لا تقدم أي درجة أو تقييم رقمي (score أو grade).
+- لا تغير قواعد السيناريو.
+- لا تعرض التصنيف للطالب داخل feedback.
+- لا تعرض درجة رقمية.
+- لا تعطِ الإجابة الجاهزة مباشرة إلا إذا كانت تعليمات العقدة الحالية تقول صراحة إنها Rescue.
+- لا تستخدم معلومات خارج السياق المرسل إليك.
+- إذا كانت الإجابة مختصرة لكن معناها واضح، قيّم المعنى وليس طول النص.`;
 
-const contents = `CURRENT NODE:
+function buildContents(studentAnswer: string): string {
+  return `CURRENT NODE:
 N1
 
 NODE QUESTION / CONTEXT:
-Ù„Ø¯ÙŠÙƒ Ù…ÙŠØ²Ø§Ù†ÙŠØ© Ù…Ø­Ø¯ÙˆØ¯Ø© ÙˆÙ„Ø§ ØªÙˆØ¬Ø¯ Ù„Ø¯ÙŠÙƒ ÙÙƒØ±Ø© Ù…Ø´Ø±ÙˆØ¹ Ù…Ø­Ø¯Ø¯Ø© Ø­ØªÙ‰ Ø§Ù„Ø¢Ù†. Ø£Ù…Ø§Ù…Ùƒ Ø®ÙŠØ§Ø±Ø§Ù†:
-Ø£) Ø§Ù„Ø¨Ø­Ø« Ø£ÙˆÙ„Ù‹Ø§ Ø¹Ù† Ø§Ø­ØªÙŠØ§Ø¬Ø§Øª ÙˆÙ…Ø´ÙƒÙ„Ø§Øª Ø§Ù„Ø¹Ù…Ù„Ø§Ø¡.
-Ø¨) Ø§Ø®ØªÙŠØ§Ø± ÙÙƒØ±Ø© Ù…Ù†ØªØ¬ ØªØ¹Ø¬Ø¨Ùƒ Ø«Ù… Ù…Ø­Ø§ÙˆÙ„Ø© Ø¥Ù‚Ù†Ø§Ø¹ Ø§Ù„Ù†Ø§Ø³ Ø¨Ø´Ø±Ø§Ø¦Ù‡Ø§.
-Ø£ÙŠ Ø§Ù„Ø®ÙŠØ§Ø±ÙŠÙ† ØªØ®ØªØ§Ø±ØŸ ÙˆÙ„Ù…Ø§Ø°Ø§ØŸ
+لديك ميزانية محدودة ولا توجد لديك فكرة مشروع محددة حتى الآن. أمامك خياران:
+أ) البحث أولًا عن احتياجات ومشكلات العملاء.
+ب) اختيار فكرة منتج تعجبك ثم محاولة إقناع الناس بشرائها.
+أي الخيارين تختار؟ ولماذا؟
 
 LEARNING GOAL:
-Ø£Ù† ÙŠØ¨Ø¯Ø£ Ø§Ù„Ø·Ø§Ù„Ø¨ Ù…Ù† Ø§Ø­ØªÙŠØ§Ø¬ Ø£Ùˆ Ù…Ø´ÙƒÙ„Ø© Ø­Ù‚ÙŠÙ‚ÙŠØ© Ù„Ø¯Ù‰ Ø§Ù„Ø¹Ù…Ù„Ø§Ø¡/Ø§Ù„Ø³ÙˆÙ‚ØŒ Ù„Ø§ Ù…Ù† Ù…Ù†ØªØ¬ ÙŠØ±ØºØ¨ ÙÙŠ Ø¨ÙŠØ¹Ù‡ Ø£ÙˆÙ„Ù‹Ø§.
+أن يبدأ الطالب من احتياج أو مشكلة حقيقية لدى العملاء/السوق، لا من منتج يرغب في بيعه أولًا.
 
 ADVANCED:
-Ø§Ù„Ø¥Ø¬Ø§Ø¨Ø© ØªÙˆØ¶Ø­ Ø¨ØµÙˆØ±Ø© Ù…Ø¨Ø§Ø´Ø±Ø© Ø£Ù† Ù†Ù‚Ø·Ø© Ø§Ù„Ø¨Ø¯Ø§ÙŠØ© Ù‡ÙŠ Ø§Ù„Ø¨Ø­Ø« Ø¹Ù†:
-- Ø§Ø­ØªÙŠØ§Ø¬
-- Ù…Ø´ÙƒÙ„Ø©
-- Ø³ÙˆÙ‚
-- Ø¬Ù…Ù‡ÙˆØ±
-- Ø¨Ø­Ø«
-- ÙØ¦Ø© Ù…Ø³ØªÙ‡Ø¯ÙØ©
-Ù…Ø¹ ØªÙØ³ÙŠØ± Ù…Ù†Ø·Ù‚ÙŠ ÙŠØ±Ø¨Ø· Ø°Ù„Ùƒ Ø¨Ø§ÙƒØªØ´Ø§Ù ÙØ±ØµØ© Ø­Ù‚ÙŠÙ‚ÙŠØ©.
+الإجابة توضح بصورة مباشرة أن نقطة البداية هي البحث عن:
+- احتياج
+- مشكلة
+- سوق
+- جمهور
+- بحث
+- فئة مستهدفة
+مع تفسير منطقي يربط ذلك باكتشاف فرصة حقيقية.
 
 MEDIUM:
-Ø§Ù„Ø¥Ø¬Ø§Ø¨Ø© ØªØ®ØªØ§Ø± Ø§Ù„Ø§ØªØ¬Ø§Ù‡ Ø§Ù„Ù…Ù‚Ø¨ÙˆÙ„ Ø£Ùˆ ØªØ´ÙŠØ± Ø¥Ù„Ù‰ Ø§Ù„Ø¨Ø­Ø«/Ø§Ù„Ø³ÙˆÙ‚/Ø§Ù„Ø¹Ù…Ù„Ø§Ø¡ØŒ Ù„ÙƒÙ† Ø§Ù„ØªÙØ³ÙŠØ± Ù…Ø­Ø¯ÙˆØ¯ Ø£Ùˆ ØºÙŠØ± Ø¹Ù…ÙŠÙ‚.
+الإجابة تختار الاتجاه المقبول أو تشير إلى البحث/السوق/العملاء، لكن التفسير محدود أو غير عميق.
 
 WEAK:
-Ø§Ù„Ø¥Ø¬Ø§Ø¨Ø© ØªØ¨Ø¯Ø£ Ù…Ù†:
-- Ø§Ù„Ù…Ù†ØªØ¬
-- ÙÙƒØ±Ø© ÙŠØ±ØºØ¨ Ø§Ù„Ø·Ø§Ù„Ø¨ ÙÙŠ ØµÙ†Ø¹Ù‡Ø§
-- ØªØ·Ø¨ÙŠÙ‚
-- Ø§Ù„Ø¨ÙŠØ¹
-Ø¯ÙˆÙ† Ø±Ø¨Ø· Ø°Ù„Ùƒ Ø¨Ù…Ø´ÙƒÙ„Ø© Ø£Ùˆ Ø§Ø­ØªÙŠØ§Ø¬ Ø­Ù‚ÙŠÙ‚ÙŠ.
+الإجابة تبدأ من:
+- المنتج
+- فكرة يرغب الطالب في صنعها
+- تطبيق
+- البيع
+دون ربط ذلك بمشكلة أو احتياج حقيقي.
 
 STUDENT ANSWER:
 ${studentAnswer.trim()}
@@ -104,109 +86,141 @@ FEEDBACK REQUIREMENTS:
 - Do not mention the classification label.
 - Do not determine next_node or score.
 - Output must conform to the JSON schema.`;
+}
 
-// 5. Initialize the official Google Gen AI client
-const ai = new GoogleGenAI({ apiKey });
+export async function evaluateN1(studentAnswer: string): Promise<EvaluationResult> {
+  // 1. Validate that the answer is not empty
+  if (!studentAnswer || !studentAnswer.trim()) {
+    throw new Error("Error: Student answer is required as a command-line argument.");
+  }
 
-// 6. Send the grounded N1 evaluation request with native structured output
-let responseText: string | undefined;
-try {
-  const response = await ai.models.generateContent({
-    model,
-    contents,
-    config: {
-      systemInstruction,
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          classification: {
-            type: Type.STRING,
-            enum: ["advanced", "medium", "weak"],
-          },
-          feedback: {
-            type: Type.STRING,
+  // 2. Read GROQ_API_KEY from process.env
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey || !apiKey.trim()) {
+    throw new Error("Error: GROQ_API_KEY environment variable is missing.");
+  }
+
+  // 3. Read AI_MODEL from process.env
+  const model = process.env.AI_MODEL || "openai/gpt-oss-120b";
+  if (!model || !model.trim()) {
+    throw new Error("Error: AI_MODEL environment variable is missing.");
+  }
+
+  // 4. Initialize official Groq client
+  const groq = new Groq({ apiKey });
+  const contents = buildContents(studentAnswer);
+
+  // 5. Send request with native strict structured output
+  let responseText: string | undefined | null;
+  try {
+    const chatCompletion = await groq.chat.completions.create({
+      model,
+      messages: [
+        { role: "system", content: systemInstruction },
+        { role: "user", content: contents },
+      ],
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "evaluation_result",
+          strict: true,
+          schema: {
+            type: "object",
+            properties: {
+              classification: {
+                type: "string",
+                enum: ["advanced", "medium", "weak"],
+              },
+              feedback: {
+                type: "string",
+              },
+            },
+            required: ["classification", "feedback"],
+            additionalProperties: false,
           },
         },
-        required: ["classification", "feedback"],
       },
-    },
-  });
+    });
 
-  responseText = response.text;
-} catch (error) {
-  // Handle technical API errors with a clear technical error message and non-zero exit code
-  console.error("Technical API Error:", error instanceof Error ? error.message : error);
-  process.exit(1);
+    responseText = chatCompletion.choices[0]?.message?.content;
+  } catch (error) {
+    throw new Error(`Technical API Error: ${error instanceof Error ? error.message : String(error)}`);
+  }
+
+  // 6. Runtime Validation
+  if (!responseText || !responseText.trim()) {
+    throw new Error("Technical Error: Model response text is empty.");
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(responseText);
+  } catch (parseError) {
+    throw new Error(
+      `Technical Error: Failed to parse model response as JSON. ${parseError instanceof Error ? parseError.message : String(parseError)}`
+    );
+  }
+
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    throw new Error("Technical Error: Model response is not a JSON object.");
+  }
+
+  const keys = Object.keys(parsed);
+  const expectedKeys = ["classification", "feedback"];
+  const hasExactKeys =
+    keys.length === 2 &&
+    keys.includes("classification") &&
+    keys.includes("feedback");
+
+  if (!hasExactKeys) {
+    throw new Error(
+      `Technical Error: Invalid keys in model response. Expected exactly ['classification', 'feedback'], received: [${keys.map((k) => `'${k}'`).join(", ")}].`
+    );
+  }
+
+  const candidate = parsed as Record<string, unknown>;
+
+  const allowedClassifications: Classification[] = ["advanced", "medium", "weak"];
+  if (
+    typeof candidate.classification !== "string" ||
+    !allowedClassifications.includes(candidate.classification as Classification)
+  ) {
+    throw new Error(
+      `Technical Error: Invalid classification value: ${JSON.stringify(candidate.classification)}. Must be one of: advanced, medium, weak.`
+    );
+  }
+
+  if (
+    typeof candidate.feedback !== "string" ||
+    candidate.feedback.trim().length === 0
+  ) {
+    throw new Error("Technical Error: Feedback must be a non-empty string.");
+  }
+
+  return {
+    classification: candidate.classification as Classification,
+    feedback: candidate.feedback.trim(),
+  };
 }
 
-// 7. Runtime Validation
-// 7.1 Ensure text exists
-if (!responseText || !responseText.trim()) {
-  console.error("Technical Error: Model response text is empty.");
-  process.exit(1);
+// CLI entry point
+const isMain =
+  process.argv[1] &&
+  (process.argv[1].replace(/\\/g, "/").endsWith("spike/evaluate-n1.ts") ||
+    process.argv[1].replace(/\\/g, "/").endsWith("spike/evaluate-n1.js"));
+
+if (isMain) {
+  const studentAnswer = process.argv[2];
+  if (!studentAnswer || !studentAnswer.trim()) {
+    console.error("Error: Student answer is required as a command-line argument.");
+    process.exit(1);
+  }
+
+  try {
+    const result = await evaluateN1(studentAnswer);
+    console.log(JSON.stringify(result, null, 2));
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  }
 }
-
-// 7.2 Parse it as JSON
-let parsed: unknown;
-try {
-  parsed = JSON.parse(responseText);
-} catch (parseError) {
-  console.error(
-    "Technical Error: Failed to parse model response as JSON.",
-    parseError instanceof Error ? parseError.message : parseError
-  );
-  process.exit(1);
-}
-
-// 7.3 Validate that the result is an object (non-null, non-array)
-if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-  console.error("Technical Error: Model response is not a JSON object.");
-  process.exit(1);
-}
-
-// 7.4 Validate exact keys (reject unexpected fields)
-const keys = Object.keys(parsed);
-const expectedKeys = ["classification", "feedback"];
-const hasExactKeys =
-  keys.length === 2 &&
-  keys.includes("classification") &&
-  keys.includes("feedback");
-
-if (!hasExactKeys) {
-  console.error(
-    `Technical Error: Invalid keys in model response. Expected exactly ['classification', 'feedback'], received: [${keys.map((k) => `'${k}'`).join(", ")}].`
-  );
-  process.exit(1);
-}
-
-const candidate = parsed as Record<string, unknown>;
-
-// 7.5 Validate classification is exactly one of: advanced, medium, weak
-const allowedClassifications: Classification[] = ["advanced", "medium", "weak"];
-if (
-  typeof candidate.classification !== "string" ||
-  !allowedClassifications.includes(candidate.classification as Classification)
-) {
-  console.error(
-    `Technical Error: Invalid classification value: ${JSON.stringify(candidate.classification)}. Must be one of: advanced, medium, weak.`
-  );
-  process.exit(1);
-}
-
-// 7.6 Validate feedback is a non-empty string
-if (
-  typeof candidate.feedback !== "string" ||
-  candidate.feedback.trim().length === 0
-) {
-  console.error("Technical Error: Feedback must be a non-empty string.");
-  process.exit(1);
-}
-
-const result: EvaluationResult = {
-  classification: candidate.classification as Classification,
-  feedback: candidate.feedback.trim(),
-};
-
-// 8. Output Behavior: Print only the validated JSON result on stdout
-console.log(JSON.stringify(result, null, 2));

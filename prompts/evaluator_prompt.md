@@ -1,6 +1,7 @@
-# Gemini Evaluator Prompt — Draft v0.1
+# AI Evaluator Prompt — Draft v0.2
 
-> هذه مسودة للـAI Spike وليست Prompt مجمدة للتجربة.
+> هذه مسودة للـAI Evaluator Spike وليست Prompt مجمدة للتجربة.
+> المزود المعتمد: Groq (openai/gpt-oss-120b).
 
 ## System / Core Instruction
 

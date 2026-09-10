@@ -2,13 +2,16 @@
 
 ## 1. الهدف
 
-هذا الملف يحدد بالضبط ما نطلبه من Gemini في كل إجابة Free-text.
+هذا الملف يحدد بالضبط ما نطلبه من النموذج الذكي (AI Evaluator) في كل إجابة Free-text.
 
-Gemini ليس Scenario Engine.
+المزود المعتمد حاليًا: Groq
+النموذج المعتمد: `openai/gpt-oss-120b` (تم الانتقال إليه بسبب قيود الحصة المجانية لمزود Gemini).
+
+النموذج ليس Scenario Engine.
 
 ---
 
-## 2. Input to Gemini
+## 2. Input to AI Evaluator
 
 في كل تقييم نرسل فقط الحد الأدنى المطلوب:
 
@@ -30,7 +33,7 @@ Gemini ليس Scenario Engine.
 
 ## 3. Required Output
 
-Gemini يجب أن يعيد Structured Output فقط بالمفهوم التالي:
+النموذج يجب أن يعيد Structured Output فقط بالمفهوم التالي:
 
 ```json
 {
@@ -51,7 +54,7 @@ Gemini يجب أن يعيد Structured Output فقط بالمفهوم التال
 
 ## 4. Explicitly Forbidden Output Responsibilities
 
-Gemini لا يحدد:
+النموذج لا يحدد:
 
 - `next_node`
 - Score نهائي
@@ -101,11 +104,11 @@ Gemini لا يحدد:
 
 ## 7. Evaluation Before Web App
 
-قبل اعتماد Gemini:
+قبل اعتماد النموذج (AI Evaluator):
 
 1. الباحث يصنف مجموعة أمثلة يدويًا.
 2. هذه التصنيفات هي Ground Truth.
-3. نشغل Gemini على نفس الأمثلة.
+3. نشغل النموذج على نفس الأمثلة.
 4. نسجل mismatches.
 5. نعدل Prompt أو Rubric فقط بعد مراجعة الباحث.
 6. لا نغير Ground Truth لكي "ينجح" النموذج.
@@ -132,6 +135,7 @@ Gemini لا يحدد:
 ```text
 Scenario: 1.0
 Prompt: 1.2
-Model: <exact-stable-model-id>
+Provider: Groq
+Model: openai/gpt-oss-120b
 App: 1.0.0
 ```

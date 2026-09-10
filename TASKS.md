@@ -14,6 +14,12 @@
 - [x] T05 — Create minimal Node/Classification TypeScript types
 - [x] T06 — Create Gemini N1 evaluation script
 - [x] T07 — Enforce structured output: classification + feedback
+- [x] T07A — Migrate evaluator provider from Gemini to Groq
+  - Migration due to Gemini technical daily quota limitation (HTTP 429), not evaluation accuracy.
+  - Approved provider: Groq.
+  - Approved model ID: `openai/gpt-oss-120b`.
+  - Enforce native strict structured output with JSON schema.
+  - Retain local validation and exact N1 prompt/rubric.
 - [ ] T08 — Run N1 labelled examples
 - [ ] T09 — Review mismatches with researcher
 - [ ] T10 — Approve N1 evaluator behavior
@@ -80,7 +86,7 @@
 
 - [ ] T41 — Reject empty input
 - [ ] T42 — Prevent double submit
-- [ ] T43 — Handle Gemini technical failure without advancing
+- [ ] T43 — Handle AI evaluator technical failure without advancing
 - [ ] T44 — Validate structured output
 - [ ] T45 — Add reasonable answer-length limit
 - [ ] T46 — Restore active session after refresh
