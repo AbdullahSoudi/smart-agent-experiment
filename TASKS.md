@@ -22,7 +22,7 @@
   - Retain local validation and exact N1 prompt/rubric.
 - [x] T08 — Run N1 labelled examples
 - [x] T09 — Review N1 mismatches and document project-owner decisions
-- [ ] T10 — Approve N1 evaluator behavior
+- [x] T10 — Approve N1 evaluator behavior
 
 **Gate:** لا تبدأ الـWeb App قبل قبول نتيجة N1.
 
