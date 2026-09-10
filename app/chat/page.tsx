@@ -31,7 +31,7 @@ export default function ChatPage() {
 
         {/* Conversational Transcript */}
         <section className="conversation-flow" aria-label="سجل الحوار التعليمي">
-          {/* Advisor Turn: Approved Scenario Prompt */}
+          {/* Advisor Question: Largely unboxed with quiet editorial accent */}
           <article className="turn-section turn-advisor">
             <div className="turn-meta">
               <span className="turn-role turn-role-advisor">المرشد</span>
@@ -41,7 +41,7 @@ export default function ChatPage() {
             </div>
           </article>
 
-          {/* Student Turn: Mock Response */}
+          {/* Student Response: Quiet warm reflective note */}
           <article className="turn-section turn-student">
             <div className="turn-meta">
               <span className="turn-role turn-role-student">إجابتك</span>
@@ -51,18 +51,18 @@ export default function ChatPage() {
             </div>
           </article>
 
-          {/* Advisor Feedback Turn: Mock Pedagogical Observation */}
+          {/* Advisor Feedback: Lightweight coaching observation */}
           <article className="turn-section turn-feedback">
             <div className="turn-meta">
               <span className="turn-role turn-role-feedback">ملاحظة المرشد</span>
             </div>
             <div className="turn-body">
-              <p className="turn-text">{MOCK_ADVISOR_FEEDBACK}</p>
+              <p className="turn-text turn-text-feedback">{MOCK_ADVISOR_FEEDBACK}</p>
             </div>
           </article>
         </section>
 
-        {/* Current Answer Composer */}
+        {/* Current Answer Composer: Integrated into the workspace */}
         <section className="composer-section" aria-label="كتابة الإجابة">
           <form className="composer-form">
             <div className="composer-group">
@@ -72,7 +72,7 @@ export default function ChatPage() {
               <textarea
                 id="student-answer"
                 name="answer"
-                rows={4}
+                rows={5}
                 className="composer-textarea"
                 placeholder="اكتب إجابتك هنا..."
                 dir="rtl"

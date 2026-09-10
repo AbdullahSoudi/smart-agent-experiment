@@ -237,28 +237,53 @@ body {
 
 
 /* ==========================================================================
-   Chat Screen Styles (Academic Entrepreneurial Studio) — T17 Mock
+   Chat Screen Styles (Academic Entrepreneurial Studio) — T17 Refined
    ========================================================================== */
 
 .chat-container {
+  --chat-canvas: #F0ECE3;
+  --chat-surface: #FAF8F4;
+  --chat-border: #DCD5C9;
+  --chat-border-subtle: #E8E2D7;
+  --chat-border-input: #D0C9BD;
+  --chat-border-focus: #1B4D3E;
+  --chat-ink-primary: #1A2026;
+  --chat-ink-secondary: #4A5565;
+  --chat-ink-muted: #6F7B8A;
+  --chat-accent: #1B4D3E;
+  --chat-accent-hover: #153E32;
+  --chat-accent-active: #0E2B23;
+  --chat-student-bg: #EFEBE2;
+  --chat-student-border: #E0DACD;
+  --chat-feedback-bg: #F5F2EB;
+  --chat-feedback-accent: #2E5A44;
+
   min-height: 100vh;
+  background-color: var(--chat-canvas);
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: clamp(2.5rem, 5vh, 4rem) 1.5rem 4rem;
+  padding: clamp(2.5rem, 5vh, 4rem) 1.5rem 5rem;
 }
 
 .chat-workspace {
   width: 100%;
-  max-width: 740px;
+  max-width: 760px;
+  background-color: var(--chat-surface);
+  border: 1px solid var(--chat-border);
+  border-top: 3px solid var(--chat-accent);
+  border-radius: 8px;
+  padding: clamp(2.25rem, 4vw, 3.25rem) clamp(1.75rem, 4vw, 3rem);
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 2.25rem;
 }
+
+/* Session Header */
 
 .chat-header {
   padding-bottom: 1.5rem;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--chat-border-subtle);
 }
 
 .chat-header-meta {
@@ -269,15 +294,15 @@ body {
   display: inline-block;
   font-size: 0.84375rem;
   font-weight: 600;
-  color: var(--color-accent);
-  letter-spacing: 0.01em;
+  color: var(--chat-accent);
+  letter-spacing: 0.02em;
 }
 
 .chat-title {
-  font-size: 1.875rem;
+  font-size: 2rem;
   font-weight: 700;
   line-height: 1.35;
-  color: var(--color-ink-primary);
+  color: var(--chat-ink-primary);
 }
 
 /* Conversational Flow */
@@ -285,16 +310,15 @@ body {
 .conversation-flow {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 2rem;
 }
 
 .turn-section {
-  padding: 1.5rem 1.75rem;
-  border-radius: 6px;
+  position: relative;
 }
 
 .turn-meta {
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.625rem;
 }
 
 .turn-role {
@@ -305,15 +329,15 @@ body {
 }
 
 .turn-role-advisor {
-  color: var(--color-accent);
+  color: var(--chat-accent);
 }
 
 .turn-role-student {
-  color: var(--color-ink-secondary);
+  color: var(--chat-ink-secondary);
 }
 
 .turn-role-feedback {
-  color: #2D6A4F;
+  color: var(--chat-feedback-accent);
 }
 
 .turn-body {
@@ -321,44 +345,52 @@ body {
 }
 
 .turn-text {
-  font-size: 1.03125rem;
-  line-height: 1.8;
-  color: var(--color-ink-primary);
+  font-size: 1.0625rem;
+  line-height: 1.85;
+  color: var(--chat-ink-primary);
 }
 
 .turn-text-prompt {
+  font-size: 1.125rem;
+  line-height: 1.9;
   white-space: pre-line;
 }
 
-/* Advisor Turn: Academic Guidance Unit */
-.turn-advisor {
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-right: 3px solid var(--color-accent);
+.turn-text-feedback {
+  font-size: 1rem;
+  line-height: 1.75;
+  color: var(--chat-ink-secondary);
 }
 
-/* Student Turn: Quiet Neutral Reflective Unit */
+/* Advisor Question: Largely unboxed, anchored by quiet right accent rule */
+.turn-advisor {
+  padding: 0 1.25rem 0 0;
+  border-right: 3px solid var(--chat-accent);
+}
+
+/* Student Turn: Quiet warm reflective note, slight visual indentation */
 .turn-student {
-  background-color: #F3EFE8;
-  border: 1px solid #E2DBD0;
+  background-color: var(--chat-student-bg);
+  border: 1px solid var(--chat-student-border);
+  border-radius: 6px;
+  padding: 1.25rem 1.5rem;
   margin-right: 0.5rem;
 }
 
-/* Advisor Feedback: Pedagogical Observation Unit */
+/* Advisor Feedback: Lightweight coaching marginalia note */
 .turn-feedback {
-  background-color: #FAF8F3;
-  border: 1px solid #EAE4D8;
-  border-right: 3px solid #2D6A4F;
+  background-color: var(--chat-feedback-bg);
+  border-right: 2px solid var(--chat-feedback-accent);
+  padding: 1rem 1.25rem;
+  border-radius: 0 4px 4px 0;
+  margin-right: 0.5rem;
 }
 
-/* Answer Composer */
+/* Integrated Answer Composer */
 
 .composer-section {
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  padding: 1.75rem 1.75rem;
-  margin-top: 0.5rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--chat-border-subtle);
 }
 
 .composer-form {
@@ -374,21 +406,21 @@ body {
 }
 
 .composer-label {
-  font-size: 0.9375rem;
+  font-size: 1rem;
   font-weight: 600;
-  color: var(--color-ink-primary);
+  color: var(--chat-ink-primary);
 }
 
 .composer-textarea {
   width: 100%;
-  min-height: 120px;
-  padding: 0.875rem 1rem;
+  min-height: 140px;
+  padding: 1rem 1.125rem;
   font-family: inherit;
-  font-size: 1rem;
-  line-height: 1.75;
-  color: var(--color-ink-primary);
-  background-color: #FAFAFA;
-  border: 1px solid var(--color-border-input);
+  font-size: 1.0625rem;
+  line-height: 1.8;
+  color: var(--chat-ink-primary);
+  background-color: #FFFFFF;
+  border: 1px solid var(--chat-border-input);
   border-radius: var(--radius-input);
   resize: vertical;
   direction: rtl;
@@ -397,14 +429,14 @@ body {
 }
 
 .composer-textarea::placeholder {
-  color: var(--color-ink-muted);
+  color: var(--chat-ink-muted);
   opacity: 0.85;
 }
 
 .composer-textarea:focus {
   outline: none;
   background-color: #FFFFFF;
-  border-color: var(--color-border-focus);
+  border-color: var(--chat-border-focus);
   box-shadow: 0 0 0 3px rgba(27, 77, 62, 0.14);
 }
 
@@ -423,20 +455,20 @@ body {
   font-size: 1rem;
   font-weight: 600;
   color: #FFFFFF;
-  background-color: var(--color-accent);
+  background-color: var(--chat-accent);
   border: 1px solid transparent;
   border-radius: var(--radius-input);
   cursor: pointer;
-  padding: 0 1.5rem;
+  padding: 0 1.75rem;
   transition: background-color 0.15s ease, transform 0.08s ease;
 }
 
 .composer-submit-btn:hover {
-  background-color: var(--color-accent-hover);
+  background-color: var(--chat-accent-hover);
 }
 
 .composer-submit-btn:active {
-  background-color: var(--color-accent-active);
+  background-color: var(--chat-accent-active);
   transform: translateY(1px);
 }
 
@@ -453,27 +485,39 @@ body {
   }
 
   .chat-workspace {
-    gap: 1.5rem;
+    padding: 1.5rem 1.125rem;
+    gap: 1.75rem;
+    border-radius: 6px;
   }
 
   .chat-title {
-    font-size: 1.5rem;
+    font-size: 1.625rem;
   }
 
-  .turn-section {
-    padding: 1.25rem 1rem;
+  .turn-advisor {
+    padding-right: 0.875rem;
   }
 
   .turn-student {
     margin-right: 0;
+    padding: 1rem 1.125rem;
+  }
+
+  .turn-feedback {
+    margin-right: 0;
+    padding: 0.875rem 1rem;
+  }
+
+  .turn-text-prompt {
+    font-size: 1.0625rem;
   }
 
   .turn-text {
-    font-size: 0.96875rem;
+    font-size: 1rem;
   }
 
   .composer-section {
-    padding: 1.25rem 1rem;
+    padding-top: 1.5rem;
   }
 
   .composer-submit-btn {
