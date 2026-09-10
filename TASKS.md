@@ -30,7 +30,7 @@
 
 - [x] T11 — Scaffold Next.js + TypeScript
 - [x] T12 — Add `.env.local` from `.env.example`
-- [ ] T13 — Implement scenario data
+- [x] T13 — Implement scenario data
 - [ ] T14 — Implement deterministic `getNextNode()`
 - [ ] T15 — Add lightweight transition tests
 
