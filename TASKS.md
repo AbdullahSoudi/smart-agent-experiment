@@ -11,7 +11,7 @@
 
 ## Phase 1 — Highest-Risk AI Spike
 
-- [ ] T05 — Create minimal Node/Classification TypeScript types
+- [x] T05 — Create minimal Node/Classification TypeScript types
 - [ ] T06 — Create Gemini N1 evaluation script
 - [ ] T07 — Enforce structured output: classification + feedback
 - [ ] T08 — Run N1 labelled examples
