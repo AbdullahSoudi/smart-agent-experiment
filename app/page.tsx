@@ -1,9 +1,11 @@
 export default function HomePage() {
   return (
     <main className="start-container">
-      <div className="start-card">
+      <article className="start-card">
         <header className="start-header">
-          <span className="context-badge">دراسة بحثية تجريبية</span>
+          <div className="context-meta">
+            <span className="context-label">دراسة بحثية تجريبية</span>
+          </div>
           <h1 className="start-title">ابدأ التجربة</h1>
           <p className="start-description">
             أدخل كود المشارك المخصص لك للمتابعة إلى سيناريو استكشاف الفرص الرقمية وتطوير الفكرة الريادية.
@@ -37,10 +39,10 @@ export default function HomePage() {
 
         <footer className="start-footer">
           <p className="privacy-note">
-            هذه التجربة مخصصة للأغراض البحثية الأكاديمية. لا يتم جمع أو مشاركة أي بيانات شخصية.
+            لا يُطلب منك إدخال اسمك أو بريدك الإلكتروني. استخدم فقط كود الطالب المخصص للدراسة.
           </p>
         </footer>
-      </div>
+      </article>
     </main>
   );
 }
