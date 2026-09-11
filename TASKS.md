@@ -60,7 +60,7 @@
 
 - [x] T24 — Connect N1 end-to-end
 - [x] T25 — Verify N1 DB record
-- [ ] T26 — Test N1 advanced path
+- [x] T26 — Test N1 advanced path
 - [ ] T27 — Test N1 medium path
 - [ ] T28 — Test N1 weak path
 
