@@ -59,7 +59,7 @@
 ## Phase 5 — First Vertical Slice
 
 - [x] T24 — Connect N1 end-to-end
-- [ ] T25 — Verify N1 DB record
+- [x] T25 — Verify N1 DB record
 - [ ] T26 — Test N1 advanced path
 - [ ] T27 — Test N1 medium path
 - [ ] T28 — Test N1 weak path
