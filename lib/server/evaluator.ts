@@ -22,7 +22,7 @@ export interface EvaluationResult {
   feedback: string;
 }
 
-export type EvaluatedNodeId = "N1" | "N2" | "N3" | "N4" | "N4_REV" | "N5";
+export type EvaluatedNodeId = "N1" | "N2" | "N3" | "N4" | "N4_REV" | "N5" | "N1_H";
 
 const SYSTEM_INSTRUCTION = `أنت وكيل تعليمي ذكي يساعد طالبًا جامعيًا على التدريب على اكتشاف الفرص الرقمية.
 
@@ -272,6 +272,39 @@ FEEDBACK REQUIREMENTS:
 - Output must conform to the JSON schema.`;
 }
 
+function buildN1HContents(studentAnswer: string): string {
+  return `CURRENT NODE:
+N1_H
+
+NODE QUESTION / CONTEXT:
+تخيل أنك لاحظت أن كثيرًا من طلاب الجامعة يجدون صعوبة في العثور على مصادر تعليمية موثوقة لمقرراتهم.
+
+هل يمكن أن تمثل هذه المشكلة نقطة بداية لاكتشاف فرصة رقمية؟ ولماذا؟
+
+LEARNING GOAL:
+التعرف على أن المشكلة أو الاحتياج الحقيقي لدى فئة محددة هو نقطة البداية لاكتشاف الفرصة الرقمية.
+
+ADVANCED:
+يتعرف بوضوح على أن وجود مشكلة حقيقية لدى فئة محددة يمكن أن يمثل نقطة بداية لفرصة رقمية، ويشرح السبب.
+
+MEDIUM:
+يوافق بصورة صحيحة ويقدم تفسيرًا بسيطًا.
+
+WEAK:
+لا يربط المشكلة باكتشاف فرصة أو يعود مرة أخرى للبدء بمنتج دون فهم المشكلة.
+
+STUDENT ANSWER:
+${studentAnswer.trim()}
+
+FEEDBACK REQUIREMENTS:
+- Arabic.
+- 1 to 3 short sentences.
+- Supportive and specific.
+- Do not mention the classification label.
+- Do not determine next_node or score.
+- Output must conform to the JSON schema.`;
+}
+
 async function callGroqEvaluator(contents: string): Promise<EvaluationResult> {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey || !apiKey.trim()) {
@@ -407,6 +440,8 @@ export async function evaluateNodeAnswer({
     contents = buildN4RevContents(trimmed);
   } else if (nodeId === "N5") {
     contents = buildN5Contents(trimmed);
+  } else if (nodeId === "N1_H") {
+    contents = buildN1HContents(trimmed);
   } else {
     throw new Error(`Unsupported node for evaluation: ${nodeId}`);
   }
@@ -455,4 +490,11 @@ export async function evaluateN4Rev(studentAnswer: string): Promise<EvaluationRe
  */
 export async function evaluateN5(studentAnswer: string): Promise<EvaluationResult> {
   return evaluateNodeAnswer({ nodeId: "N5", answer: studentAnswer });
+}
+
+/**
+ * Evaluates a student's answer for node N1_H using the approved Groq model and strict JSON Schema.
+ */
+export async function evaluateN1H(studentAnswer: string): Promise<EvaluationResult> {
+  return evaluateNodeAnswer({ nodeId: "N1_H", answer: studentAnswer });
 }
