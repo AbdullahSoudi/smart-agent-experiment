@@ -75,7 +75,7 @@
 ## Phase 7 — Hint / Rescue
 
 - [x] T34 — Implement N1_H
-- [ ] T35 — Implement N1_F rescue
+- [x] T35 — Implement N1_F rescue
 - [ ] T36 — Implement N2_H
 - [ ] T37 — Implement N3_H
 - [ ] T38 — Implement N4_H

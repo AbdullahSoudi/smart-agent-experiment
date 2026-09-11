@@ -4,27 +4,24 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SCENARIO_NODES, type NodeId } from "@/lib/scenario";
 
-interface CompletedTurn {
+interface TurnHistoryItem {
   nodeId: NodeId;
   prompt: string;
   studentAnswer: string;
-  feedback: string;
+  feedback: string | null;
 }
 
 export default function ChatPage() {
   const router = useRouter();
-
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [currentNodeId, setCurrentNodeId] = useState<NodeId>("N1");
+  const [completedTurns, setCompletedTurns] = useState<TurnHistoryItem[]>([]);
   const [studentAnswer, setStudentAnswer] = useState("");
+  const [selectedRescueChoice, setSelectedRescueChoice] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Turn state
-  const [completedTurns, setCompletedTurns] = useState<CompletedTurn[]>([]);
-  const [currentNodeId, setCurrentNodeId] = useState<NodeId>("N1");
-
   useEffect(() => {
-    // Check client session
     const storedSessionId = sessionStorage.getItem("experiment_session_id");
     if (!storedSessionId) {
       router.replace("/");
@@ -113,7 +110,7 @@ export default function ChatPage() {
           nodeId: currentNodeId,
           prompt: activePrompt,
           studentAnswer: trimmed,
-          feedback: data.feedback,
+          feedback: data.feedback ?? null,
         },
       ]);
       setCurrentNodeId(data.nextNode);
@@ -142,6 +139,61 @@ export default function ChatPage() {
         }
       }
 
+      setIsSubmitting(false);
+    } catch {
+      setErrorMessage("تعذر إرسال الإجابة الآن. حاول مرة أخرى.");
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleRescueSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!sessionId) {
+      router.replace("/");
+      return;
+    }
+
+    if (!selectedRescueChoice) {
+      setErrorMessage("يرجى تحديد خيار للمتابعة.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setErrorMessage(null);
+
+    try {
+      const res = await fetch("/api/n1-f/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          sessionId,
+          choice: selectedRescueChoice,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setErrorMessage(data.error || "تعذر إرسال الإجابة الآن. حاول مرة أخرى.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Success: advance turn
+      setCompletedTurns((prev) => [
+        ...prev,
+        {
+          nodeId: currentNodeId,
+          prompt: activePrompt,
+          studentAnswer: selectedRescueChoice,
+          feedback: data.feedback ?? null,
+        },
+      ]);
+      setCurrentNodeId(data.nextNode);
+      setSelectedRescueChoice(null);
+      setStudentAnswer("");
       setIsSubmitting(false);
     } catch {
       setErrorMessage("تعذر إرسال الإجابة الآن. حاول مرة أخرى.");
@@ -191,13 +243,15 @@ export default function ChatPage() {
                 </div>
               </article>
 
-              {/* Mentor Coaching Marginalia */}
-              <article className="turn-block mentor-coaching-zone">
-                <div className="coaching-note-surface">
-                  <span className="role-tag role-tag-coaching">ملاحظة المرشد</span>
-                  <p className="coaching-text">{turn.feedback}</p>
-                </div>
-              </article>
+              {/* Mentor Coaching Marginalia (rendered only if feedback exists) */}
+              {turn.feedback && (
+                <article className="turn-block mentor-coaching-zone">
+                  <div className="coaching-note-surface">
+                    <span className="role-tag role-tag-coaching">ملاحظة المرشد</span>
+                    <p className="coaching-text">{turn.feedback}</p>
+                  </div>
+                </article>
+              )}
             </div>
           ))}
 
@@ -222,47 +276,127 @@ export default function ChatPage() {
             </div>
           )}
 
-          <form className="composer-form" onSubmit={handleSubmit}>
-            <div className="composer-header">
-              <label htmlFor="student-answer" className="composer-label">
-                اكتب إجابتك
-              </label>
-              <span className="composer-sublabel">
-                {canSubmit ? "صياغة تفسيرية وتأملية" : "تم تسجيل إجابة المحطة"}
-              </span>
-            </div>
+          {currentNodeId === "N1_F" ? (
+            <form className="composer-form" onSubmit={handleRescueSubmit}>
+              <div className="composer-header">
+                <span className="composer-label">اختر الإجابة المناسبة</span>
+                <span className="composer-sublabel">اختيار توجيهي من متعدد</span>
+              </div>
 
-            <textarea
-              id="student-answer"
-              name="answer"
-              rows={5}
-              className="composer-textarea"
-              placeholder={
-                canSubmit
-                  ? "اكتب إجابتك هنا..."
-                  : "تم تسجيل إجابة المحطة بنجاح للمتابعة في مراحل لاحقة."
-              }
-              dir="rtl"
-              value={studentAnswer}
-              onChange={(e) => setStudentAnswer(e.target.value)}
-              disabled={isSubmitting || !canSubmit}
-            />
-
-            <div className="composer-footer">
-              <button
-                type="submit"
-                className="btn-primary composer-btn"
-                disabled={isSubmitting || !canSubmit || !studentAnswer.trim()}
-                aria-busy={isSubmitting}
+              <div
+                className="choice-group"
+                role="radiogroup"
+                aria-label="خيارات مسار الإنقاذ"
+                style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
               >
-                {isSubmitting
-                  ? "جاري المعالجة..."
-                  : !canSubmit
-                  ? "تم تسجيل الإجابة"
-                  : "إرسال الإجابة"}
-              </button>
-            </div>
-          </form>
+                {"choices" in activeNode && Array.isArray(activeNode.choices)
+                  ? activeNode.choices.map((choiceText: string, idx: number) => {
+                      const isSelected = selectedRescueChoice === choiceText;
+                      return (
+                        <label
+                          key={idx}
+                          className={`choice-option-card ${isSelected ? "choice-option-selected" : ""}`}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.875rem",
+                            padding: "1rem 1.25rem",
+                            borderRadius: "var(--radius-md, 8px)",
+                            border: isSelected
+                              ? "2px solid var(--accent-primary, #0f766e)"
+                              : "1px solid var(--border-strong, #cbd5e1)",
+                            backgroundColor: isSelected
+                              ? "var(--surface-subtle, #f0fdfa)"
+                              : "#ffffff",
+                            cursor: isSubmitting ? "not-allowed" : "pointer",
+                            transition: "all 0.2s ease",
+                          }}
+                        >
+                          <input
+                            type="radio"
+                            name="rescue-choice"
+                            value={choiceText}
+                            checked={isSelected}
+                            onChange={() => {
+                              if (!isSubmitting) setSelectedRescueChoice(choiceText);
+                            }}
+                            disabled={isSubmitting}
+                            style={{
+                              width: "1.125rem",
+                              height: "1.125rem",
+                              accentColor: "var(--accent-primary, #0f766e)",
+                              cursor: isSubmitting ? "not-allowed" : "pointer",
+                            }}
+                          />
+                          <span
+                            style={{
+                              fontSize: "1rem",
+                              lineHeight: "1.6",
+                              color: "var(--text-primary, #1e293b)",
+                            }}
+                          >
+                            {choiceText}
+                          </span>
+                        </label>
+                      );
+                    })
+                  : null}
+              </div>
+
+              <div className="composer-footer">
+                <button
+                  type="submit"
+                  className="btn-primary composer-btn"
+                  disabled={isSubmitting || !selectedRescueChoice}
+                  aria-busy={isSubmitting}
+                >
+                  {isSubmitting ? "جاري المعالجة..." : "تأكيد الاختيار ومتابعة"}
+                </button>
+              </div>
+            </form>
+          ) : (
+            <form className="composer-form" onSubmit={handleSubmit}>
+              <div className="composer-header">
+                <label htmlFor="student-answer" className="composer-label">
+                  اكتب إجابتك
+                </label>
+                <span className="composer-sublabel">
+                  {canSubmit ? "صياغة تفسيرية وتأملية" : "تم تسجيل إجابة المحطة"}
+                </span>
+              </div>
+
+              <textarea
+                id="student-answer"
+                name="answer"
+                rows={5}
+                className="composer-textarea"
+                placeholder={
+                  canSubmit
+                    ? "اكتب إجابتك هنا..."
+                    : "تم تسجيل إجابة المحطة بنجاح للمتابعة في مراحل لاحقة."
+                }
+                dir="rtl"
+                value={studentAnswer}
+                onChange={(e) => setStudentAnswer(e.target.value)}
+                disabled={isSubmitting || !canSubmit}
+              />
+
+              <div className="composer-footer">
+                <button
+                  type="submit"
+                  className="btn-primary composer-btn"
+                  disabled={isSubmitting || !canSubmit || !studentAnswer.trim()}
+                  aria-busy={isSubmitting}
+                >
+                  {isSubmitting
+                    ? "جاري المعالجة..."
+                    : !canSubmit
+                    ? "تم تسجيل الإجابة"
+                    : "إرسال الإجابة"}
+                </button>
+              </div>
+            </form>
+          )}
         </section>
       </div>
     </main>
