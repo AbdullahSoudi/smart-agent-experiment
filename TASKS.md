@@ -62,7 +62,7 @@
 - [x] T25 — Verify N1 DB record
 - [x] T26 — Test N1 advanced path
 - [x] T27 — Test N1 medium path
-- [ ] T28 — Test N1 weak path
+- [x] T28 — Test N1 weak path
 
 ## Phase 6 — Main Scenario
 
