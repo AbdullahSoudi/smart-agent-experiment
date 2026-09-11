@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SCENARIO_NODES, type NodeId } from "@/lib/scenario";
 
-interface TurnHistory {
+interface CompletedTurn {
+  nodeId: NodeId;
   prompt: string;
   studentAnswer: string;
   feedback: string;
@@ -19,7 +20,7 @@ export default function ChatPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Turn state
-  const [turnHistory, setTurnHistory] = useState<TurnHistory | null>(null);
+  const [completedTurns, setCompletedTurns] = useState<CompletedTurn[]>([]);
   const [currentNodeId, setCurrentNodeId] = useState<NodeId>("N1");
 
   useEffect(() => {
@@ -32,9 +33,6 @@ export default function ChatPage() {
     setSessionId(storedSessionId);
   }, [router]);
 
-  const n1Node = SCENARIO_NODES.N1;
-  const n1Prompt = "prompt" in n1Node ? n1Node.prompt : "";
-
   const activeNode = SCENARIO_NODES[currentNodeId];
   const activePrompt =
     "prompt" in activeNode
@@ -43,10 +41,17 @@ export default function ChatPage() {
       ? activeNode.message
       : "";
 
+  // Implemented interactive input nodes in current development slice
+  const canSubmit = currentNodeId === "N1" || currentNodeId === "N2";
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!sessionId) {
       router.replace("/");
+      return;
+    }
+
+    if (!canSubmit) {
       return;
     }
 
@@ -59,8 +64,10 @@ export default function ChatPage() {
     setIsSubmitting(true);
     setErrorMessage(null);
 
+    const endpoint = currentNodeId === "N1" ? "/api/n1/submit" : "/api/n2/submit";
+
     try {
-      const res = await fetch("/api/n1/submit", {
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -80,11 +87,15 @@ export default function ChatPage() {
       }
 
       // Success: advance turn
-      setTurnHistory({
-        prompt: n1Prompt,
-        studentAnswer: trimmed,
-        feedback: data.feedback,
-      });
+      setCompletedTurns((prev) => [
+        ...prev,
+        {
+          nodeId: currentNodeId,
+          prompt: activePrompt,
+          studentAnswer: trimmed,
+          feedback: data.feedback,
+        },
+      ]);
       setCurrentNodeId(data.nextNode);
       setStudentAnswer("");
       setIsSubmitting(false);
@@ -94,7 +105,7 @@ export default function ChatPage() {
     }
   };
 
-  const isCompletedTurn = turnHistory !== null;
+  const isCompletedAnyTurn = completedTurns.length > 0;
 
   return (
     <main className="viewport-canvas">
@@ -105,7 +116,7 @@ export default function ChatPage() {
             <span className="masthead-badge">جلسة الإرشاد</span>
             <span className="masthead-divider" aria-hidden="true">·</span>
             <span className="masthead-context">
-              {!isCompletedTurn ? "المحطة 01: نقطة البداية" : `المحطة التالية: ${activeNode.title}`}
+              {!isCompletedAnyTurn ? "المحطة 01: نقطة البداية" : `المحطة التالية: ${activeNode.title}`}
             </span>
           </div>
           <h1 className="workspace-title">اكتشاف الفرص الرقمية</h1>
@@ -113,22 +124,18 @@ export default function ChatPage() {
 
         {/* Conversational Transcript Flow */}
         <section className="chat-flow" aria-label="سجل الحوار التعليمي">
-          {!isCompletedTurn ? (
-            /* Initial N1 Prompt (The One Bold Moment) */
-            <article className="turn-block">
-              <div className="prompt-anchor-surface">
-                <span className="role-tag role-tag-anchor">المرشد · التحدي النشط</span>
-                <p className="prompt-text-anchor">{n1Prompt}</p>
-              </div>
-            </article>
-          ) : (
-            /* Completed N1 Turn + Next Prompt Anchor */
-            <>
-              {/* Prior N1 Prompt */}
+          {/* Prior Completed Turns */}
+          {completedTurns.map((turn, index) => (
+            <div key={`${turn.nodeId}-${index}`}>
+              {/* Prior Prompt Anchor */}
               <article className="turn-block">
                 <div className="prompt-anchor-surface">
-                  <span className="role-tag role-tag-anchor">المرشد · نقطة البداية (N1)</span>
-                  <p className="prompt-text-anchor">{turnHistory.prompt}</p>
+                  <span className="role-tag role-tag-anchor">
+                    {turn.nodeId === "N1"
+                      ? "المرشد · نقطة البداية (N1)"
+                      : `المرشد · محطة ${turn.nodeId}`}
+                  </span>
+                  <p className="prompt-text-anchor">{turn.prompt}</p>
                 </div>
               </article>
 
@@ -136,7 +143,7 @@ export default function ChatPage() {
               <article className="turn-block student-reflection-zone">
                 <div className="student-note-surface">
                   <span className="role-tag role-tag-student">إجابتك المسجلة</span>
-                  <p className="student-reflection-text">{turnHistory.studentAnswer}</p>
+                  <p className="student-reflection-text">{turn.studentAnswer}</p>
                 </div>
               </article>
 
@@ -144,21 +151,23 @@ export default function ChatPage() {
               <article className="turn-block mentor-coaching-zone">
                 <div className="coaching-note-surface">
                   <span className="role-tag role-tag-coaching">ملاحظة المرشد</span>
-                  <p className="coaching-text">{turnHistory.feedback}</p>
+                  <p className="coaching-text">{turn.feedback}</p>
                 </div>
               </article>
+            </div>
+          ))}
 
-              {/* Active Next Challenge Anchor */}
-              <article className="turn-block">
-                <div className="prompt-anchor-surface">
-                  <span className="role-tag role-tag-anchor">
-                    المرشد · التحدي النشط ({currentNodeId})
-                  </span>
-                  <p className="prompt-text-anchor">{activePrompt}</p>
-                </div>
-              </article>
-            </>
-          )}
+          {/* Active Challenge Anchor */}
+          <article className="turn-block">
+            <div className="prompt-anchor-surface">
+              <span className="role-tag role-tag-anchor">
+                {!isCompletedAnyTurn
+                  ? "المرشد · التحدي النشط"
+                  : `المرشد · التحدي النشط (${currentNodeId})`}
+              </span>
+              <p className="prompt-text-anchor">{activePrompt}</p>
+            </div>
+          </article>
         </section>
 
         {/* Integrated Response Composer */}
@@ -175,7 +184,7 @@ export default function ChatPage() {
                 اكتب إجابتك
               </label>
               <span className="composer-sublabel">
-                {!isCompletedTurn ? "صياغة تفسيرية وتأملية" : "تم تسجيل إجابة المحطة الأولى"}
+                {canSubmit ? "صياغة تفسيرية وتأملية" : "تم تسجيل إجابة المحطة"}
               </span>
             </div>
 
@@ -185,26 +194,26 @@ export default function ChatPage() {
               rows={5}
               className="composer-textarea"
               placeholder={
-                !isCompletedTurn
+                canSubmit
                   ? "اكتب إجابتك هنا..."
-                  : "تم تسجيل إجابة المحطة الأولى بنجاح للمتابعة في مراحل لاحقة."
+                  : "تم تسجيل إجابة المحطة بنجاح للمتابعة في مراحل لاحقة."
               }
               dir="rtl"
               value={studentAnswer}
               onChange={(e) => setStudentAnswer(e.target.value)}
-              disabled={isSubmitting || isCompletedTurn}
+              disabled={isSubmitting || !canSubmit}
             />
 
             <div className="composer-footer">
               <button
                 type="submit"
                 className="btn-primary composer-btn"
-                disabled={isSubmitting || isCompletedTurn || !studentAnswer.trim()}
+                disabled={isSubmitting || !canSubmit || !studentAnswer.trim()}
                 aria-busy={isSubmitting}
               >
                 {isSubmitting
                   ? "جاري المعالجة..."
-                  : isCompletedTurn
+                  : !canSubmit
                   ? "تم تسجيل الإجابة"
                   : "إرسال الإجابة"}
               </button>

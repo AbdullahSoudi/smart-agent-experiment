@@ -12,7 +12,7 @@ import Groq from "groq-sdk";
 import type { Classification } from "../transitions";
 
 /**
- * Current development baseline version for the approved N1 evaluator prompt.
+ * Current development baseline version for the approved evaluator prompt.
  * Note: Formal experiment freeze occurs in T55.
  */
 export const PROMPT_VERSION = "0.2";
@@ -21,6 +21,8 @@ export interface EvaluationResult {
   classification: Classification;
   feedback: string;
 }
+
+export type EvaluatedNodeId = "N1" | "N2";
 
 const SYSTEM_INSTRUCTION = `أنت وكيل تعليمي ذكي يساعد طالبًا جامعيًا على التدريب على اكتشاف الفرص الرقمية.
 
@@ -92,16 +94,47 @@ FEEDBACK REQUIREMENTS:
 - Output must conform to the JSON schema.`;
 }
 
-/**
- * Evaluates a student's answer for node N1 using the approved Groq model and strict JSON Schema.
- * Throws a technical error on API or parsing failures; never treats technical failures as weak answers.
- */
-export async function evaluateN1(studentAnswer: string): Promise<EvaluationResult> {
-  const trimmed = studentAnswer ? studentAnswer.trim() : "";
-  if (!trimmed) {
-    throw new Error("Validation Error: Student answer cannot be empty.");
-  }
+function buildN2Contents(studentAnswer: string): string {
+  return `CURRENT NODE:
+N2
 
+NODE QUESTION / CONTEXT:
+اكتشفت مشكلة تتعلق بصعوبة وصول بعض طلاب الجامعة إلى مصادر تعليمية مناسبة. لكن ليس كل الطلاب لديهم نفس الاحتياجات.
+
+ما أهم المعلومات التي تحتاج لمعرفتها عن العملاء المستهدفين قبل أن تقرر وجود فرصة حقيقية؟
+
+LEARNING GOAL:
+فهم العملاء والمشكلة بعمق وعدم الاكتفاء بمجرد معرفة وجود المشكلة، بل تحليل البدائل الحالية والحلول القائمة وسلوك الفئة المستهدفة.
+
+ADVANCED:
+يذكر عدة عناصر تحليلية مثل:
+- المنافسين
+- البدائل
+- القدرة الشرائية
+- السلوك
+- حجم الفئة/المشكلة
+- الحلول الحالية
+ويظهر أنه لا يكتفي بمعرفة وجود المشكلة.
+
+MEDIUM:
+يركز على معرفة الاحتياجات أو خصائص العميل، لكن لا يحلل بصورة كافية كيف يحل العميل المشكلة حاليًا أو ما البدائل الموجودة.
+
+WEAK:
+إجابة عامة جدًا أو لا تتناول العميل والمشكلة بصورة تسمح بتقييم وجود فرصة.
+
+STUDENT ANSWER:
+${studentAnswer.trim()}
+
+FEEDBACK REQUIREMENTS:
+- Arabic.
+- 1 to 3 short sentences.
+- Supportive and specific.
+- Do not mention the classification label.
+- Do not determine next_node or score.
+- Output must conform to the JSON schema.`;
+}
+
+async function callGroqEvaluator(contents: string): Promise<EvaluationResult> {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey || !apiKey.trim()) {
     throw new Error("Configuration Error: GROQ_API_KEY environment variable is missing.");
@@ -109,7 +142,6 @@ export async function evaluateN1(studentAnswer: string): Promise<EvaluationResul
 
   const model = process.env.AI_MODEL || "openai/gpt-oss-120b";
   const groq = new Groq({ apiKey });
-  const contents = buildN1Contents(trimmed);
 
   let responseText: string | undefined | null;
   try {
@@ -207,4 +239,46 @@ export async function evaluateN1(studentAnswer: string): Promise<EvaluationResul
     classification: candidate.classification as Classification,
     feedback: candidate.feedback.trim(),
   };
+}
+
+/**
+ * Conceptual node evaluator that accepts nodeId and studentAnswer.
+ */
+export async function evaluateNodeAnswer({
+  nodeId,
+  answer,
+}: {
+  nodeId: EvaluatedNodeId;
+  answer: string;
+}): Promise<EvaluationResult> {
+  const trimmed = answer ? answer.trim() : "";
+  if (!trimmed) {
+    throw new Error("Validation Error: Student answer cannot be empty.");
+  }
+
+  let contents: string;
+  if (nodeId === "N1") {
+    contents = buildN1Contents(trimmed);
+  } else if (nodeId === "N2") {
+    contents = buildN2Contents(trimmed);
+  } else {
+    throw new Error(`Unsupported node for evaluation: ${nodeId}`);
+  }
+
+  return callGroqEvaluator(contents);
+}
+
+/**
+ * Evaluates a student's answer for node N1 using the approved Groq model and strict JSON Schema.
+ * Preserved for direct backwards compatibility.
+ */
+export async function evaluateN1(studentAnswer: string): Promise<EvaluationResult> {
+  return evaluateNodeAnswer({ nodeId: "N1", answer: studentAnswer });
+}
+
+/**
+ * Evaluates a student's answer for node N2 using the approved Groq model and strict JSON Schema.
+ */
+export async function evaluateN2(studentAnswer: string): Promise<EvaluationResult> {
+  return evaluateNodeAnswer({ nodeId: "N2", answer: studentAnswer });
 }

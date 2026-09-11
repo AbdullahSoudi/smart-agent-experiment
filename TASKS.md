@@ -66,7 +66,7 @@
 
 ## Phase 6 — Main Scenario
 
-- [ ] T29 — Implement/evaluate N2
+- [x] T29 — Implement/evaluate N2
 - [ ] T30 — Implement/evaluate N3
 - [ ] T31 — Implement/evaluate N4 (including N4_REV substep)
 - [ ] T32 — Implement/evaluate N5
