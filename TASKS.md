@@ -69,7 +69,7 @@
 - [x] T29 — Implement/evaluate N2
 - [x] T30 — Implement/evaluate N3
 - [x] T31 — Implement/evaluate N4 (including N4_REV substep)
-- [ ] T32 — Implement/evaluate N5
+- [x] T32 — Implement/evaluate N5
 - [ ] T33 — Implement END
 
 ## Phase 7 — Hint / Rescue

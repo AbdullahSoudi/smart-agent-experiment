@@ -22,7 +22,7 @@ export interface EvaluationResult {
   feedback: string;
 }
 
-export type EvaluatedNodeId = "N1" | "N2" | "N3" | "N4" | "N4_REV";
+export type EvaluatedNodeId = "N1" | "N2" | "N3" | "N4" | "N4_REV" | "N5";
 
 const SYSTEM_INSTRUCTION = `أنت وكيل تعليمي ذكي يساعد طالبًا جامعيًا على التدريب على اكتشاف الفرص الرقمية.
 
@@ -234,6 +234,44 @@ FEEDBACK REQUIREMENTS:
 - Output must conform to the JSON schema.`;
 }
 
+function buildN5Contents(studentAnswer: string): string {
+  return `CURRENT NODE:
+N5
+
+NODE QUESTION / CONTEXT:
+أمامك الآن مشروعك المقترح.
+
+ما الأسباب التي تجعلك تختار هذه الفرصة تحديدًا؟ اذكر عاملين على الأقل، منها ما يخص العملاء ومنها ما يخص العائد.
+
+LEARNING GOAL:
+تبرير اختيار الفرصة بالربط بين احتياج حقيقي للعميل (مشكلة/فئة/قيمة) وتحقيق عائد مادي ونموذج دخل مستدام.
+
+ADVANCED:
+يبرر الاختيار من خلال عناصر مثل:
+- مشكلة/احتياج حقيقي
+- فئة مستهدفة واضحة
+- قيمة
+- عائد مادي أو نموذج دخل
+ويظهر ربطًا بين احتياج العميل والقيمة الاقتصادية.
+
+MEDIUM:
+التبرير جيد جزئيًا، لكنه يحتاج توضيح أن الاختيار لا يقوم فقط على إعجاب الطالب بالفكرة بل على حل مشكلة وقابلية التحول إلى قيمة اقتصادية.
+
+WEAK:
+تبرير ضعيف أو ذاتي لا يعتمد على العميل والجدوى الاقتصادية.
+
+STUDENT ANSWER:
+${studentAnswer.trim()}
+
+FEEDBACK REQUIREMENTS:
+- Arabic.
+- 1 to 3 short sentences.
+- Supportive and specific.
+- Do not mention the classification label.
+- Do not determine next_node or score.
+- Output must conform to the JSON schema.`;
+}
+
 async function callGroqEvaluator(contents: string): Promise<EvaluationResult> {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey || !apiKey.trim()) {
@@ -367,6 +405,8 @@ export async function evaluateNodeAnswer({
     contents = buildN4Contents(trimmed);
   } else if (nodeId === "N4_REV") {
     contents = buildN4RevContents(trimmed);
+  } else if (nodeId === "N5") {
+    contents = buildN5Contents(trimmed);
   } else {
     throw new Error(`Unsupported node for evaluation: ${nodeId}`);
   }
@@ -408,4 +448,11 @@ export async function evaluateN4(studentAnswer: string): Promise<EvaluationResul
  */
 export async function evaluateN4Rev(studentAnswer: string): Promise<EvaluationResult> {
   return evaluateNodeAnswer({ nodeId: "N4_REV", answer: studentAnswer });
+}
+
+/**
+ * Evaluates a student's answer for node N5 using the approved Groq model and strict JSON Schema.
+ */
+export async function evaluateN5(studentAnswer: string): Promise<EvaluationResult> {
+  return evaluateNodeAnswer({ nodeId: "N5", answer: studentAnswer });
 }
