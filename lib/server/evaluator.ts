@@ -22,7 +22,7 @@ export interface EvaluationResult {
   feedback: string;
 }
 
-export type EvaluatedNodeId = "N1" | "N2" | "N3" | "N4" | "N4_REV" | "N5" | "N1_H";
+export type EvaluatedNodeId = "N1" | "N2" | "N3" | "N4" | "N4_REV" | "N5" | "N1_H" | "N3_H";
 
 const SYSTEM_INSTRUCTION = `أنت وكيل تعليمي ذكي يساعد طالبًا جامعيًا على التدريب على اكتشاف الفرص الرقمية.
 
@@ -305,6 +305,43 @@ FEEDBACK REQUIREMENTS:
 - Output must conform to the JSON schema.`;
 }
 
+function buildN3HContents(studentAnswer: string): string {
+  return `CURRENT NODE:
+N3_H
+
+NODE QUESTION / CONTEXT:
+فكرتك ممكنة، لكنها ما زالت عامة.
+
+أعد صياغة الفجوة في إجابة قصيرة توضح:
+
+- لمن هذه الفرصة؟
+- ما المشكلة المحددة؟
+- ما القيمة التي يمكن أن يقدمها الحل؟
+
+LEARNING GOAL:
+إعادة صياغة الفجوة الرقمية بتحديد الفئة المستهدفة والمشكلة المحددة والقيمة بوضوح كافٍ للانتقال إلى صياغة الفرصة.
+
+ADVANCED:
+يحدد بوضوح واكتمال: الفئة المستهدفة + المشكلة المحددة + القيمة التي يقدمها الحل، بما يكفي تمامًا للانتقال لصياغة الفرصة.
+
+MEDIUM:
+يحدد العناصر المطلوبة (الفئة والمشكلة والقيمة) بصورة مقبولة وكافية للانتقال لصياغة الفرصة، مع وجود إيجاز أو عمومية جزئية.
+
+WEAK:
+يظل عامًا ولا يحدد الفجوة، أو يغفل العناصر الأساسية (الفئة، المشكلة، القيمة).
+
+STUDENT ANSWER:
+${studentAnswer.trim()}
+
+FEEDBACK REQUIREMENTS:
+- Arabic.
+- 1 to 3 short sentences.
+- Supportive and specific.
+- Do not mention the classification label.
+- Do not determine next_node or score.
+- Output must conform to the JSON schema.`;
+}
+
 async function callGroqEvaluator(contents: string): Promise<EvaluationResult> {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey || !apiKey.trim()) {
@@ -442,6 +479,8 @@ export async function evaluateNodeAnswer({
     contents = buildN5Contents(trimmed);
   } else if (nodeId === "N1_H") {
     contents = buildN1HContents(trimmed);
+  } else if (nodeId === "N3_H") {
+    contents = buildN3HContents(trimmed);
   } else {
     throw new Error(`Unsupported node for evaluation: ${nodeId}`);
   }
@@ -497,4 +536,11 @@ export async function evaluateN5(studentAnswer: string): Promise<EvaluationResul
  */
 export async function evaluateN1H(studentAnswer: string): Promise<EvaluationResult> {
   return evaluateNodeAnswer({ nodeId: "N1_H", answer: studentAnswer });
+}
+
+/**
+ * Evaluates student answer for node N3_H using the approved Groq model and strict JSON Schema.
+ */
+export async function evaluateN3H(studentAnswer: string): Promise<EvaluationResult> {
+  return evaluateNodeAnswer({ nodeId: "N3_H", answer: studentAnswer });
 }
