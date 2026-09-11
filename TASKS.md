@@ -68,7 +68,7 @@
 
 - [x] T29 — Implement/evaluate N2
 - [x] T30 — Implement/evaluate N3
-- [ ] T31 — Implement/evaluate N4 (including N4_REV substep)
+- [x] T31 — Implement/evaluate N4 (including N4_REV substep)
 - [ ] T32 — Implement/evaluate N5
 - [ ] T33 — Implement END
 

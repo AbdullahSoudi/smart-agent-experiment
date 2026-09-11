@@ -22,7 +22,7 @@ export interface EvaluationResult {
   feedback: string;
 }
 
-export type EvaluatedNodeId = "N1" | "N2" | "N3";
+export type EvaluatedNodeId = "N1" | "N2" | "N3" | "N4" | "N4_REV";
 
 const SYSTEM_INSTRUCTION = `أنت وكيل تعليمي ذكي يساعد طالبًا جامعيًا على التدريب على اكتشاف الفرص الرقمية.
 
@@ -170,6 +170,70 @@ FEEDBACK REQUIREMENTS:
 - Output must conform to the JSON schema.`;
 }
 
+function buildN4Contents(studentAnswer: string): string {
+  return `CURRENT NODE:
+N4
+
+NODE QUESTION / CONTEXT:
+اقترح فرصة رقمية محددة لحل هذه المشكلة، واشرح في جملة ما القيمة التي سيحصل عليها العميل منها.
+
+LEARNING GOAL:
+صياغة الفرصة الرقمية والقيمة المقدمة للعميل (المستخدم، المشكلة، الحل، القيمة).
+
+ADVANCED:
+يقترح فرصة رقمية محددة لمعالجة المشكلة ويوضح بدقة القيمة التي سيحصل عليها العميل (المستخدم، المشكلة، الحل، القيمة).
+
+MEDIUM:
+يقترح فرصة أو حلاً رقمياً، لكن صياغة القيمة أو عناصر الفكرة (المستخدم، المشكلة، الحل) تحتاج إلى مزيد من التحديد.
+
+WEAK:
+الفكرة عامة جداً أو غير محددة، ولا توضح المستخدم أو المشكلة أو الحل أو القيمة.
+
+STUDENT ANSWER:
+${studentAnswer.trim()}
+
+FEEDBACK REQUIREMENTS:
+- Arabic.
+- 1 to 3 short sentences.
+- Supportive and specific.
+- Do not mention the classification label.
+- Do not determine next_node or score.
+- Output must conform to the JSON schema.`;
+}
+
+function buildN4RevContents(studentAnswer: string): string {
+  return `CURRENT NODE:
+N4_REV
+
+NODE QUESTION / CONTEXT:
+فكرتك تعالج مشكلة الوصول والتنظيم. لكن رائد الأعمال يبحث أيضًا عن الاستدامة المالية والتمكين الاقتصادي.
+
+كيف يمكن لهذه الفرصة أن تولد عائدًا ماديًا لك؟ ولماذا تعتقد أنها تستحق التطوير؟
+
+LEARNING GOAL:
+تحديد آلية توليد العائد المالي والاستدامة الاقتصادية وتبرير جدوى تطوير الفرصة.
+
+ADVANCED:
+يقترح آلية دخل واضحة ومناسبة للفكرة ويبرر جدوى التطوير.
+
+MEDIUM:
+يذكر آلية دخل أو تبريرًا معقولًا لكن بصورة غير مكتملة.
+
+WEAK:
+لا يقدم تصورًا واقعيًا للدخل أو لا يربط العائد بالفرصة.
+
+STUDENT ANSWER:
+${studentAnswer.trim()}
+
+FEEDBACK REQUIREMENTS:
+- Arabic.
+- 1 to 3 short sentences.
+- Supportive and specific.
+- Do not mention the classification label.
+- Do not determine next_node or score.
+- Output must conform to the JSON schema.`;
+}
+
 async function callGroqEvaluator(contents: string): Promise<EvaluationResult> {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey || !apiKey.trim()) {
@@ -299,6 +363,10 @@ export async function evaluateNodeAnswer({
     contents = buildN2Contents(trimmed);
   } else if (nodeId === "N3") {
     contents = buildN3Contents(trimmed);
+  } else if (nodeId === "N4") {
+    contents = buildN4Contents(trimmed);
+  } else if (nodeId === "N4_REV") {
+    contents = buildN4RevContents(trimmed);
   } else {
     throw new Error(`Unsupported node for evaluation: ${nodeId}`);
   }
@@ -326,4 +394,18 @@ export async function evaluateN2(studentAnswer: string): Promise<EvaluationResul
  */
 export async function evaluateN3(studentAnswer: string): Promise<EvaluationResult> {
   return evaluateNodeAnswer({ nodeId: "N3", answer: studentAnswer });
+}
+
+/**
+ * Evaluates a student's answer for node N4 using the approved Groq model and strict JSON Schema.
+ */
+export async function evaluateN4(studentAnswer: string): Promise<EvaluationResult> {
+  return evaluateNodeAnswer({ nodeId: "N4", answer: studentAnswer });
+}
+
+/**
+ * Evaluates a student's answer for node N4_REV using the approved Groq model and strict JSON Schema.
+ */
+export async function evaluateN4Rev(studentAnswer: string): Promise<EvaluationResult> {
+  return evaluateNodeAnswer({ nodeId: "N4_REV", answer: studentAnswer });
 }
