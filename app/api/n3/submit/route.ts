@@ -1,3 +1,4 @@
+import { MAX_STUDENT_ANSWER_LENGTH, ANSWER_TOO_LONG_ERROR } from "@/lib/validation";
 import { NextResponse } from "next/server";
 import { getNextNode } from "@/lib/transitions";
 import { evaluateN3 } from "@/lib/server/evaluator";
@@ -49,6 +50,13 @@ export async function POST(request: Request) {
 
     const trimmedSessionId = sessionId.trim();
     const trimmedAnswer = answer.trim();
+
+    if (trimmedAnswer.length > MAX_STUDENT_ANSWER_LENGTH) {
+      return NextResponse.json(
+        { error: ANSWER_TOO_LONG_ERROR },
+        { status: 400 }
+      );
+    }
 
     // 1. Server-side session verification
     const session = await getSessionById(trimmedSessionId);

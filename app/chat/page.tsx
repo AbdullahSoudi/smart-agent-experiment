@@ -1,5 +1,7 @@
 "use client";
 
+import { MAX_STUDENT_ANSWER_LENGTH, ANSWER_TOO_LONG_ERROR } from "@/lib/validation";
+
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { SCENARIO_NODES, type NodeId } from "@/lib/scenario";
@@ -141,6 +143,11 @@ export default function ChatPage() {
     const trimmed = studentAnswer.trim();
     if (!trimmed) {
       setErrorMessage("يرجى كتابة إجابة للمتابعة.");
+      return;
+    }
+
+    if (trimmed.length > MAX_STUDENT_ANSWER_LENGTH) {
+      setErrorMessage(ANSWER_TOO_LONG_ERROR);
       return;
     }
 
@@ -523,6 +530,7 @@ export default function ChatPage() {
                 value={studentAnswer}
                 onChange={(e) => setStudentAnswer(e.target.value)}
                 disabled={isSubmitting || !canSubmit}
+                maxLength={MAX_STUDENT_ANSWER_LENGTH}
               />
 
               <div className="composer-footer">

@@ -88,7 +88,7 @@
 - [x] T42 — Prevent double submit
 - [x] T43 — Handle AI evaluator technical failure without advancing
 - [x] T44 — Validate structured output
-- [ ] T45 — Add reasonable answer-length limit
+- [x] T45 — Add reasonable answer-length limit
 - [ ] T46 — Restore active session after refresh
 
 ## Phase 9 — Research Verification
