@@ -7,8 +7,9 @@ import { SCENARIO_NODES, type NodeId } from "@/lib/scenario";
 interface TurnHistoryItem {
   nodeId: NodeId;
   prompt: string;
-  studentAnswer: string;
-  feedback: string | null;
+  studentAnswer?: string | null;
+  feedback?: string | null;
+  isScaffolding?: boolean;
 }
 
 export default function ChatPage() {
@@ -20,6 +21,7 @@ export default function ChatPage() {
   const [selectedRescueChoice, setSelectedRescueChoice] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [retryTrigger, setRetryTrigger] = useState(0);
 
   useEffect(() => {
     const storedSessionId = sessionStorage.getItem("experiment_session_id");
@@ -37,6 +39,63 @@ export default function ChatPage() {
       : "message" in activeNode
       ? activeNode.message
       : "";
+
+  // Auto-continuation for non-interactive scaffolding nodes (such as N2_H)
+  useEffect(() => {
+    if (currentNodeId === "N2_H" && sessionId) {
+      let isMounted = true;
+      setIsSubmitting(true);
+      setErrorMessage(null);
+
+      const performContinue = async () => {
+        try {
+          const res = await fetch("/api/n2-h/continue", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sessionId }),
+          });
+
+          const data = await res.json();
+          if (!isMounted) return;
+
+          if (!res.ok) {
+            setErrorMessage(
+              data.error || "تعذر المتابعة التلقائية حاليًا. يرجى إعادة المحاولة."
+            );
+            setIsSubmitting(false);
+            return;
+          }
+
+          // Success: advance turn and persist scaffolding in visible transcript
+          setCompletedTurns((prev) => [
+            ...prev,
+            {
+              nodeId: "N2_H",
+              prompt: activePrompt,
+              studentAnswer: null,
+              feedback: null,
+              isScaffolding: true,
+            },
+          ]);
+          setCurrentNodeId(data.nextNode);
+          setIsSubmitting(false);
+        } catch {
+          if (isMounted) {
+            setErrorMessage(
+              "تعذر الاتصال بالخادم لمتابعة التوجيه. يرجى إعادة المحاولة."
+            );
+            setIsSubmitting(false);
+          }
+        }
+      };
+
+      performContinue();
+
+      return () => {
+        isMounted = false;
+      };
+    }
+  }, [currentNodeId, sessionId, retryTrigger, activePrompt]);
 
   // Implemented interactive input nodes in current development slice
   const canSubmit =
@@ -221,39 +280,61 @@ export default function ChatPage() {
         {/* Conversational Transcript Flow */}
         <section className="chat-flow" aria-label="سجل الحوار التعليمي">
           {/* Prior Completed Turns */}
-          {completedTurns.map((turn, index) => (
-            <div key={`${turn.nodeId}-${index}`}>
-              {/* Prior Prompt Anchor */}
-              <article className="turn-block">
-                <div className="prompt-anchor-surface">
-                  <span className="role-tag role-tag-anchor">
-                    {turn.nodeId === "N1"
-                      ? "المرشد · نقطة البداية (N1)"
-                      : `المرشد · محطة ${turn.nodeId}`}
-                  </span>
-                  <p className="prompt-text-anchor">{turn.prompt}</p>
-                </div>
-              </article>
-
-              {/* Student Reflection Note */}
-              <article className="turn-block student-reflection-zone">
-                <div className="student-note-surface">
-                  <span className="role-tag role-tag-student">إجابتك المسجلة</span>
-                  <p className="student-reflection-text">{turn.studentAnswer}</p>
-                </div>
-              </article>
-
-              {/* Mentor Coaching Marginalia (rendered only if feedback exists) */}
-              {turn.feedback && (
-                <article className="turn-block mentor-coaching-zone">
-                  <div className="coaching-note-surface">
-                    <span className="role-tag role-tag-coaching">ملاحظة المرشد</span>
-                    <p className="coaching-text">{turn.feedback}</p>
+          {completedTurns.map((turn, index) => {
+            if (turn.isScaffolding || turn.nodeId === "N2_H") {
+              return (
+                <article key={`${turn.nodeId}-${index}`} className="turn-block">
+                  <div
+                    className="prompt-anchor-surface"
+                    style={{
+                      borderRight: "3px solid var(--accent-primary, #0f766e)",
+                    }}
+                  >
+                    <span className="role-tag role-tag-anchor">
+                      المرشد · توجيه داعم ({SCENARIO_NODES[turn.nodeId].title || turn.nodeId})
+                    </span>
+                    <p className="prompt-text-anchor">{turn.prompt}</p>
                   </div>
                 </article>
-              )}
-            </div>
-          ))}
+              );
+            }
+
+            return (
+              <div key={`${turn.nodeId}-${index}`}>
+                {/* Prior Prompt Anchor */}
+                <article className="turn-block">
+                  <div className="prompt-anchor-surface">
+                    <span className="role-tag role-tag-anchor">
+                      {turn.nodeId === "N1"
+                        ? "المرشد · نقطة البداية (N1)"
+                        : `المرشد · محطة ${turn.nodeId}`}
+                    </span>
+                    <p className="prompt-text-anchor">{turn.prompt}</p>
+                  </div>
+                </article>
+
+                {/* Student Reflection Note */}
+                {turn.studentAnswer && (
+                  <article className="turn-block student-reflection-zone">
+                    <div className="student-note-surface">
+                      <span className="role-tag role-tag-student">إجابتك المسجلة</span>
+                      <p className="student-reflection-text">{turn.studentAnswer}</p>
+                    </div>
+                  </article>
+                )}
+
+                {/* Mentor Coaching Marginalia (rendered only if feedback exists) */}
+                {turn.feedback && (
+                  <article className="turn-block mentor-coaching-zone">
+                    <div className="coaching-note-surface">
+                      <span className="role-tag role-tag-coaching">ملاحظة المرشد</span>
+                      <p className="coaching-text">{turn.feedback}</p>
+                    </div>
+                  </article>
+                )}
+              </div>
+            );
+          })}
 
           {/* Active Challenge Anchor */}
           <article className="turn-block">
@@ -276,7 +357,28 @@ export default function ChatPage() {
             </div>
           )}
 
-          {currentNodeId === "N1_F" ? (
+          {currentNodeId === "N2_H" ? (
+            <div
+              className="scaffolding-status"
+              style={{ textAlign: "center", padding: "1.5rem 0" }}
+            >
+              {errorMessage ? (
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem" }}>
+                  <button
+                    type="button"
+                    className="btn-primary composer-btn"
+                    onClick={() => setRetryTrigger((c) => c + 1)}
+                  >
+                    إعادة المحاولة للمتابعة
+                  </button>
+                </div>
+              ) : (
+                <p style={{ color: "var(--text-muted)", fontSize: "0.95rem" }}>
+                  جاري المتابعة تلقائيًا إلى المحطة التالية...
+                </p>
+              )}
+            </div>
+          ) : currentNodeId === "N1_F" ? (
             <form className="composer-form" onSubmit={handleRescueSubmit}>
               <div className="composer-header">
                 <span className="composer-label">اختر الإجابة المناسبة</span>
