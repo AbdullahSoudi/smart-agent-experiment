@@ -22,7 +22,7 @@ export interface EvaluationResult {
   feedback: string;
 }
 
-export type EvaluatedNodeId = "N1" | "N2" | "N3" | "N4" | "N4_REV" | "N5" | "N1_H" | "N3_H";
+export type EvaluatedNodeId = "N1" | "N2" | "N3" | "N4" | "N4_REV" | "N5" | "N1_H" | "N3_H" | "N5_H";
 
 const SYSTEM_INSTRUCTION = `أنت وكيل تعليمي ذكي يساعد طالبًا جامعيًا على التدريب على اكتشاف الفرص الرقمية.
 
@@ -342,6 +342,41 @@ FEEDBACK REQUIREMENTS:
 - Output must conform to the JSON schema.`;
 }
 
+function buildN5HContents(studentAnswer: string): string {
+  return `CURRENT NODE:
+N5_H
+
+NODE QUESTION / CONTEXT:
+تبريرك جيد، لكن فكر مرة أخرى:
+
+هل اخترت الفرصة لأنها تعجبك فقط، أم لأنها تحل مشكلة حقيقية ويمكن أن تتحول إلى قيمة اقتصادية؟
+
+وضّح السبب.
+
+LEARNING GOAL:
+تحسين تبرير القرار بالربط بين حل مشكلة حقيقية للعميل وإمكانية التحول إلى قيمة اقتصادية والجدوى.
+
+ADVANCED:
+يربط الاختيار بوضوح بحل مشكلة حقيقية للعميل/السوق وبإمكانية التحول إلى قيمة اقتصادية واستدامة مالية.
+
+MEDIUM:
+يربط الاختيار بالمشكلة/العميل وإمكانية القيمة الاقتصادية بصورة مقبولة وكافية حتى وإن كانت موجزة.
+
+WEAK:
+يظل التبرير ذاتيًا أو غير مرتبط بالمشكلة والجدوى الاقتصادية.
+
+STUDENT ANSWER:
+${studentAnswer.trim()}
+
+FEEDBACK REQUIREMENTS:
+- Arabic.
+- 1 to 3 short sentences.
+- Supportive and specific.
+- Do not mention the classification label.
+- Do not determine next_node or score.
+- Output must conform to the JSON schema.`;
+}
+
 async function callGroqEvaluator(contents: string): Promise<EvaluationResult> {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey || !apiKey.trim()) {
@@ -481,6 +516,8 @@ export async function evaluateNodeAnswer({
     contents = buildN1HContents(trimmed);
   } else if (nodeId === "N3_H") {
     contents = buildN3HContents(trimmed);
+  } else if (nodeId === "N5_H") {
+    contents = buildN5HContents(trimmed);
   } else {
     throw new Error(`Unsupported node for evaluation: ${nodeId}`);
   }
@@ -543,4 +580,11 @@ export async function evaluateN1H(studentAnswer: string): Promise<EvaluationResu
  */
 export async function evaluateN3H(studentAnswer: string): Promise<EvaluationResult> {
   return evaluateNodeAnswer({ nodeId: "N3_H", answer: studentAnswer });
+}
+
+/**
+ * Evaluates student answer for node N5_H using the approved Groq model and strict JSON Schema.
+ */
+export async function evaluateN5H(studentAnswer: string): Promise<EvaluationResult> {
+  return evaluateNodeAnswer({ nodeId: "N5_H", answer: studentAnswer });
 }

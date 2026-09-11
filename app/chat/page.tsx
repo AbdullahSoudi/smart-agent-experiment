@@ -107,7 +107,8 @@ export default function ChatPage() {
     currentNodeId === "N5" ||
     currentNodeId === "N1_H" ||
     currentNodeId === "N3_H" ||
-    currentNodeId === "N4_H";
+    currentNodeId === "N4_H" ||
+    currentNodeId === "N5_H";
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -146,6 +147,8 @@ export default function ChatPage() {
         ? "/api/n4-h/submit"
         : currentNodeId === "N5"
         ? "/api/n5/submit"
+        : currentNodeId === "N5_H"
+        ? "/api/n5-h/submit"
         : "/api/n1-h/submit";
 
     try {

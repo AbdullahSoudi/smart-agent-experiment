@@ -79,7 +79,7 @@
 - [x] T36 — Implement N2_H
 - [x] T37 — Implement N3_H
 - [x] T38 — Implement N4_H
-- [ ] T39 — Implement N5_H
+- [x] T39 — Implement N5_H
 - [ ] T40 — Test full struggling-student path
 
 ## Phase 8 — Reliability
