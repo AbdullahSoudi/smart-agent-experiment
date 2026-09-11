@@ -115,6 +115,30 @@ export default function ChatPage() {
       ]);
       setCurrentNodeId(data.nextNode);
       setStudentAnswer("");
+
+      // When reaching END, finalize session server-side before navigating to /complete
+      if (data.nextNode === "END") {
+        try {
+          const compRes = await fetch("/api/session/complete", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ sessionId }),
+          });
+
+          if (compRes.ok) {
+            sessionStorage.removeItem("experiment_session_id");
+            router.replace("/complete");
+            return;
+          } else {
+            setErrorMessage("تعذر إنهاء الجلسة حاليًا. حاول مرة أخرى.");
+          }
+        } catch {
+          setErrorMessage("تعذر إنهاء الجلسة حاليًا. حاول مرة أخرى.");
+        }
+      }
+
       setIsSubmitting(false);
     } catch {
       setErrorMessage("تعذر إرسال الإجابة الآن. حاول مرة أخرى.");
