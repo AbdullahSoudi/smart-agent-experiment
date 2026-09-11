@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { SCENARIO_NODES, type NodeId } from "@/lib/scenario";
 
@@ -23,6 +23,11 @@ export default function ChatPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [retryTrigger, setRetryTrigger] = useState(0);
 
+  // In-flight synchronous guards to prevent same-tick and concurrent double-submits
+  const isSubmittingRef = useRef(false);
+  const n2hFiredRef = useRef(false);
+  const completionFiredRef = useRef(false);
+
   useEffect(() => {
     const storedSessionId = sessionStorage.getItem("experiment_session_id");
     if (!storedSessionId) {
@@ -42,8 +47,14 @@ export default function ChatPage() {
 
   // Auto-continuation for non-interactive scaffolding nodes (such as N2_H)
   useEffect(() => {
-    if (currentNodeId === "N2_H" && sessionId) {
+    if (currentNodeId !== "N2_H") {
+      n2hFiredRef.current = false;
+    }
+
+    if (currentNodeId === "N2_H" && sessionId && !n2hFiredRef.current) {
+      n2hFiredRef.current = true;
       let isMounted = true;
+      isSubmittingRef.current = true;
       setIsSubmitting(true);
       setErrorMessage(null);
 
@@ -62,6 +73,8 @@ export default function ChatPage() {
             setErrorMessage(
               data.error || "تعذر المتابعة التلقائية حاليًا. يرجى إعادة المحاولة."
             );
+            n2hFiredRef.current = false;
+            isSubmittingRef.current = false;
             setIsSubmitting(false);
             return;
           }
@@ -78,12 +91,15 @@ export default function ChatPage() {
             },
           ]);
           setCurrentNodeId(data.nextNode);
+          isSubmittingRef.current = false;
           setIsSubmitting(false);
         } catch {
           if (isMounted) {
             setErrorMessage(
               "تعذر الاتصال بالخادم لمتابعة التوجيه. يرجى إعادة المحاولة."
             );
+            n2hFiredRef.current = false;
+            isSubmittingRef.current = false;
             setIsSubmitting(false);
           }
         }
@@ -117,7 +133,8 @@ export default function ChatPage() {
       return;
     }
 
-    if (!canSubmit) {
+    // Synchronous guard against same-tick and in-flight double submissions
+    if (!canSubmit || isSubmitting || isSubmittingRef.current) {
       return;
     }
 
@@ -127,6 +144,7 @@ export default function ChatPage() {
       return;
     }
 
+    isSubmittingRef.current = true;
     setIsSubmitting(true);
     setErrorMessage(null);
 
@@ -167,6 +185,7 @@ export default function ChatPage() {
 
       if (!res.ok) {
         setErrorMessage(data.error || "تعذر إرسال الإجابة الآن. حاول مرة أخرى.");
+        isSubmittingRef.current = false;
         setIsSubmitting(false);
         return;
       }
@@ -185,7 +204,8 @@ export default function ChatPage() {
       setStudentAnswer("");
 
       // When reaching END, finalize session server-side before navigating to /complete
-      if (data.nextNode === "END") {
+      if (data.nextNode === "END" && !completionFiredRef.current) {
+        completionFiredRef.current = true;
         try {
           const compRes = await fetch("/api/session/complete", {
             method: "POST",
@@ -201,15 +221,19 @@ export default function ChatPage() {
             return;
           } else {
             setErrorMessage("تعذر إنهاء الجلسة حاليًا. حاول مرة أخرى.");
+            completionFiredRef.current = false;
           }
         } catch {
           setErrorMessage("تعذر إنهاء الجلسة حاليًا. حاول مرة أخرى.");
+          completionFiredRef.current = false;
         }
       }
 
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
     } catch {
       setErrorMessage("تعذر إرسال الإجابة الآن. حاول مرة أخرى.");
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
   };
@@ -221,11 +245,17 @@ export default function ChatPage() {
       return;
     }
 
+    // Synchronous guard against same-tick and in-flight double submissions
+    if (isSubmitting || isSubmittingRef.current) {
+      return;
+    }
+
     if (!selectedRescueChoice) {
       setErrorMessage("يرجى تحديد خيار للمتابعة.");
       return;
     }
 
+    isSubmittingRef.current = true;
     setIsSubmitting(true);
     setErrorMessage(null);
 
@@ -245,6 +275,7 @@ export default function ChatPage() {
 
       if (!res.ok) {
         setErrorMessage(data.error || "تعذر إرسال الإجابة الآن. حاول مرة أخرى.");
+        isSubmittingRef.current = false;
         setIsSubmitting(false);
         return;
       }
@@ -262,9 +293,11 @@ export default function ChatPage() {
       setCurrentNodeId(data.nextNode);
       setSelectedRescueChoice(null);
       setStudentAnswer("");
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
     } catch {
       setErrorMessage("تعذر إرسال الإجابة الآن. حاول مرة أخرى.");
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
   };

@@ -85,7 +85,7 @@
 ## Phase 8 — Reliability
 
 - [x] T41 — Reject empty input
-- [ ] T42 — Prevent double submit
+- [x] T42 — Prevent double submit
 - [ ] T43 — Handle AI evaluator technical failure without advancing
 - [ ] T44 — Validate structured output
 - [ ] T45 — Add reasonable answer-length limit
