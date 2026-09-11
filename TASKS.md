@@ -53,7 +53,7 @@
 
 - [x] T20 — Create Supabase project
 - [x] T21 — Create `sessions` table
-- [ ] T22 — Create `interactions` table
+- [x] T22 — Create `interactions` table
 - [ ] T23 — Implement server-side persistence helpers
 
 ## Phase 5 — First Vertical Slice
