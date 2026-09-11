@@ -93,7 +93,7 @@
 
 ## Phase 9 — Research Verification
 
-- [ ] T47 — Run complete strong-student path manually
+- [x] T47 — Run complete strong-student path manually
 - [ ] T48 — Run complete weak/rescue path manually
 - [ ] T49 — Verify stored interactions manually
 - [ ] T50 — Export sample CSV and confirm researcher can analyze it
