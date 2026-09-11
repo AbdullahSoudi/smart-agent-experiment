@@ -22,7 +22,7 @@ export interface EvaluationResult {
   feedback: string;
 }
 
-export type EvaluatedNodeId = "N1" | "N2";
+export type EvaluatedNodeId = "N1" | "N2" | "N3";
 
 const SYSTEM_INSTRUCTION = `أنت وكيل تعليمي ذكي يساعد طالبًا جامعيًا على التدريب على اكتشاف الفرص الرقمية.
 
@@ -121,6 +121,42 @@ MEDIUM:
 
 WEAK:
 إجابة عامة جدًا أو لا تتناول العميل والمشكلة بصورة تسمح بتقييم وجود فرصة.
+
+STUDENT ANSWER:
+${studentAnswer.trim()}
+
+FEEDBACK REQUIREMENTS:
+- Arabic.
+- 1 to 3 short sentences.
+- Supportive and specific.
+- Do not mention the classification label.
+- Do not determine next_node or score.
+- Output must conform to the JSON schema.`;
+}
+
+function buildN3Contents(studentAnswer: string): string {
+  return `CURRENT NODE:
+N3
+
+NODE QUESTION / CONTEXT:
+اكتشفت أن بعض الطلاب يعتمدون على مجموعات التواصل الاجتماعي للبحث عن المصادر، لكنهم يواجهون مشكلات مثل صعوبة التحقق من الجودة وتشتت الروابط.
+
+هل ترى هنا فرصة رقمية؟ وما الفجوة التي يمكن لمشروعك استغلالها؟
+
+LEARNING GOAL:
+اكتشاف الفجوة الرقمية في الحلول الحالية وربطها بنقص حقيقي لدى المستخدم بدلاً من مجرد اقتراح فكرة عامة أو مكررة.
+
+ADVANCED:
+يحدد فجوة واضحة في الحلول الحالية، مثل تنظيم/تجميع/التحقق من المصادر، ويربطها بمشكلة المستخدم.
+
+MEDIUM:
+يقدم فكرة ممكنة لكنها عامة ولا يحدد بوضوح:
+- لمن؟
+- ما المشكلة؟
+- ما القيمة؟
+
+WEAK:
+يركز على فكرة "مبتكرة" دون تحديد النقص في الحلول الحالية أو ما يفتقده الطالب.
 
 STUDENT ANSWER:
 ${studentAnswer.trim()}
@@ -261,6 +297,8 @@ export async function evaluateNodeAnswer({
     contents = buildN1Contents(trimmed);
   } else if (nodeId === "N2") {
     contents = buildN2Contents(trimmed);
+  } else if (nodeId === "N3") {
+    contents = buildN3Contents(trimmed);
   } else {
     throw new Error(`Unsupported node for evaluation: ${nodeId}`);
   }
@@ -281,4 +319,11 @@ export async function evaluateN1(studentAnswer: string): Promise<EvaluationResul
  */
 export async function evaluateN2(studentAnswer: string): Promise<EvaluationResult> {
   return evaluateNodeAnswer({ nodeId: "N2", answer: studentAnswer });
+}
+
+/**
+ * Evaluates a student's answer for node N3 using the approved Groq model and strict JSON Schema.
+ */
+export async function evaluateN3(studentAnswer: string): Promise<EvaluationResult> {
+  return evaluateNodeAnswer({ nodeId: "N3", answer: studentAnswer });
 }

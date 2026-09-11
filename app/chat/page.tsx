@@ -42,7 +42,8 @@ export default function ChatPage() {
       : "";
 
   // Implemented interactive input nodes in current development slice
-  const canSubmit = currentNodeId === "N1" || currentNodeId === "N2";
+  const canSubmit =
+    currentNodeId === "N1" || currentNodeId === "N2" || currentNodeId === "N3";
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -64,7 +65,12 @@ export default function ChatPage() {
     setIsSubmitting(true);
     setErrorMessage(null);
 
-    const endpoint = currentNodeId === "N1" ? "/api/n1/submit" : "/api/n2/submit";
+    const endpoint =
+      currentNodeId === "N1"
+        ? "/api/n1/submit"
+        : currentNodeId === "N2"
+        ? "/api/n2/submit"
+        : "/api/n3/submit";
 
     try {
       const res = await fetch(endpoint, {
