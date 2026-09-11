@@ -86,7 +86,7 @@
 
 - [x] T41 — Reject empty input
 - [x] T42 — Prevent double submit
-- [ ] T43 — Handle AI evaluator technical failure without advancing
+- [x] T43 — Handle AI evaluator technical failure without advancing
 - [ ] T44 — Validate structured output
 - [ ] T45 — Add reasonable answer-length limit
 - [ ] T46 — Restore active session after refresh
