@@ -97,7 +97,7 @@
 - [x] T48 — Run complete weak/rescue path manually
 - [x] T49 — Verify stored interactions manually
 - [x] T50 — Export sample CSV and confirm researcher can analyze it
-- [ ] T51 — Verify no student Score is displayed
+- [x] T51 — Verify no student Score is displayed
 
 ## Phase 10 — Pilot & Freeze
 
