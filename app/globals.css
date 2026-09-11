@@ -617,3 +617,20 @@ button[aria-busy="true"] {
     animation: none !important;
   }
 }
+
+/* Error Alert Component */
+.form-error-alert {
+  background-color: #FAF4F4;
+  border: 1px solid #E8D0D0;
+  border-inline-start: 3px solid #A83232;
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 1rem;
+  margin-block-end: 1rem;
+}
+
+.error-text {
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: #7A2424;
+  margin: 0;
+}

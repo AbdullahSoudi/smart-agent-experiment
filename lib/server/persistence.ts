@@ -158,3 +158,25 @@ export async function updateSessionState(
 
   return data as SessionRecord;
 }
+
+/**
+ * Loads an existing session record by its primary ID.
+ * Returns null if the session does not exist.
+ */
+export async function getSessionById(
+  sessionId: string
+): Promise<SessionRecord | null> {
+  const supabase = getSupabaseServerClient();
+
+  const { data, error } = await supabase
+    .from("sessions")
+    .select("*")
+    .eq("id", sessionId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error("Failed to load session", { cause: error });
+  }
+
+  return data as SessionRecord | null;
+}
