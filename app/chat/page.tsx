@@ -17,6 +17,7 @@ interface TurnHistoryItem {
 export default function ChatPage() {
   const router = useRouter();
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [isRestoring, setIsRestoring] = useState(true);
   const [currentNodeId, setCurrentNodeId] = useState<NodeId>("N1");
   const [completedTurns, setCompletedTurns] = useState<TurnHistoryItem[]>([]);
   const [studentAnswer, setStudentAnswer] = useState("");
@@ -37,6 +38,81 @@ export default function ChatPage() {
       return;
     }
     setSessionId(storedSessionId);
+
+    const restoreSession = async () => {
+      try {
+        const res = await fetch("/api/session/restore", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId: storedSessionId }),
+        });
+
+        if (!res.ok) {
+          sessionStorage.removeItem("experiment_session_id");
+          router.replace("/");
+          return;
+        }
+
+        const data = await res.json();
+
+        // If session was already marked completed, navigate to complete screen
+        if (data.status === "completed") {
+          sessionStorage.removeItem("experiment_session_id");
+          router.replace("/complete");
+          return;
+        }
+
+        // Reconstruct completedTurns from persisted interaction history
+        const reconstructed: TurnHistoryItem[] = [];
+        const hist = data.history || [];
+        for (let i = 0; i < hist.length; i++) {
+          const item = hist[i];
+          const nodeDef = SCENARIO_NODES[item.nodeId as NodeId];
+          const prompt = nodeDef
+            ? "prompt" in nodeDef
+              ? nodeDef.prompt
+              : "message" in nodeDef
+              ? nodeDef.message
+              : ""
+            : "";
+
+          reconstructed.push({
+            nodeId: item.nodeId,
+            prompt,
+            studentAnswer: item.studentAnswer ?? null,
+            feedback: item.feedback ?? null,
+            isScaffolding: false,
+          });
+
+          // Reconstruct historical N2_H scaffolding if this interaction transitioned to N2_H
+          // and the session subsequently advanced beyond N2_H
+          if (item.nextNode === "N2_H") {
+            const hasSubsequent = i + 1 < hist.length;
+            const sessionMovedBeyond = data.currentNode !== "N2_H";
+            if (hasSubsequent || sessionMovedBeyond) {
+              const n2hDef = SCENARIO_NODES["N2_H"];
+              const n2hMessage = "message" in n2hDef ? n2hDef.message : "";
+              reconstructed.push({
+                nodeId: "N2_H",
+                prompt: n2hMessage,
+                studentAnswer: null,
+                feedback: null,
+                isScaffolding: true,
+              });
+            }
+          }
+        }
+
+        setCompletedTurns(reconstructed);
+        setCurrentNodeId(data.currentNode);
+        setIsRestoring(false);
+      } catch {
+        setIsRestoring(false);
+        setErrorMessage("تعذر استعادة الجلسة حاليًا. يرجى إعادة تحميل الصفحة.");
+      }
+    };
+
+    restoreSession();
   }, [router]);
 
   const activeNode = SCENARIO_NODES[currentNodeId];
@@ -49,8 +125,11 @@ export default function ChatPage() {
 
   // Auto-continuation for non-interactive scaffolding nodes (such as N2_H)
   useEffect(() => {
+    if (isRestoring) return;
+
     if (currentNodeId !== "N2_H") {
       n2hFiredRef.current = false;
+      return;
     }
 
     if (currentNodeId === "N2_H" && sessionId && !n2hFiredRef.current) {
@@ -113,7 +192,54 @@ export default function ChatPage() {
         isMounted = false;
       };
     }
-  }, [currentNodeId, sessionId, retryTrigger, activePrompt]);
+  }, [currentNodeId, sessionId, isRestoring, retryTrigger, activePrompt]);
+
+  // Auto-completion for when session is restored at active END state
+  useEffect(() => {
+    if (isRestoring) return;
+
+    if (currentNodeId !== "END") {
+      completionFiredRef.current = false;
+      return;
+    }
+
+    if (currentNodeId === "END" && sessionId && !completionFiredRef.current) {
+      completionFiredRef.current = true;
+      let isMounted = true;
+      const finalize = async () => {
+        try {
+          const compRes = await fetch("/api/session/complete", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ sessionId }),
+          });
+
+          if (!isMounted) return;
+
+          if (compRes.ok) {
+            sessionStorage.removeItem("experiment_session_id");
+            router.replace("/complete");
+          } else {
+            setErrorMessage("تعذر إنهاء الجلسة حاليًا. حاول مرة أخرى.");
+            completionFiredRef.current = false;
+          }
+        } catch {
+          if (isMounted) {
+            setErrorMessage("تعذر إنهاء الجلسة حاليًا. حاول مرة أخرى.");
+            completionFiredRef.current = false;
+          }
+        }
+      };
+
+      finalize();
+
+      return () => {
+        isMounted = false;
+      };
+    }
+  }, [currentNodeId, sessionId, isRestoring, router]);
 
   // Implemented interactive input nodes in current development slice
   const canSubmit =
@@ -310,6 +436,26 @@ export default function ChatPage() {
   };
 
   const isCompletedAnyTurn = completedTurns.length > 0;
+
+  if (isRestoring) {
+    return (
+      <main className="viewport-canvas">
+        <div className="workspace-frame">
+          <header className="workspace-masthead">
+            <div className="masthead-meta">
+              <span className="masthead-badge">جلسة الإرشاد</span>
+              <span className="masthead-divider" aria-hidden="true">·</span>
+              <span className="masthead-context">جاري استعادة الجلسة...</span>
+            </div>
+            <h1 className="workspace-title">اكتشاف الفرص الرقمية</h1>
+          </header>
+          <div style={{ textAlign: "center", padding: "4rem 1rem", color: "var(--color-text-muted, #64748b)" }}>
+            <p>جاري استعادة الحوار التعليمي...</p>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="viewport-canvas">

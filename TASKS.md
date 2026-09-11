@@ -89,7 +89,7 @@
 - [x] T43 — Handle AI evaluator technical failure without advancing
 - [x] T44 — Validate structured output
 - [x] T45 — Add reasonable answer-length limit
-- [ ] T46 — Restore active session after refresh
+- [x] T46 — Restore active session after refresh
 
 ## Phase 9 — Research Verification
 

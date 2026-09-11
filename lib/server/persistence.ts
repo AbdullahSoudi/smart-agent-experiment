@@ -180,3 +180,34 @@ export async function getSessionById(
 
   return data as SessionRecord | null;
 }
+
+export interface RestorationInteraction {
+  node_id: NodeId;
+  student_answer: string | null;
+  agent_feedback: string | null;
+  next_node: NodeId | null;
+  created_at: string;
+}
+
+/**
+ * Retrieves past interactions for a session in deterministic chronological order.
+ * Selects only the fields necessary for client-side transcript reconstruction.
+ */
+export async function getInteractionsForSession(
+  sessionId: string
+): Promise<RestorationInteraction[]> {
+  const supabase = getSupabaseServerClient();
+
+  const { data, error } = await supabase
+    .from("interactions")
+    .select("node_id, student_answer, agent_feedback, next_node, created_at")
+    .eq("session_id", sessionId)
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true });
+
+  if (error) {
+    throw new Error("Failed to load interactions for session", { cause: error });
+  }
+
+  return (data || []) as RestorationInteraction[];
+}
