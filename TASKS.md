@@ -51,7 +51,7 @@
 
 ## Phase 4 — Persistence
 
-- [ ] T20 — Create Supabase project
+- [x] T20 — Create Supabase project
 - [ ] T21 — Create `sessions` table
 - [ ] T22 — Create `interactions` table
 - [ ] T23 — Implement server-side persistence helpers
