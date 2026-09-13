@@ -1,16 +1,14 @@
 /**
- * Scenario Data for Digital Opportunity Discovery (Version 1.0)
+ * Scenario Data Model & Frozen Content
  *
- * Source of Truth: SCENARIO_SPEC.md (Frozen for Pilot)
- * Note: Deterministic routing (getNextNode) is deliberately separated and belongs to T14.
+ * Source of Truth: SCENARIO_SPEC.md & PILOT_ISSUES.md
+ * Versions:
+ *   - 1.0: Frozen historical baseline
+ *   - 1.1: Simplified student-friendly instructional Arabic wording (approved in T54)
+ *
+ * Rubrics, educational objectives, and deterministic transition topology
+ * are 100% identical between versions.
  */
-
-export const SCENARIO_VERSION = "1.0";
-export const START_NODE_ID: NodeId = "N1";
-export const COMPLETION_NODE_ID: NodeId = "END";
-
-export const SCENARIO_OPENING_MESSAGE =
-  "مرحبًا بك.\n\nتخيل أنك تريد إنشاء مشروع رقمي صغير يمكن أن يحقق لك استقلالًا ماليًا، ولكن لديك ميزانية محدودة، ولا تملك منتجًا محددًا حتى الآن.\n\nأمامك فرصة للبحث عن مشكلة حقيقية يعاني منها إحدى الفئات المستهدفة وتحويلها إلى فرصة مشروع رقمي يدر عائدًا.\n\nمن أين ستبدأ؟";
 
 export type NodeId =
   | "N1"
@@ -27,147 +25,132 @@ export type NodeId =
   | "N5_H"
   | "END";
 
+export type EvaluatedNodeId =
+  | "N1"
+  | "N1_H"
+  | "N2"
+  | "N3"
+  | "N3_H"
+  | "N4"
+  | "N4_REV"
+  | "N5"
+  | "N5_H";
+
 export type InteractionMode =
   | "evaluated_text"
-  | "choice"
+  | "quick_reply_rescue"
   | "message_auto_continue"
   | "text_no_classification"
   | "completion";
 
-export interface RubricDefinition {
-  readonly advanced?: string;
-  readonly medium?: string;
-  readonly weak?: string;
-  readonly advancedOrMedium?: string;
+export interface RubricCriteria {
+  advanced?: string;
+  medium?: string;
+  weak?: string;
+  advancedOrMedium?: string;
 }
 
 export interface FeedbackIntent {
-  readonly advanced?: string;
-  readonly medium?: string;
-  readonly weak?: string;
+  advanced?: string;
+  medium?: string;
+  weak?: string;
 }
 
-export interface EvaluatedTextNode {
-  readonly id: NodeId;
-  readonly title: string;
-  readonly interactionMode: "evaluated_text";
-  readonly prompt: string;
-  readonly learningGoal?: string;
-  readonly rubric?: RubricDefinition;
-  readonly feedbackIntent?: FeedbackIntent;
-  readonly guidance?: string;
-  readonly parentNodeId?: NodeId;
+export interface ScenarioNode {
+  id: NodeId;
+  title: string;
+  interactionMode: InteractionMode;
+  prompt?: string;
+  message?: string;
+  choices?: readonly string[];
+  rubric?: RubricCriteria;
+  feedbackIntent?: FeedbackIntent;
+  guidance?: string;
+  parentNodeId?: NodeId;
 }
 
-export interface ChoiceNode {
-  readonly id: NodeId;
-  readonly title: string;
-  readonly interactionMode: "choice";
-  readonly prompt: string;
-  readonly choices: readonly [string, string];
-}
+export const START_NODE_ID: NodeId = "N1";
+export const TERMINAL_NODE_ID: NodeId = "END";
+export const DEFAULT_SCENARIO_VERSION = "1.1";
+export const SCENARIO_VERSION = "1.1";
 
-export interface MessageAutoContinueNode {
-  readonly id: NodeId;
-  readonly title: string;
-  readonly interactionMode: "message_auto_continue";
-  readonly message: string;
-}
-
-export interface TextNoClassificationNode {
-  readonly id: NodeId;
-  readonly title: string;
-  readonly interactionMode: "text_no_classification";
-  readonly prompt: string;
-  readonly learningGoal?: string;
-  readonly guidance?: string;
-}
-
-export interface CompletionNode {
-  readonly id: NodeId;
-  readonly title: string;
-  readonly interactionMode: "completion";
-  readonly message: string;
-}
-
-export type ScenarioNode =
-  | EvaluatedTextNode
-  | ChoiceNode
-  | MessageAutoContinueNode
-  | TextNoClassificationNode
-  | CompletionNode;
-
-export const SCENARIO_NODES: Record<NodeId, ScenarioNode> = {
+/**
+ * Historical Scenario v1.0 nodes (preserved for research reproducibility).
+ */
+export const SCENARIO_NODES_V1_0: Record<NodeId, ScenarioNode> = {
   N1: {
     id: "N1",
-    title: "تحديد نقطة البداية",
+    title: "اكتشاف المشكلة والاحتياج",
     interactionMode: "evaluated_text",
-    learningGoal:
-      "أن يبدأ الطالب من احتياج أو مشكلة حقيقية لدى العملاء/السوق، لا من منتج يرغب في بيعه أولًا.",
     prompt:
-      "لديك ميزانية محدودة ولا توجد لديك فكرة مشروع محددة حتى الآن. أمامك خياران:\n\nأ) البحث أولًا عن احتياجات ومشكلات العملاء.\nب) اختيار فكرة منتج تعجبك ثم محاولة إقناع الناس بشرائها.\n\nأي الخيارين تختار؟ ولماذا؟",
+      "أنت طالب جامعي تلاحظ أن زملاءك يواجهون صعوبة في الوصول إلى ملخصات دراسية موثوقة ومراجعات قبل الاختبارات.\n\nتحدث مع زملائك لتفهم المشكلة بشكل أعمق.\n\nما أول خطوة ستبدأ بها لاكتشاف الفرصة؟",
     rubric: {
       advanced:
-        "الإجابة توضح بصورة مباشرة أن نقطة البداية هي البحث عن:\n- احتياج\n- مشكلة\n- سوق\n- جمهور\n- بحث\n- فئة مستهدفة\nمع تفسير منطقي يربط ذلك باكتشاف فرصة حقيقية.",
+        "يركز مباشرة على التحدث مع الطلاب أو مراقبة سلوكهم أو جمع بيانات عن المشكلة لفهمها قبل اقتراح حل.",
       medium:
-        "الإجابة تختار الاتجاه المقبول أو تشير إلى البحث/السوق/العملاء، لكن التفسير محدود أو غير عميق.",
+        "يذكر جمع المعلومات لكنه يخلطها فورًا بالتفكير في الحل، أو يكتفي بسؤال سطحي دون فهم عميق للمشكلة.",
       weak:
-        "الإجابة تبدأ من:\n- المنتج\n- فكرة يرغب الطالب في صنعها\n- تطبيق\n- البيع\nدون ربط ذلك بمشكلة أو احتياج حقيقي.",
+        "يقفز مباشرة إلى بناء الحل أو التطبيق دون التحقق من وجود المشكلة أو التحدث مع الطلاب.",
     },
     feedbackIntent: {
       advanced:
-        "عزز أن البحث عن مشكلة حقيقية يساعد على اكتشاف فرصة ذات قيمة فعلية، ثم انتقل لفهم العميل.",
+        "أكد صحة منهجيته في البدء من احتياج المستخدم واطلب منه تحديد الفجوة في الحلول الحالية.",
       medium:
-        "عزز الاتجاه ثم اطلب التفكير بصورة أعمق في الفرق بين البحث عن منتج نرغب في بيعه والبحث عن مشكلة يمكن حلها.",
+        "اطلب منه التركيز أولاً على المشكلة وسلوك الطلاب قبل التفكير في مواصفات الحل.",
       weak:
-        "قدّم تلميحًا: قبل السؤال \"ماذا أريد أن أبيع؟\" فكر \"ما المشكلة التي يعاني منها الناس ويمكنني حلها؟\"",
+        "نبهه إلى أن البداية الصحيحة هي التحقق من المشكلة وليس بناء الحل، ثم انقله إلى N1_H.",
     },
   },
 
   N1_H: {
     id: "N1_H",
-    title: "إعادة المحاولة",
+    title: "إعادة توجيه لاكتشاف المشكلة",
     interactionMode: "evaluated_text",
     prompt:
-      "تخيل أنك لاحظت أن كثيرًا من طلاب الجامعة يجدون صعوبة في العثور على مصادر تعليمية موثوقة لمقرراتهم.\n\nهل يمكن أن تمثل هذه المشكلة نقطة بداية لاكتشاف فرصة رقمية؟ ولماذا؟",
+      "قبل أن تبدأ بإنشاء موقع أو منصة، ركز على الخطوة الأولى:\n\nكيف تتأكد أن المشكلة حقيقية وتستحق حلاً؟\n\nأعد صياغة خطوتك الأولى بناءً على فهم احتياج الطلاب أولاً.",
     rubric: {
       advanced:
-        "يتعرف بوضوح على أن وجود مشكلة حقيقية لدى فئة محددة يمكن أن يمثل نقطة بداية لفرصة رقمية، ويشرح السبب.",
-      medium: "يوافق بصورة صحيحة ويقدم تفسيرًا بسيطًا.",
+        "يقترح خطوة واضحة تركز على بحث الاحتياج، مثل إجراء مقابلات سريعة، استبيان، أو مراقبة طرق مذاكرتهم الحالية.",
+      medium:
+        "يذكر فكرة عامة عن البحث، لكنها غير محددة أو ما زالت متأثرة بالرغبة في إطلاق الحل.",
       weak:
-        "لا يربط المشكلة باكتشاف فرصة أو يعود مرة أخرى للبدء بمنتج دون فهم المشكلة.",
+        "يكرر الإصرار على بناء الحل أولاً أو يتجاهل دراسة احتياج الطلاب.",
+    },
+    feedbackIntent: {
+      advanced: "عزز تركيزه على دراسة الاحتياج وانقله لمرحلة تحليل الحلول الحالية.",
+      medium: "ساعده على تحويل الخطوة إلى إجراء عملي أكثر تحديدًا للتحقق من المشكلة.",
+      weak: "انقله إلى خيارات محددة مسبقًا للاختيار بينها عبر N1_F.",
     },
   },
 
   N1_F: {
     id: "N1_F",
-    title: "مسار الإنقاذ المتكرر",
-    interactionMode: "choice",
+    title: "اختيار مبسط للخطوة الأولى",
+    interactionMode: "quick_reply_rescue",
     prompt:
-      "يبدو أن الأمر يحتاج إلى توضيح بسيط.\n\nالقاعدة الذهبية هنا هي: لا تبحث عن عملاء لمنتجك، بل ابحث عن منتج لعملائك.\n\nدعنا نتأكد من الفكرة عبر هذا السؤال السريع:\n\nإذا أردت البدء بمشروع ناجح، هل تبدأ بـ:\n\n1. تصميم تطبيق متطور ثم البحث عمن يشتريه.\n2. رصد مشكلة يواجهها الناس ثم تصميم تطبيق لحلها.\n\nاكتب الرقم الصحيح.",
+      "لمساعدتك في تجاوز هذه الخطوة، اختر الإجراء الأنسب للبدء من بين الخيارات التالية:\n\n1. عمل استبيان أو مقابلات سريعة مع 10 من زملائك لفهم كيفية حصولهم على الملخصات حاليًا ومشاكلها.\n2. البدء فورًا في تصميم تطبيق ومحاولة إقناع الطلاب باستخدامه لاحقًا.",
     choices: [
-      "تصميم تطبيق متطور ثم البحث عمن يشتريه.",
-      "رصد مشكلة يواجهها الناس ثم تصميم تطبيق لحلها.",
+      "عمل استبيان أو مقابلات سريعة مع 10 من زملائك لفهم كيفية حصولهم على الملخصات حاليًا ومشاكلها.",
+      "البدء فورًا في تصميم تطبيق ومحاولة إقناع الطلاب باستخدامه لاحقًا.",
     ],
   },
 
   N2: {
     id: "N2",
-    title: "فهم العملاء والمشكلة",
+    title: "فهم احتياجات المستخدم والحلول الحالية",
     interactionMode: "evaluated_text",
     prompt:
-      "اكتشفت مشكلة تتعلق بصعوبة وصول بعض طلاب الجامعة إلى مصادر تعليمية مناسبة. لكن ليس كل الطلاب لديهم نفس الاحتياجات.\n\nما أهم المعلومات التي تحتاج لمعرفتها عن العملاء المستهدفين قبل أن تقرر وجود فرصة حقيقية؟",
+      "بداية موفقة. ركزت على الاستماع للمستخدم أولاً.\n\nالآن، بعد أن تحدثت مع الطلاب وتأكدت من وجود المشكلة:\n\nما الذي يجب أن تركز عليه في الخطوة التالية لتحديد الفجوة في الحلول الحالية؟",
     rubric: {
       advanced:
-        "يذكر عدة عناصر تحليلية مثل:\n- المنافسين\n- البدائل\n- القدرة الشرائية\n- السلوك\n- حجم الفئة/المشكلة\n- الحلول الحالية\nويظهر أنه لا يكتفي بمعرفة وجود المشكلة.",
+        "يركز على تحليل ما يفعله الطلاب حاليًا (بدائل، جروبات تليجرام/واتساب، تصوير مكتبات...) ونقاط القصور في تلك الحلول.",
       medium:
-        "يركز على معرفة الاحتياجات أو خصائص العميل، لكن لا يحلل بصورة كافية كيف يحل العميل المشكلة حاليًا أو ما البدائل الموجودة.",
+        "يركز فقط على احتياجات الطلاب العامة دون الالتفات إلى كيف يحلون المشكلة حاليًا، أو يقترح فكرة حل دون مقارنتها بالبدائل.",
       weak:
-        "إجابة عامة جدًا أو لا تتناول العميل والمشكلة بصورة تسمح بتقييم وجود فرصة.",
+        "يتجاهل الحلول الحالية والاحتياجات، ويكتفي باقتراح فكرة عشوائية أو يكرر ما قاله سابقًا.",
     },
     feedbackIntent: {
-      advanced:
-        "عزز أنه يبحث عن حجم المشكلة والبدائل الموجودة، ثم انتقل لاكتشاف الفجوة.",
+      advanced: "شجعه على الاستمرار في تحليل الفجوة، وانقله إلى صياغة الفجوة الرقمية.",
       medium:
         "أكد أن معرفة الاحتياجات بداية جيدة، ثم وجّه انتباهه إلى كيفية حل العميل للمشكلة حاليًا.",
       weak:
@@ -297,4 +280,161 @@ export const SCENARIO_NODES: Record<NodeId, ScenarioNode> = {
     message:
       "أحسنت! لقد أكملت سيناريو اكتشاف الفرص الرقمية.\n\nخلال السيناريو تدربت على:\n\n- تحديد المشكلة والاحتياج بدلًا من البدء بالمنتج.\n- تحليل الفجوة في الحلول الحالية.\n- صياغة حل رقمي يقدم قيمة فعلية.\n- التفكير في آلية لتحقيق عائد مادي واستدامة اقتصادية.",
   },
-} satisfies Record<NodeId, ScenarioNode>;
+};
+
+/**
+ * Scenario v1.1 nodes: Simplified, natural, accessible Arabic for students.
+ * Approved in T54. Retains identical rubrics and learning outcomes.
+ */
+export const SCENARIO_NODES_V1_1: Record<NodeId, ScenarioNode> = {
+  N1: {
+    id: "N1",
+    title: "فهم المشكلة والاحتياج",
+    interactionMode: "evaluated_text",
+    prompt:
+      "تخيل إنك طالب في الجامعة وبتلاحظ إن زمايلك بيعانوا عشان يلاقوا ملخصات ومراجعات موثوقة قبل الامتحانات.\n\nعايزين نبدأ نفهم الموضوع أكتر عشان نعمل مشروع مفيد.\n\nإيه أول خطوة هتفكر تبدأ بيها عشان تفهم المشكلة وتكتشف الفرصة؟",
+    rubric: SCENARIO_NODES_V1_0.N1.rubric,
+    feedbackIntent: SCENARIO_NODES_V1_0.N1.feedbackIntent,
+  },
+
+  N1_H: {
+    id: "N1_H",
+    title: "التأكد من احتياج الطلاب",
+    interactionMode: "evaluated_text",
+    prompt:
+      "قبل ما تبدأ تبني موقع أو تطبيق، محتاجين نتأكد الأول إن المشكلة دي موجودة بجد عند الطلاب.\n\nإزاي هتتأكد إن دي مشكلة حقيقية وتستاهل نعملها حل؟ قول خطوتك الأولى ببساطة.",
+    rubric: SCENARIO_NODES_V1_0.N1_H.rubric,
+    feedbackIntent: SCENARIO_NODES_V1_0.N1_H.feedbackIntent,
+  },
+
+  N1_F: {
+    id: "N1_F",
+    title: "اختيار الخطوة الأولى المناسبة",
+    interactionMode: "quick_reply_rescue",
+    prompt:
+      "عشان نساعدك تكمل، اختار أنسب طريقة تبدأ بيها من الخيارات دي:",
+    choices: [
+      "أسأل 10 من زمايلي وأفهم منهم إزاي بيجيبوا ملخصاتهم دلوقتي وإيه اللي مضايقهم فيها.",
+      "أبدأ فورًا في برمجة تطبيق للملخصات وأحاول أقنع الطلاب يستخدموه بعد ما يخلص.",
+    ],
+  },
+
+  N2: {
+    id: "N2",
+    title: "الحلول الحالية ونقاط القصور",
+    interactionMode: "evaluated_text",
+    prompt:
+      "تمام، ممتاز إنك بدأت بفهم احتياج زمايلك.\n\nدلوقتي بعد ما اتكلمت معاهم وعرفت مشكلتهم:\n\nإيه الحاجة اللي المفروض تركز عليها عشان تعرف إيه اللي ناقص في الطرق اللي بيستخدموها حاليًا؟",
+    rubric: SCENARIO_NODES_V1_0.N2.rubric,
+    feedbackIntent: SCENARIO_NODES_V1_0.N2.feedbackIntent,
+  },
+
+  N2_H: {
+    id: "N2_H",
+    title: "تلميح للحلول الحالية",
+    interactionMode: "message_auto_continue",
+    message:
+      "قبل ما تفكر في حل جديد، بص على اللي الطلاب بيعملوه دلوقتي: هما بيتصرفوا إزاي حاليًا؟ وإيه الحاجة الناقصة أو اللي مضايقاهم في طريقتهم دي؟",
+  },
+
+  N3: {
+    id: "N3",
+    title: "اكتشاف الحاجة الناقصة في السوق",
+    interactionMode: "evaluated_text",
+    prompt:
+      "عرفت إن بعض الطلاب بيعتمدوا على جروبات تليجرام وفيسبوك عشان يلاقوا مذكرات ومصادر، بس بتواجههم مشاكل زي الروابط المشتتة والمصادر غير الموثوقة.\n\nشايف هنا فرصة لمشروع رقمي؟ وإيه الحاجة الناقصة دلوقتي ومشروعك ممكن يحلها؟",
+    rubric: SCENARIO_NODES_V1_0.N3.rubric,
+    feedbackIntent: SCENARIO_NODES_V1_0.N3.feedbackIntent,
+  },
+
+  N3_H: {
+    id: "N3_H",
+    title: "توضيح الفكرة والفايدة",
+    interactionMode: "evaluated_text",
+    prompt:
+      "الفكرة كويسة، بس لسه عامة شوية.\n\nوضح فكرتك في جملة بسيطة تقول فيها:\n- مين بالظبط اللي بتساعدهم؟\n- إيه المشكلة المحددة؟\n- إيه الفايدة اللي مشروعك هيقدمهالهم؟",
+    rubric: SCENARIO_NODES_V1_0.N3_H.rubric,
+  },
+
+  N4: {
+    id: "N4",
+    title: "صياغة فكرة المشروع والفايدة للعميل",
+    interactionMode: "evaluated_text",
+    prompt:
+      "اقترح فكرة مشروع رقمي محدد يحل المشكلة دي، وقول في جملة واحدة: إيه الفايدة اللي الطالب هياخدها من فكرتك؟",
+    guidance: SCENARIO_NODES_V1_0.N4.guidance,
+  },
+
+  N4_REV: {
+    id: "N4_REV",
+    title: "الاستمرار وتحقيق الدخل",
+    interactionMode: "evaluated_text",
+    parentNodeId: "N4",
+    prompt:
+      "فكرتك ممتازة في حل مشكلة تنظيم الملخصات. بس أي مشروع محتاج يستمر ويغطي مصاريفه.\n\nإزاي الفكرة دي ممكن تكسب منها فلوس أو تستمر كمشروع؟ وليه شايفها تستاهل التعب والتطوير؟",
+    rubric: SCENARIO_NODES_V1_0.N4_REV.rubric,
+  },
+
+  N4_H: {
+    id: "N4_H",
+    title: "توضيح فكرتك خطوة بخطوة",
+    interactionMode: "text_no_classification",
+    prompt:
+      "عشان فكرتك تبقى واضحة وسهلة، جاوب على النقط دي ببساطة:\n\n- مين الناس اللي بتستهدفهم؟\n- إيه المشكلة اللي بتواجههم؟\n- إيه الحل الرقمي اللي بتقدمه؟\n- إيه الفايدة المباشرة اللي هياخدوها منك؟",
+    guidance: SCENARIO_NODES_V1_0.N4_H.guidance,
+  },
+
+  N5: {
+    id: "N5",
+    title: "أسباب اختيارك للمشروع",
+    interactionMode: "evaluated_text",
+    prompt:
+      "دلوقتي قدامك فكرة مشروعك.\n\nليه اخترت الفرصة دي بالذات؟ اذكر سببين على الأقل: سبب يخص الطلاب واستفادتهم، وسبب يخص استمرار المشروع وتحقيق الدخل.",
+    rubric: SCENARIO_NODES_V1_0.N5.rubric,
+    feedbackIntent: SCENARIO_NODES_V1_0.N5.feedbackIntent,
+  },
+
+  N5_H: {
+    id: "N5_H",
+    title: "التفكير في جدوى الاختيار",
+    interactionMode: "evaluated_text",
+    prompt:
+      "كلامك كويس، بس فكر معايا:\n\nهل اخترت الفرصة دي عشان عاجباك بس، ولا عشان فعلاً بتحل مشكلة حقيقية وممكن تكسب منها وتستمر؟\n\nوضح السبب ببساطة.",
+    rubric: SCENARIO_NODES_V1_0.N5_H.rubric,
+  },
+
+  END: {
+    id: "END",
+    title: "النهاية",
+    interactionMode: "completion",
+    message:
+      "أحسنت! كملت التجربة بنجاح.\n\nخلال الخطوات دي اتعلمت:\n- تبدأ بفهم المشكلة واحتياج الناس الأول قبل ما تبني أي حل.\n- تشوف إيه اللي ناقص في الطرق والحلول الموجودة حاليًا.\n- تقدم فكرة حل رقمي يقدم فايدة حقيقية.\n- تفكر إزاي المشروع يحقق دخل ويستمر بنجاح.",
+  },
+};
+
+/**
+ * Returns scenario nodes dictionary according to the requested scenario version.
+ */
+export function getScenarioNodes(version: string = "1.1"): Record<NodeId, ScenarioNode> {
+  if (version === "1.0") {
+    return SCENARIO_NODES_V1_0;
+  }
+  return SCENARIO_NODES_V1_1;
+}
+
+/**
+ * Returns a specific node from the scenario with version awareness.
+ */
+export function getScenarioNode(nodeId: NodeId, version: string = "1.1"): ScenarioNode {
+  const nodes = getScenarioNodes(version);
+  const node = nodes[nodeId];
+  if (!node) {
+    throw new Error(`Node not found in scenario: ${nodeId} (version ${version})`);
+  }
+  return node;
+}
+
+/**
+ * Default active scenario nodes (v1.1 for all current/new sessions).
+ */
+export const SCENARIO_NODES: Record<NodeId, ScenarioNode> = SCENARIO_NODES_V1_1;

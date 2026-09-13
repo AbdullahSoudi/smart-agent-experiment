@@ -1,274 +1,266 @@
 "use client";
 
-import { MAX_STUDENT_ANSWER_LENGTH, ANSWER_TOO_LONG_ERROR } from "@/lib/validation";
-
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { SCENARIO_NODES, type NodeId } from "@/lib/scenario";
+import {
+  NodeId,
+  START_NODE_ID,
+  getScenarioNode,
+} from "@/lib/scenario";
+import {
+  MAX_STUDENT_ANSWER_LENGTH,
+  ANSWER_TOO_LONG_ERROR,
+} from "@/lib/validation";
 
-interface TurnHistoryItem {
-  nodeId: NodeId;
-  prompt: string;
-  studentAnswer?: string | null;
-  feedback?: string | null;
-  isScaffolding?: boolean;
+interface ChatMessage {
+  id: string;
+  sender: "assistant" | "student";
+  text: string;
 }
 
 export default function ChatPage() {
   const router = useRouter();
+
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [isRestoring, setIsRestoring] = useState(true);
-  const [currentNodeId, setCurrentNodeId] = useState<NodeId>("N1");
-  const [completedTurns, setCompletedTurns] = useState<TurnHistoryItem[]>([]);
+  const [currentNodeId, setCurrentNodeId] = useState<NodeId>(START_NODE_ID);
+  const [scenarioVersion, setScenarioVersion] = useState<string>("1.1");
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [studentAnswer, setStudentAnswer] = useState("");
-  const [selectedRescueChoice, setSelectedRescueChoice] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [retryTrigger, setRetryTrigger] = useState(0);
+  const [isRestoring, setIsRestoring] = useState(true);
+  const [autoContinueTrigger, setAutoContinueTrigger] = useState(0);
 
-  // In-flight synchronous guards to prevent same-tick and concurrent double-submits
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isSubmittingRef = useRef(false);
-  const n2hFiredRef = useRef(false);
-  const completionFiredRef = useRef(false);
+
+  // Auto-scroll helper
+  const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
+    messagesEndRef.current?.scrollIntoView({ behavior });
+  };
 
   useEffect(() => {
-    const storedSessionId = sessionStorage.getItem("experiment_session_id");
-    if (!storedSessionId) {
+    scrollToBottom();
+  }, [messages, isSubmitting]);
+
+  // Session restore & bootstrap
+  useEffect(() => {
+    const activeSessionId = sessionStorage.getItem("experiment_session_id");
+
+    if (!activeSessionId) {
       router.replace("/");
       return;
     }
-    setSessionId(storedSessionId);
+
+    setSessionId(activeSessionId);
 
     const restoreSession = async () => {
       try {
         const res = await fetch("/api/session/restore", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessionId: storedSessionId }),
+          body: JSON.stringify({ sessionId: activeSessionId }),
         });
 
         if (!res.ok) {
-          sessionStorage.removeItem("experiment_session_id");
           router.replace("/");
           return;
         }
 
         const data = await res.json();
+        const activeNode: NodeId = data.currentNode;
+        const version: string = data.scenarioVersion || "1.1";
 
-        // If session was already marked completed, navigate to complete screen
-        if (data.status === "completed") {
-          sessionStorage.removeItem("experiment_session_id");
+        setScenarioVersion(version);
+        setCurrentNodeId(activeNode);
+
+        if (activeNode === "END" || data.status === "completed") {
           router.replace("/complete");
           return;
         }
 
-        // Reconstruct completedTurns from persisted interaction history
-        const reconstructed: TurnHistoryItem[] = [];
-        const hist = data.history || [];
-        for (let i = 0; i < hist.length; i++) {
-          const item = hist[i];
-          const nodeDef = SCENARIO_NODES[item.nodeId as NodeId];
-          const prompt = nodeDef
-            ? "prompt" in nodeDef
-              ? nodeDef.prompt
-              : "message" in nodeDef
-              ? nodeDef.message
-              : ""
-            : "";
+        // Reconstruct conversation stream from history
+        const restoredMessages: ChatMessage[] = [];
+        let msgIdCounter = 1;
 
-          reconstructed.push({
-            nodeId: item.nodeId,
-            prompt,
-            studentAnswer: item.studentAnswer ?? null,
-            feedback: item.feedback ?? null,
-            isScaffolding: false,
+        // Opening prompt of START_NODE_ID
+        const startNode = getScenarioNode(START_NODE_ID, version);
+        if (startNode.prompt) {
+          restoredMessages.push({
+            id: `msg-${msgIdCounter++}`,
+            sender: "assistant",
+            text: startNode.prompt,
           });
+        }
 
-          // Reconstruct historical N2_H scaffolding if this interaction transitioned to N2_H
-          // and the session subsequently advanced beyond N2_H
-          if (item.nextNode === "N2_H") {
-            const hasSubsequent = i + 1 < hist.length;
-            const sessionMovedBeyond = data.currentNode !== "N2_H";
-            if (hasSubsequent || sessionMovedBeyond) {
-              const n2hDef = SCENARIO_NODES["N2_H"];
-              const n2hMessage = "message" in n2hDef ? n2hDef.message : "";
-              reconstructed.push({
-                nodeId: "N2_H",
-                prompt: n2hMessage,
-                studentAnswer: null,
-                feedback: null,
-                isScaffolding: true,
+        let trackedNode = START_NODE_ID;
+
+        if (Array.isArray(data.history) && data.history.length > 0) {
+          for (const item of data.history) {
+            // Student message
+            if (item.studentAnswer) {
+              restoredMessages.push({
+                id: `msg-${msgIdCounter++}`,
+                sender: "student",
+                text: item.studentAnswer,
               });
+            }
+
+            // Assistant response
+            if (item.feedback) {
+              restoredMessages.push({
+                id: `msg-${msgIdCounter++}`,
+                sender: "assistant",
+                text: item.feedback,
+              });
+            }
+
+            // If node transitioned to a different node, show that node's prompt
+            if (item.nextNode && item.nextNode !== item.nodeId) {
+              trackedNode = item.nextNode;
+              if (trackedNode !== "END") {
+                const nextNodeDef = getScenarioNode(trackedNode, version);
+                const nextText = nextNodeDef.prompt || nextNodeDef.message;
+                if (nextText) {
+                  restoredMessages.push({
+                    id: `msg-${msgIdCounter++}`,
+                    sender: "assistant",
+                    text: nextText,
+                  });
+                }
+              }
             }
           }
         }
 
-        setCompletedTurns(reconstructed);
-        setCurrentNodeId(data.currentNode);
+        // If trackedNode is different from activeNode and not already displayed
+        if (trackedNode !== activeNode) {
+          const currentNodeDef = getScenarioNode(activeNode, version);
+          const currentText = currentNodeDef.prompt || currentNodeDef.message;
+          if (currentText) {
+            restoredMessages.push({
+              id: `msg-${msgIdCounter++}`,
+              sender: "assistant",
+              text: currentText,
+            });
+          }
+        }
+
+        setMessages(restoredMessages);
         setIsRestoring(false);
       } catch {
-        setIsRestoring(false);
-        setErrorMessage("تعذر استعادة الجلسة حاليًا. يرجى إعادة تحميل الصفحة.");
+        router.replace("/");
       }
     };
 
     restoreSession();
   }, [router]);
 
-  const activeNode = SCENARIO_NODES[currentNodeId];
-  const activePrompt =
-    "prompt" in activeNode
-      ? activeNode.prompt
-      : "message" in activeNode
-      ? activeNode.message
-      : "";
-
-  // Auto-continuation for non-interactive scaffolding nodes (such as N2_H)
+  // Handle N2_H auto-continue
   useEffect(() => {
-    if (isRestoring) return;
-
-    if (currentNodeId !== "N2_H") {
-      n2hFiredRef.current = false;
+    if (isRestoring || currentNodeId !== "N2_H" || !sessionId) {
       return;
     }
 
-    if (currentNodeId === "N2_H" && sessionId && !n2hFiredRef.current) {
-      n2hFiredRef.current = true;
-      let isMounted = true;
+    let isCancelled = false;
+
+    const timer = setTimeout(async () => {
+      if (isCancelled || isSubmittingRef.current) return;
       isSubmittingRef.current = true;
       setIsSubmitting(true);
       setErrorMessage(null);
 
-      const performContinue = async () => {
-        try {
-          const res = await fetch("/api/n2-h/continue", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ sessionId }),
-          });
+      try {
+        const res = await fetch("/api/n2-h/submit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId }),
+        });
 
-          const data = await res.json();
-          if (!isMounted) return;
+        if (!res.ok) {
+          throw new Error("Failed to auto-continue");
+        }
 
-          if (!res.ok) {
-            setErrorMessage(
-              data.error || "تعذر المتابعة التلقائية حاليًا. يرجى إعادة المحاولة."
-            );
-            n2hFiredRef.current = false;
-            isSubmittingRef.current = false;
-            setIsSubmitting(false);
-            return;
-          }
+        const data = await res.json();
+        const nextNode: NodeId = data.nextNode;
+        setCurrentNodeId(nextNode);
 
-          // Success: advance turn and persist scaffolding in visible transcript
-          setCompletedTurns((prev) => [
+        if (nextNode === "END") {
+          router.replace("/complete");
+          return;
+        }
+
+        const nextDef = getScenarioNode(nextNode, scenarioVersion);
+        if (nextDef.prompt) {
+          setMessages((prev) => [
             ...prev,
             {
-              nodeId: "N2_H",
-              prompt: activePrompt,
-              studentAnswer: null,
-              feedback: null,
-              isScaffolding: true,
+              id: `msg-${Date.now()}-next`,
+              sender: "assistant",
+              text: nextDef.prompt || "",
             },
           ]);
-          setCurrentNodeId(data.nextNode);
-          isSubmittingRef.current = false;
-          setIsSubmitting(false);
-        } catch {
-          if (isMounted) {
-            setErrorMessage(
-              "تعذر الاتصال بالخادم لمتابعة التوجيه. يرجى إعادة المحاولة."
-            );
-            n2hFiredRef.current = false;
-            isSubmittingRef.current = false;
-            setIsSubmitting(false);
-          }
         }
-      };
+      } catch {
+        setErrorMessage("تعذر المتابعة تلقائيًا. يرجى الضغط على زر المتابعة.");
+      } finally {
+        isSubmittingRef.current = false;
+        setIsSubmitting(false);
+      }
+    }, 1800);
 
-      performContinue();
+    return () => {
+      isCancelled = true;
+      clearTimeout(timer);
+    };
+  }, [currentNodeId, sessionId, isRestoring, autoContinueTrigger, router, scenarioVersion]);
 
-      return () => {
-        isMounted = false;
-      };
+  // Auto-resize textarea
+  const handleTextareaInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setStudentAnswer(e.target.value);
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 180)}px`;
     }
-  }, [currentNodeId, sessionId, isRestoring, retryTrigger, activePrompt]);
+  };
 
-  // Auto-completion for when session is restored at active END state
-  useEffect(() => {
-    if (isRestoring) return;
-
-    if (currentNodeId !== "END") {
-      completionFiredRef.current = false;
-      return;
+  // Submit route dispatcher
+  const getNodeSubmitEndpoint = (nodeId: NodeId): string => {
+    switch (nodeId) {
+      case "N1":
+        return "/api/n1/submit";
+      case "N1_H":
+        return "/api/n1-h/submit";
+      case "N1_F":
+        return "/api/n1-f/submit";
+      case "N2":
+        return "/api/n2/submit";
+      case "N2_H":
+        return "/api/n2-h/submit";
+      case "N3":
+        return "/api/n3/submit";
+      case "N3_H":
+        return "/api/n3-h/submit";
+      case "N4":
+        return "/api/n4/submit";
+      case "N4_REV":
+        return "/api/n4-rev/submit";
+      case "N4_H":
+        return "/api/n4-h/submit";
+      case "N5":
+        return "/api/n5/submit";
+      case "N5_H":
+        return "/api/n5-h/submit";
+      default:
+        return "/api/n1/submit";
     }
+  };
 
-    if (currentNodeId === "END" && sessionId && !completionFiredRef.current) {
-      completionFiredRef.current = true;
-      let isMounted = true;
-      const finalize = async () => {
-        try {
-          const compRes = await fetch("/api/session/complete", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ sessionId }),
-          });
-
-          if (!isMounted) return;
-
-          if (compRes.ok) {
-            sessionStorage.removeItem("experiment_session_id");
-            router.replace("/complete");
-          } else {
-            setErrorMessage("تعذر إنهاء الجلسة حاليًا. حاول مرة أخرى.");
-            completionFiredRef.current = false;
-          }
-        } catch {
-          if (isMounted) {
-            setErrorMessage("تعذر إنهاء الجلسة حاليًا. حاول مرة أخرى.");
-            completionFiredRef.current = false;
-          }
-        }
-      };
-
-      finalize();
-
-      return () => {
-        isMounted = false;
-      };
-    }
-  }, [currentNodeId, sessionId, isRestoring, router]);
-
-  // Implemented interactive input nodes in current development slice
-  const canSubmit =
-    currentNodeId === "N1" ||
-    currentNodeId === "N2" ||
-    currentNodeId === "N3" ||
-    currentNodeId === "N4" ||
-    currentNodeId === "N4_REV" ||
-    currentNodeId === "N5" ||
-    currentNodeId === "N1_H" ||
-    currentNodeId === "N3_H" ||
-    currentNodeId === "N4_H" ||
-    currentNodeId === "N5_H";
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!sessionId) {
-      router.replace("/");
-      return;
-    }
-
-    // Synchronous guard against same-tick and in-flight double submissions
-    if (!canSubmit || isSubmitting || isSubmittingRef.current) {
-      return;
-    }
-
+  // Submit regular text message
+  const handleSendMessage = async () => {
     const trimmed = studentAnswer.trim();
-    if (!trimmed) {
-      setErrorMessage("يرجى كتابة إجابة للمتابعة.");
+    if (!trimmed || isSubmittingRef.current || !sessionId) {
       return;
     }
 
@@ -277,426 +269,312 @@ export default function ChatPage() {
       return;
     }
 
+    // Synchronous guard
     isSubmittingRef.current = true;
     setIsSubmitting(true);
     setErrorMessage(null);
 
-    const endpoint =
-      currentNodeId === "N1"
-        ? "/api/n1/submit"
-        : currentNodeId === "N2"
-        ? "/api/n2/submit"
-        : currentNodeId === "N3"
-        ? "/api/n3/submit"
-        : currentNodeId === "N3_H"
-        ? "/api/n3-h/submit"
-        : currentNodeId === "N4"
-        ? "/api/n4/submit"
-        : currentNodeId === "N4_REV"
-        ? "/api/n4-rev/submit"
-        : currentNodeId === "N4_H"
-        ? "/api/n4-h/submit"
-        : currentNodeId === "N5"
-        ? "/api/n5/submit"
-        : currentNodeId === "N5_H"
-        ? "/api/n5-h/submit"
-        : "/api/n1-h/submit";
+    const userMsgId = `msg-${Date.now()}-user`;
+    setMessages((prev) => [
+      ...prev,
+      { id: userMsgId, sender: "student", text: trimmed },
+    ]);
+    setStudentAnswer("");
+
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+    }
 
     try {
+      const endpoint = getNodeSubmitEndpoint(currentNodeId);
       const res = await fetch(endpoint, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          sessionId,
-          answer: trimmed,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId, answer: trimmed }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        setErrorMessage(data.error || "تعذر إرسال الإجابة الآن. حاول مرة أخرى.");
-        isSubmittingRef.current = false;
-        setIsSubmitting(false);
+        setErrorMessage(data.error || "تعذر إرسال الرسالة حاليًا. حاول مرة أخرى.");
         return;
       }
 
-      // Success: advance turn
-      setCompletedTurns((prev) => [
-        ...prev,
-        {
-          nodeId: currentNodeId,
-          prompt: activePrompt,
-          studentAnswer: trimmed,
-          feedback: data.feedback ?? null,
-        },
-      ]);
-      setCurrentNodeId(data.nextNode);
-      setStudentAnswer("");
+      const nextNode: NodeId = data.nextNode;
+      const feedback: string | null = data.feedback;
 
-      // When reaching END, finalize session server-side before navigating to /complete
-      if (data.nextNode === "END" && !completionFiredRef.current) {
-        completionFiredRef.current = true;
-        try {
-          const compRes = await fetch("/api/session/complete", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
+      if (nextNode === currentNodeId) {
+        // Conversational Support or Off-Topic: remain at current node
+        if (feedback) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `msg-${Date.now()}-assistant`,
+              sender: "assistant",
+              text: feedback,
             },
-            body: JSON.stringify({ sessionId }),
-          });
+          ]);
+        }
+      } else {
+        // Node advanced deterministically!
+        if (feedback) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `msg-${Date.now()}-feedback`,
+              sender: "assistant",
+              text: feedback,
+            },
+          ]);
+        }
 
-          if (compRes.ok) {
-            sessionStorage.removeItem("experiment_session_id");
-            router.replace("/complete");
-            return;
-          } else {
-            setErrorMessage("تعذر إنهاء الجلسة حاليًا. حاول مرة أخرى.");
-            completionFiredRef.current = false;
-          }
-        } catch {
-          setErrorMessage("تعذر إنهاء الجلسة حاليًا. حاول مرة أخرى.");
-          completionFiredRef.current = false;
+        if (nextNode === "END") {
+          setTimeout(() => router.replace("/complete"), 1200);
+          return;
+        }
+
+        setCurrentNodeId(nextNode);
+        const nextDef = getScenarioNode(nextNode, scenarioVersion);
+        const nextText = nextDef.prompt || nextDef.message;
+
+        if (nextText) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `msg-${Date.now()}-next`,
+              sender: "assistant",
+              text: nextText,
+            },
+          ]);
         }
       }
-
-      isSubmittingRef.current = false;
-      setIsSubmitting(false);
     } catch {
-      setErrorMessage("تعذر إرسال الإجابة الآن. حاول مرة أخرى.");
+      setErrorMessage("تعذر الاتصال بالخادم. يرجى المحاولة مرة أخرى.");
+    } finally {
       isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
   };
 
-  const handleRescueSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!sessionId) {
-      router.replace("/");
-      return;
-    }
-
-    // Synchronous guard against same-tick and in-flight double submissions
-    if (isSubmitting || isSubmittingRef.current) {
-      return;
-    }
-
-    if (!selectedRescueChoice) {
-      setErrorMessage("يرجى تحديد خيار للمتابعة.");
-      return;
-    }
+  // Submit quick choice for N1_F
+  const handleQuickChoice = async (choiceText: string) => {
+    if (isSubmittingRef.current || !sessionId) return;
 
     isSubmittingRef.current = true;
     setIsSubmitting(true);
     setErrorMessage(null);
+
+    setMessages((prev) => [
+      ...prev,
+      { id: `msg-${Date.now()}-user`, sender: "student", text: choiceText },
+    ]);
 
     try {
       const res = await fetch("/api/n1-f/submit", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          sessionId,
-          choice: selectedRescueChoice,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId, choice: choiceText }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        setErrorMessage(data.error || "تعذر إرسال الإجابة الآن. حاول مرة أخرى.");
-        isSubmittingRef.current = false;
-        setIsSubmitting(false);
+        setErrorMessage(data.error || "تعذر إرسال الاختيار. حاول مرة أخرى.");
         return;
       }
 
-      // Success: advance turn
-      setCompletedTurns((prev) => [
-        ...prev,
-        {
-          nodeId: currentNodeId,
-          prompt: activePrompt,
-          studentAnswer: selectedRescueChoice,
-          feedback: data.feedback ?? null,
-        },
-      ]);
-      setCurrentNodeId(data.nextNode);
-      setSelectedRescueChoice(null);
-      setStudentAnswer("");
-      isSubmittingRef.current = false;
-      setIsSubmitting(false);
+      const nextNode: NodeId = data.nextNode;
+      setCurrentNodeId(nextNode);
+
+      if (nextNode === "END") {
+        router.replace("/complete");
+        return;
+      }
+
+      const nextDef = getScenarioNode(nextNode, scenarioVersion);
+      if (nextDef.prompt) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `msg-${Date.now()}-next`,
+            sender: "assistant",
+            text: nextDef.prompt || "",
+          },
+        ]);
+      }
     } catch {
-      setErrorMessage("تعذر إرسال الإجابة الآن. حاول مرة أخرى.");
+      setErrorMessage("تعذر الاتصال بالخادم. يرجى المحاولة مرة أخرى.");
+    } finally {
       isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
   };
 
-  const isCompletedAnyTurn = completedTurns.length > 0;
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
 
-  if (isRestoring) {
-    return (
-      <main className="viewport-canvas">
-        <div className="workspace-frame">
-          <header className="workspace-masthead">
-            <div className="masthead-meta">
-              <span className="masthead-badge">جلسة الإرشاد</span>
-              <span className="masthead-divider" aria-hidden="true">·</span>
-              <span className="masthead-context">جاري استعادة الجلسة...</span>
-            </div>
-            <h1 className="workspace-title">اكتشاف الفرص الرقمية</h1>
-          </header>
-          <div style={{ textAlign: "center", padding: "4rem 1rem", color: "var(--color-text-muted, #64748b)" }}>
-            <p>جاري استعادة الحوار التعليمي...</p>
-          </div>
-        </div>
-      </main>
-    );
-  }
+  const activeNodeDef = getScenarioNode(currentNodeId, scenarioVersion);
+  const isN1F = currentNodeId === "N1_F";
+  const isN2H = currentNodeId === "N2_H";
 
   return (
-    <main className="viewport-canvas">
-      <div className="workspace-frame">
-        {/* Session Masthead */}
-        <header className="workspace-masthead">
-          <div className="masthead-meta">
-            <span className="masthead-badge">جلسة الإرشاد</span>
-            <span className="masthead-divider" aria-hidden="true">·</span>
-            <span className="masthead-context">
-              {!isCompletedAnyTurn ? "المحطة 01: نقطة البداية" : `المحطة التالية: ${activeNode.title}`}
-            </span>
-          </div>
-          <h1 className="workspace-title">اكتشاف الفرص الرقمية</h1>
-        </header>
-
-        {/* Conversational Transcript Flow */}
-        <section className="chat-flow" aria-label="سجل الحوار التعليمي">
-          {/* Prior Completed Turns */}
-          {completedTurns.map((turn, index) => {
-            if (turn.isScaffolding || turn.nodeId === "N2_H") {
-              return (
-                <article key={`${turn.nodeId}-${index}`} className="turn-block">
-                  <div
-                    className="prompt-anchor-surface"
-                    style={{
-                      borderRight: "3px solid var(--accent-primary, #0f766e)",
-                    }}
-                  >
-                    <span className="role-tag role-tag-anchor">
-                      المرشد · توجيه داعم ({SCENARIO_NODES[turn.nodeId].title || turn.nodeId})
-                    </span>
-                    <p className="prompt-text-anchor">{turn.prompt}</p>
-                  </div>
-                </article>
-              );
-            }
-
-            return (
-              <div key={`${turn.nodeId}-${index}`}>
-                {/* Prior Prompt Anchor */}
-                <article className="turn-block">
-                  <div className="prompt-anchor-surface">
-                    <span className="role-tag role-tag-anchor">
-                      {turn.nodeId === "N1"
-                        ? "المرشد · نقطة البداية (N1)"
-                        : `المرشد · محطة ${turn.nodeId}`}
-                    </span>
-                    <p className="prompt-text-anchor">{turn.prompt}</p>
-                  </div>
-                </article>
-
-                {/* Student Reflection Note */}
-                {turn.studentAnswer && (
-                  <article className="turn-block student-reflection-zone">
-                    <div className="student-note-surface">
-                      <span className="role-tag role-tag-student">إجابتك المسجلة</span>
-                      <p className="student-reflection-text">{turn.studentAnswer}</p>
-                    </div>
-                  </article>
-                )}
-
-                {/* Mentor Coaching Marginalia (rendered only if feedback exists) */}
-                {turn.feedback && (
-                  <article className="turn-block mentor-coaching-zone">
-                    <div className="coaching-note-surface">
-                      <span className="role-tag role-tag-coaching">ملاحظة المرشد</span>
-                      <p className="coaching-text">{turn.feedback}</p>
-                    </div>
-                  </article>
-                )}
-              </div>
-            );
-          })}
-
-          {/* Active Challenge Anchor */}
-          <article className="turn-block">
-            <div className="prompt-anchor-surface">
-              <span className="role-tag role-tag-anchor">
-                {!isCompletedAnyTurn
-                  ? "المرشد · التحدي النشط"
-                  : `المرشد · التحدي النشط (${currentNodeId})`}
-              </span>
-              <p className="prompt-text-anchor">{activePrompt}</p>
+    <div className="mentor-chat-viewport" dir="rtl">
+      {/* Mentor Header */}
+      <header className="mentor-chat-header">
+        <div className="mentor-chat-header-content">
+          <div className="mentor-brand">
+            <div className="mentor-avatar-icon" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 2a8 8 0 0 0-8 8c0 3.3 2 6.1 5 7.4V20a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2v-2.6c3-1.3 5-4.1 5-7.4a8 8 0 0 0-8-8z" />
+                <path d="M10 14h4" />
+              </svg>
             </div>
-          </article>
-        </section>
+            <div className="mentor-title-group">
+              <h1 className="mentor-title">الوكيل الذكي لاكتشاف الفرص الرقمية</h1>
+              <div className="mentor-status-badge">
+                <span className="mentor-status-dot" aria-hidden="true" />
+                <span className="mentor-status-text">جلسة نشطة</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
 
-        {/* Integrated Response Composer */}
-        <section className="composer-desk" aria-label="كتابة الإجابة">
-          {errorMessage && (
-            <div className="form-error-alert" role="alert">
-              <p className="error-text">{errorMessage}</p>
+      {/* Main Conversation Stream */}
+      <main className="mentor-chat-main" aria-label="محادثة الإرشاد الذكي">
+        <div className="mentor-stream-container">
+          {messages.map((msg) => (
+            <div
+              key={msg.id}
+              className={`chat-message-row chat-message-${msg.sender}`}
+            >
+              {msg.sender === "assistant" && (
+                <div className="bubble-avatar" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="m9 12 2 2 4-4" />
+                  </svg>
+                </div>
+              )}
+              <div className="chat-bubble">
+                <p className="bubble-text">{msg.text}</p>
+              </div>
+            </div>
+          ))}
+
+          {/* Thinking Indicator */}
+          {isSubmitting && (
+            <div className="chat-message-row chat-message-assistant">
+              <div className="bubble-avatar" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <circle cx="12" cy="12" r="9" />
+                </svg>
+              </div>
+              <div className="chat-bubble chat-bubble-thinking">
+                <span className="thinking-dot" />
+                <span className="thinking-dot" />
+                <span className="thinking-dot" />
+                <span className="thinking-label">الوكيل بيفكر...</span>
+              </div>
             </div>
           )}
 
-          {currentNodeId === "N2_H" ? (
-            <div
-              className="scaffolding-status"
-              style={{ textAlign: "center", padding: "1.5rem 0" }}
-            >
-              {errorMessage ? (
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem" }}>
+          {/* Quick Reply Choices for N1_F */}
+          {isN1F && !isSubmitting && (
+            <div className="quick-reply-container" role="group" aria-label="خيارات المتابعة">
+              {"choices" in activeNodeDef && Array.isArray(activeNodeDef.choices) ? (
+                activeNodeDef.choices.map((choice: string, idx: number) => (
                   <button
+                    key={idx}
                     type="button"
-                    className="btn-primary composer-btn"
-                    onClick={() => setRetryTrigger((c) => c + 1)}
+                    className="quick-choice-chip"
+                    onClick={() => handleQuickChoice(choice)}
+                    disabled={isSubmitting}
                   >
-                    إعادة المحاولة للمتابعة
+                    {choice}
                   </button>
-                </div>
-              ) : (
-                <p style={{ color: "var(--text-muted)", fontSize: "0.95rem" }}>
-                  جاري المتابعة تلقائيًا إلى المحطة التالية...
-                </p>
-              )}
+                ))
+              ) : null}
             </div>
-          ) : currentNodeId === "N1_F" ? (
-            <form className="composer-form" onSubmit={handleRescueSubmit}>
-              <div className="composer-header">
-                <span className="composer-label">اختر الإجابة المناسبة</span>
-                <span className="composer-sublabel">اختيار توجيهي من متعدد</span>
-              </div>
+          )}
 
-              <div
-                className="choice-group"
-                role="radiogroup"
-                aria-label="خيارات مسار الإنقاذ"
-                style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
+          {/* Auto-continue helper for N2_H if needed */}
+          {isN2H && errorMessage && (
+            <div className="retry-container">
+              <button
+                type="button"
+                className="btn-mentor-action"
+                onClick={() => setAutoContinueTrigger((c) => c + 1)}
               >
-                {"choices" in activeNode && Array.isArray(activeNode.choices)
-                  ? activeNode.choices.map((choiceText: string, idx: number) => {
-                      const isSelected = selectedRescueChoice === choiceText;
-                      return (
-                        <label
-                          key={idx}
-                          className={`choice-option-card ${isSelected ? "choice-option-selected" : ""}`}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "0.875rem",
-                            padding: "1rem 1.25rem",
-                            borderRadius: "var(--radius-md, 8px)",
-                            border: isSelected
-                              ? "2px solid var(--accent-primary, #0f766e)"
-                              : "1px solid var(--border-strong, #cbd5e1)",
-                            backgroundColor: isSelected
-                              ? "var(--surface-subtle, #f0fdfa)"
-                              : "#ffffff",
-                            cursor: isSubmitting ? "not-allowed" : "pointer",
-                            transition: "all 0.2s ease",
-                          }}
-                        >
-                          <input
-                            type="radio"
-                            name="rescue-choice"
-                            value={choiceText}
-                            checked={isSelected}
-                            onChange={() => {
-                              if (!isSubmitting) setSelectedRescueChoice(choiceText);
-                            }}
-                            disabled={isSubmitting}
-                            style={{
-                              width: "1.125rem",
-                              height: "1.125rem",
-                              accentColor: "var(--accent-primary, #0f766e)",
-                              cursor: isSubmitting ? "not-allowed" : "pointer",
-                            }}
-                          />
-                          <span
-                            style={{
-                              fontSize: "1rem",
-                              lineHeight: "1.6",
-                              color: "var(--text-primary, #1e293b)",
-                            }}
-                          >
-                            {choiceText}
-                          </span>
-                        </label>
-                      );
-                    })
-                  : null}
-              </div>
+                متابعة الخطوة التالية
+              </button>
+            </div>
+          )}
 
-              <div className="composer-footer">
-                <button
-                  type="submit"
-                  className="btn-primary composer-btn"
-                  disabled={isSubmitting || !selectedRescueChoice}
-                  aria-busy={isSubmitting}
-                >
-                  {isSubmitting ? "جاري المعالجة..." : "تأكيد الاختيار ومتابعة"}
-                </button>
-              </div>
-            </form>
-          ) : (
-            <form className="composer-form" onSubmit={handleSubmit}>
-              <div className="composer-header">
-                <label htmlFor="student-answer" className="composer-label">
-                  اكتب إجابتك
-                </label>
-                <span className="composer-sublabel">
-                  {canSubmit ? "صياغة تفسيرية وتأملية" : "تم تسجيل إجابة المحطة"}
-                </span>
-              </div>
+          <div ref={messagesEndRef} />
+        </div>
+      </main>
 
+      {/* Sticky Bottom Composer */}
+      <footer className="mentor-chat-composer-bar">
+        <div className="composer-inner">
+          {errorMessage && (
+            <div className="composer-error-banner" role="alert">
+              <span>{errorMessage}</span>
+            </div>
+          )}
+
+          {!isN1F && !isN2H ? (
+            <div className="composer-input-wrapper">
               <textarea
-                id="student-answer"
-                name="answer"
-                rows={5}
-                className="composer-textarea"
-                placeholder={
-                  canSubmit
-                    ? "اكتب إجابتك هنا..."
-                    : "تم تسجيل إجابة المحطة بنجاح للمتابعة في مراحل لاحقة."
-                }
-                dir="rtl"
+                ref={textareaRef}
+                id="mentor-answer-input"
+                className="mentor-composer-textarea"
+                placeholder="اكتب إجابتك أو سؤالك أو اطلب توضيح..."
+                rows={1}
                 value={studentAnswer}
-                onChange={(e) => setStudentAnswer(e.target.value)}
-                disabled={isSubmitting || !canSubmit}
+                onChange={handleTextareaInput}
+                onKeyDown={handleKeyDown}
+                disabled={isSubmitting}
                 maxLength={MAX_STUDENT_ANSWER_LENGTH}
+                aria-label="رسالتك للمرشد الذكي"
               />
 
-              <div className="composer-footer">
+              <div className="composer-actions">
+                <span className="char-counter" aria-live="polite">
+                  {studentAnswer.length}/{MAX_STUDENT_ANSWER_LENGTH}
+                </span>
                 <button
-                  type="submit"
-                  className="btn-primary composer-btn"
-                  disabled={isSubmitting || !canSubmit || !studentAnswer.trim()}
-                  aria-busy={isSubmitting}
+                  type="button"
+                  id="send-message-button"
+                  className="btn-mentor-send"
+                  onClick={handleSendMessage}
+                  disabled={isSubmitting || !studentAnswer.trim()}
+                  aria-label="إرسال الرسالة"
                 >
-                  {isSubmitting
-                    ? "جاري المعالجة..."
-                    : !canSubmit
-                    ? "تم تسجيل الإجابة"
-                    : "إرسال الإجابة"}
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" style={{ transform: "rotate(180deg)" }}>
+                    <line x1="22" y1="2" x2="11" y2="13" />
+                    <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                  </svg>
+                  <span className="btn-send-label">إرسال</span>
                 </button>
               </div>
-            </form>
+            </div>
+          ) : isN1F ? (
+            <div className="composer-hint-banner">
+              <span>اختر أحد الخيارات أعلاه للمتابعة</span>
+            </div>
+          ) : (
+            <div className="composer-hint-banner">
+              <span>جاري الانتقال للخطوة التالية...</span>
+            </div>
           )}
-        </section>
-      </div>
-    </main>
+        </div>
+      </footer>
+    </div>
   );
 }

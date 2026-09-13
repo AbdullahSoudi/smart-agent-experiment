@@ -1,16 +1,22 @@
 /**
  * Server-only persistence layer for research experiment sessions and interactions.
  *
- * Source of Truth: PROJECT.md Section 6 & SCENARIO_SPEC.md
+ * Source of Truth: PROJECT.md Section 6, SCENARIO_SPEC.md & PILOT_ISSUES.md
  * Architecture Invariant:
- *   - AI evaluates classification + feedback
+ *   - AI evaluates intent, classification + feedback
  *   - Application code deterministically calculates transitions and next_node
- *   - Persistence stores already-decided values
+ *   - Persistence stores already-decided values and turn_kind
  */
 
 import type { NodeId } from "../scenario";
 import type { Classification } from "../transitions";
 import { getSupabaseServerClient } from "./supabase";
+
+export type TurnKind =
+  | "evaluated_answer"
+  | "conversational_support"
+  | "off_topic"
+  | "non_evaluated_answer";
 
 export interface SessionRecord {
   id: string;
@@ -34,6 +40,7 @@ export interface InteractionRecord {
   agent_feedback: string | null;
   next_node: NodeId | null;
   decision_time_ms: number | null;
+  turn_kind: TurnKind | null;
   created_at: string;
 }
 
@@ -55,6 +62,7 @@ export interface RecordInteractionInput {
   agentFeedback?: string | null;
   nextNode?: NodeId | null;
   decisionTimeMs?: number | null;
+  turnKind?: TurnKind | null;
 }
 
 export interface UpdateSessionStateInput {
@@ -96,7 +104,7 @@ export async function createSession(
 
 /**
  * Persists an interaction turn in public.interactions.
- * Supports evaluated turns as well as unconditional and non-evaluated turns.
+ * Supports evaluated turns, conversational support, off-topic turns, and non-evaluated turns.
  */
 export async function recordInteraction(
   input: RecordInteractionInput
@@ -113,6 +121,7 @@ export async function recordInteraction(
       agent_feedback: input.agentFeedback ?? null,
       next_node: input.nextNode ?? null,
       decision_time_ms: input.decisionTimeMs ?? null,
+      turn_kind: input.turnKind ?? null,
     })
     .select()
     .single();
@@ -186,6 +195,7 @@ export interface RestorationInteraction {
   student_answer: string | null;
   agent_feedback: string | null;
   next_node: NodeId | null;
+  turn_kind: TurnKind | null;
   created_at: string;
 }
 
@@ -200,7 +210,7 @@ export async function getInteractionsForSession(
 
   const { data, error } = await supabase
     .from("interactions")
-    .select("node_id, student_answer, agent_feedback, next_node, created_at")
+    .select("node_id, student_answer, agent_feedback, next_node, turn_kind, created_at")
     .eq("session_id", sessionId)
     .order("created_at", { ascending: true })
     .order("id", { ascending: true });
@@ -210,4 +220,47 @@ export async function getInteractionsForSession(
   }
 
   return (data || []) as RestorationInteraction[];
+}
+
+/**
+ * Returns the count of prior conversational support turns for this session at the given node.
+ * Used for progressive scaffolding without modifying session schema.
+ */
+export async function getSupportTurnCount(
+  sessionId: string,
+  nodeId: NodeId
+): Promise<number> {
+  const supabase = getSupabaseServerClient();
+  const { count, error } = await supabase
+    .from("interactions")
+    .select("*", { count: "exact", head: true })
+    .eq("session_id", sessionId)
+    .eq("node_id", nodeId)
+    .eq("turn_kind", "conversational_support");
+
+  if (error) {
+    return 0;
+  }
+  return count ?? 0;
+}
+
+/**
+ * Retrieves recent interactions for bounded conversational context.
+ */
+export async function getRecentInteractionsForSession(
+  sessionId: string,
+  limit: number = 6
+): Promise<Array<{ student_answer: string | null; agent_feedback: string | null; turn_kind: TurnKind | null }>> {
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("interactions")
+    .select("student_answer, agent_feedback, turn_kind")
+    .eq("session_id", sessionId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error || !data) {
+    return [];
+  }
+  return (data as Array<{ student_answer: string | null; agent_feedback: string | null; turn_kind: TurnKind | null }>).reverse();
 }

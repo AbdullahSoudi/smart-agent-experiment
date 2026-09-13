@@ -1,11 +1,12 @@
 import { MAX_STUDENT_ANSWER_LENGTH, ANSWER_TOO_LONG_ERROR } from "@/lib/validation";
 import { NextResponse } from "next/server";
 import { getNextNode } from "@/lib/transitions";
-import { evaluateN1 } from "@/lib/server/evaluator";
+import { evaluateNodeAnswer } from "@/lib/server/evaluator";
 import {
   getSessionById,
   recordInteraction,
   updateSessionState,
+  type TurnKind,
 } from "@/lib/server/persistence";
 
 export async function POST(request: Request) {
@@ -81,10 +82,18 @@ export async function POST(request: Request) {
       );
     }
 
-    // 2. Groq AI Evaluation (N1 only)
+    // 2. Groq AI Evaluation with bounded context & progressive support
     let evaluationResult;
     try {
-      evaluationResult = await evaluateN1(trimmedAnswer);
+      evaluationResult = await evaluateNodeAnswer({
+        nodeId: "N1",
+        answer: trimmedAnswer,
+        options: {
+          sessionId: session.id,
+          scenarioVersion: session.scenario_version,
+          promptVersion: session.prompt_version,
+        },
+      });
     } catch (evalError) {
       // Technical failure rule: A technical AI failure is NOT a weak answer.
       // Do not advance node, do not persist interaction, student remains at N1.
@@ -94,7 +103,39 @@ export async function POST(request: Request) {
       );
     }
 
-    // 3. Deterministic application transition logic
+    // 3. Handle Conversational Support & Off-Topic turns
+    if (evaluationResult.intent === "support" || evaluationResult.intent === "off_topic") {
+      const turnKind: TurnKind =
+        evaluationResult.intent === "support"
+          ? "conversational_support"
+          : "off_topic";
+
+      await recordInteraction({
+        sessionId: session.id,
+        nodeId: "N1",
+        studentAnswer: trimmedAnswer,
+        classification: null,
+        agentFeedback: evaluationResult.feedback,
+        nextNode: "N1",
+        turnKind,
+        decisionTimeMs: null,
+      });
+
+      // Do NOT update session current_node, student remains at current node
+      return NextResponse.json({
+        feedback: evaluationResult.feedback,
+        nextNode: "N1",
+      });
+    }
+
+    // 4. Genuine answer: deterministic application transition logic
+    if (!evaluationResult.classification) {
+      return NextResponse.json(
+        { error: "تعذر تقييم الإجابة حاليًا. حاول مرة أخرى." },
+        { status: 500 }
+      );
+    }
+
     const nextNode = getNextNode({
       nodeId: "N1",
       classification: evaluationResult.classification,
@@ -107,7 +148,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 4. Persist interaction (Order: interaction -> session update)
+    // 5. Persist interaction (Order: interaction -> session update)
     await recordInteraction({
       sessionId: session.id,
       nodeId: "N1",
@@ -115,16 +156,17 @@ export async function POST(request: Request) {
       classification: evaluationResult.classification,
       agentFeedback: evaluationResult.feedback,
       nextNode,
+      turnKind: "evaluated_answer",
       decisionTimeMs: null,
     });
 
-    // 5. Update session current_node
+    // 6. Update session current_node
     await updateSessionState({
       sessionId: session.id,
       currentNode: nextNode,
     });
 
-    // 6. Return response to browser (classification strictly excluded)
+    // 7. Return response to browser (classification strictly excluded)
     return NextResponse.json({
       feedback: evaluationResult.feedback,
       nextNode,

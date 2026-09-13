@@ -55,11 +55,13 @@ export async function POST(request: Request) {
       studentAnswer: inter.student_answer,
       feedback: inter.agent_feedback,
       nextNode: inter.next_node,
+      turnKind: inter.turn_kind ?? null,
     }));
 
     return NextResponse.json({
       status: session.status,
       currentNode: session.current_node,
+      scenarioVersion: session.scenario_version,
       history,
     });
   } catch (error) {

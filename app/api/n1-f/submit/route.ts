@@ -116,6 +116,7 @@ export async function POST(request: Request) {
       classification: null,
       agentFeedback: null,
       nextNode,
+      turnKind: "non_evaluated_answer",
       decisionTimeMs: null,
     });
 

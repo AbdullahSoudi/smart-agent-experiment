@@ -139,3 +139,31 @@ Provider: Groq
 Model: openai/gpt-oss-120b
 App: 1.0.0
 ```
+
+
+---
+
+## 7. Conversational Intent Contract (Prompt v0.3 — T54 Pilot Evolution)
+
+في الإصدار 0.3 (المعتمد للجلسات الجديدة ابتداءً من T54)، يتعامل النموذج بمرونة حوارية تمنع تصنيف طلبات المساعدة بالخطأ كإجابات ضعيفة:
+
+### مخرجات النموذج الهيكلية (Strict JSON Schema)
+```json
+{
+  "intent": "answer | support | off_topic",
+  "classification": "advanced | medium | weak | null",
+  "feedback": "Arabic response string"
+}
+```
+
+### قواعد التحقق الصارمة (Server-Side Invariants)
+- إذا كان `intent = "answer"`: يجب أن يكون `classification` قيمة صحيحة (`advanced` أو `medium` أو `weak`).
+- إذا كان `intent = "support"`: يجب أن يكون `classification = null`.
+- إذا كان `intent = "off_topic"`: يجب أن يكون `classification = null`.
+- **التوجيه والمسار (Routing)**: النموذج لا يختار نهائياً `next_node`. في حالتي الدعم والمحادثة الجانبية يبقى الطالب في نفس المحطة التعليمية.
+- **التدرج في الدعم (Progressive Scaffolding)**:
+  1. طلب الدعم الأول: تبسيط السؤال وإعادة صياغته بشكل مباشر.
+  2. طلب الدعم الثاني: تقديم مثال واقعي ملموس.
+  3. طلب الدعم الثالث: تجزئة المطلوب إلى خطوة أصغر.
+  4. طلب الدعم الرابع+: تقديم قالب مبسط وإكمال الطالب للباقي.
+- **التكيف مع اللهجة المصرية**: عند طلب الطالب أو حديثه بالمصري، يرد الوكيل بمصرية مهذبة وبسيطة بدون تكلف.

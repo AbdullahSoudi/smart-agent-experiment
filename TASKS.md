@@ -103,7 +103,7 @@
 
 - [x] T52 — Run pilot
 - [x] T53 — Record pilot issues
-- [ ] T54 — Fix only approved pilot issues
+- [x] T54 — Fix only approved pilot issues
 - [ ] T55 — Freeze App / Scenario / Prompt / Model versions
 - [ ] T56 — Tag experiment release v1.0
 

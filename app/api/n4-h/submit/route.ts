@@ -1,10 +1,12 @@
 import { MAX_STUDENT_ANSWER_LENGTH, ANSWER_TOO_LONG_ERROR } from "@/lib/validation";
 import { NextResponse } from "next/server";
 import { getNextNode } from "@/lib/transitions";
+import { evaluateNodeAnswer } from "@/lib/server/evaluator";
 import {
   getSessionById,
   recordInteraction,
   updateSessionState,
+  type TurnKind,
 } from "@/lib/server/persistence";
 
 export async function POST(request: Request) {
@@ -80,7 +82,50 @@ export async function POST(request: Request) {
       );
     }
 
-    // 2. Deterministic routing (No Groq evaluation, No classification)
+    // 2. Evaluator call to distinguish support/off_topic from actual answer
+    let evalResult;
+    try {
+      evalResult = await evaluateNodeAnswer({
+        nodeId: "N4", // evaluate context against N4 learning goal
+        answer: trimmedAnswer,
+        options: {
+          sessionId: session.id,
+          scenarioVersion: session.scenario_version,
+          promptVersion: session.prompt_version,
+        },
+      });
+    } catch {
+      // On technical failure at N4_H, safe retryable error without advancing
+      return NextResponse.json(
+        { error: "تعذر معالجة الرسالة حاليًا. حاول مرة أخرى." },
+        { status: 500 }
+      );
+    }
+
+    if (evalResult.intent === "support" || evalResult.intent === "off_topic") {
+      const turnKind: TurnKind =
+        evalResult.intent === "support"
+          ? "conversational_support"
+          : "off_topic";
+
+      await recordInteraction({
+        sessionId: session.id,
+        nodeId: "N4_H",
+        studentAnswer: trimmedAnswer,
+        classification: null,
+        agentFeedback: evalResult.feedback,
+        nextNode: "N4_H",
+        turnKind,
+        decisionTimeMs: null,
+      });
+
+      return NextResponse.json({
+        feedback: evalResult.feedback,
+        nextNode: "N4_H",
+      });
+    }
+
+    // Actual reformulation answer attempt -> deterministic unclassified transition to N5
     const nextNode = getNextNode({
       nodeId: "N4_H",
     });
@@ -92,26 +137,24 @@ export async function POST(request: Request) {
       );
     }
 
-    // 3. Persist interaction (Order: interaction -> session update)
     await recordInteraction({
       sessionId: session.id,
       nodeId: "N4_H",
       studentAnswer: trimmedAnswer,
       classification: null,
-      agentFeedback: null,
+      agentFeedback: evalResult.feedback,
       nextNode,
+      turnKind: "non_evaluated_answer",
       decisionTimeMs: null,
     });
 
-    // 4. Update session current_node
     await updateSessionState({
       sessionId: session.id,
       currentNode: nextNode,
     });
 
-    // 5. Return response to browser (No classification, no score)
     return NextResponse.json({
-      feedback: null,
+      feedback: evalResult.feedback,
       nextNode,
     });
   } catch (error) {

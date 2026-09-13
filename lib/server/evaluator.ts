@@ -1,383 +1,169 @@
 /**
- * Server-only Groq runtime evaluator for student free-text responses.
+ * Evaluator Service for Conversational Intelligent Mentor Experiment
  *
- * Source of Truth:
- *   - SCENARIO_SPEC.md (Version 1.0) for learning goals & rubrics
- *   - prompts/evaluator_prompt.md (Draft v0.2)
- *   - AI_EVALUATION.md
- *   - data/n1_evaluator_approval.md
+ * Source of Truth: AI_EVALUATION.md, SCENARIO_SPEC.md & PILOT_ISSUES.md
+ * Provider: Groq
+ * Model: openai/gpt-oss-120b
+ * Versions:
+ *   - 0.2: Historical baseline (strict classification + feedback only)
+ *   - 0.3: Intent-aware conversational mentor (support, off_topic, answer, progressive scaffolding, Egyptian adaptation)
+ *
+ * INVARIANTS:
+ *   - Output is strictly validated against JSON schema
+ *   - AI evaluates intent, classification, and student-visible feedback
+ *   - AI NEVER chooses next_node, grade, or score
+ *   - If intent === "answer": classification MUST be advanced | medium | weak
+ *   - If intent === "support" | "off_topic": classification MUST be null
+ *   - Invalid output combinations are technical failures (no fallback to weak, no state advancement)
  */
 
 import Groq from "groq-sdk";
+import type { EvaluatedNodeId } from "../scenario";
+import { getScenarioNode } from "../scenario";
 import type { Classification } from "../transitions";
+import { getSupportTurnCount, getRecentInteractionsForSession, type TurnKind } from "./persistence";
 
-/**
- * Current development baseline version for the approved evaluator prompt.
- * Note: Formal experiment freeze occurs in T55.
- */
-export const PROMPT_VERSION = "0.2";
+export const PROMPT_VERSION = "0.3";
+export const DEFAULT_PROMPT_VERSION = "0.3";
+
+export type EvaluationIntent = "answer" | "support" | "off_topic";
 
 export interface EvaluationResult {
-  classification: Classification;
+  intent: EvaluationIntent;
+  classification: Classification | null;
   feedback: string;
 }
 
-export type EvaluatedNodeId = "N1" | "N2" | "N3" | "N4" | "N4_REV" | "N5" | "N1_H" | "N3_H" | "N5_H";
-
-const SYSTEM_INSTRUCTION = `أنت وكيل تعليمي ذكي يساعد طالبًا جامعيًا على التدريب على اكتشاف الفرص الرقمية.
-
-مهمتك في هذه الرسالة محدودة جدًا:
-
-1. اقرأ هدف العقدة الحالية ومعايير التصنيف.
-2. افهم إجابة الطالب دلاليًا، ولا تعتمد على التطابق الحرفي للكلمات فقط.
-3. صنف الإجابة إلى قيمة واحدة فقط:
-   advanced
-   medium
-   weak
-4. اكتب تغذية راجعة عربية قصيرة وداعمة مرتبطة مباشرة بإجابة الطالب (1 إلى 3 جمل).
-
-قواعد إلزامية:
-- يجب أن يكون الإخراج مطابقًا تمامًا لمخطط JSON المحدد (classification و feedback فقط).
-- لا تحدد العقدة التالية.
-- لا تقترح next_node.
-- لا تقدم أي درجة أو تقييم رقمي (score أو grade).
-- لا تغير قواعد السيناريو.
-- لا تعرض التصنيف للطالب داخل feedback.
-- لا تعرض درجة رقمية.
-- لا تعطِ الإجابة الجاهزة مباشرة إلا إذا كانت تعليمات العقدة الحالية تقول صراحة إنها Rescue.
-- لا تستخدم معلومات خارج السياق المرسل إليك.
-- إذا كانت الإجابة مختصرة لكن معناها واضح، قيّم المعنى وليس طول النص.`;
-
-function buildN1Contents(studentAnswer: string): string {
-  return `CURRENT NODE:
-N1
-
-NODE QUESTION / CONTEXT:
-لديك ميزانية محدودة ولا توجد لديك فكرة مشروع محددة حتى الآن. أمامك خياران:
-أ) البحث أولًا عن احتياجات ومشكلات العملاء.
-ب) اختيار فكرة منتج تعجبك ثم محاولة إقناع الناس بشرائها.
-أي الخيارين تختار؟ ولماذا؟
-
-LEARNING GOAL:
-أن يبدأ الطالب من احتياج أو مشكلة حقيقية لدى العملاء/السوق، لا من منتج يرغب في بيعه أولًا.
-
-ADVANCED:
-الإجابة توضح بصورة مباشرة أن نقطة البداية هي البحث عن:
-- احتياج
-- مشكلة
-- سوق
-- جمهور
-- بحث
-- فئة مستهدفة
-مع تفسير منطقي يربط ذلك باكتشاف فرصة حقيقية.
-
-MEDIUM:
-الإجابة تختار الاتجاه المقبول أو تشير إلى البحث/السوق/العملاء، لكن التفسير محدود أو غير عميق.
-
-WEAK:
-الإجابة تبدأ من:
-- المنتج
-- فكرة يرغب الطالب في صنعها
-- تطبيق
-- البيع
-دون ربط ذلك بمشكلة أو احتياج حقيقي.
-
-STUDENT ANSWER:
-${studentAnswer.trim()}
-
-FEEDBACK REQUIREMENTS:
-- Arabic.
-- 1 to 3 short sentences.
-- Supportive and specific.
-- Do not mention the classification label.
-- Do not determine next_node or score.
-- Output must conform to the JSON schema.`;
+export interface EvaluateNodeOptions {
+  sessionId?: string;
+  scenarioVersion?: string;
+  promptVersion?: string;
 }
 
-function buildN2Contents(studentAnswer: string): string {
-  return `CURRENT NODE:
-N2
+const SYSTEM_INSTRUCTION_V0_3 = `أنت "الوكيل الذكي لاكتشاف الفرص الرقمية"، مرشد حواري تعليمي ذكي وودود يساعد طالبًا جامعيًا في رحلة استكشاف وتطوير فرصة لمشروع ريادي رقمي.
 
-NODE QUESTION / CONTEXT:
-اكتشفت مشكلة تتعلق بصعوبة وصول بعض طلاب الجامعة إلى مصادر تعليمية مناسبة. لكن ليس كل الطلاب لديهم نفس الاحتياجات.
+مهمتك في كل رسالة يرسلها الطالب:
+1. تحديد نية الطالب بدقة (intent):
+   - "support": الطالب يطلب مساعدة، أو توضيحًا، أو تبسيطًا للسؤال، أو مثالاً، أو يسأل عن معنى كلمة أو مصطلح، أو يطلب التحدث بالمصري ("مش فاهم", "وضحلي أكتر", "ممكن تبسط السؤال؟", "يعني إيه فجوة؟", "اديني مثال", "ممكن تتكلم معايا مصري عشان أفهم؟", "مش فاهم المقصود بالقيمة", "قول السؤال بطريقة أسهل").
+     * في هذه الحالة: intent = "support"، و classification = "null".
+     * اكتب ردًا حواريًا مساعدًا ومبسطًا ومشجعًا في 1 إلى 3 جمل قصيرة، مع الالتزام بمستوى التدرج المطلوب (Scaffolding).
 
-ما أهم المعلومات التي تحتاج لمعرفتها عن العملاء المستهدفين قبل أن تقرر وجود فرصة حقيقية؟
+   - "off_topic": رسالة اجتماعية أو خارج سياق التعلم ("عامل ايه؟", "الجو حر النهارده", "نتكلم في حاجة تانية؟").
+     * في هذه الحالة: intent = "off_topic"، و classification = "null".
+     * رد باختصار ولطف (جملة واحدة)، ثم أعد توجيهه بلطف إلى السؤال الحالي.
 
-LEARNING GOAL:
-فهم العملاء والمشكلة بعمق وعدم الاكتفاء بمجرد معرفة وجود المشكلة، بل تحليل البدائل الحالية والحلول القائمة وسلوك الفئة المستهدفة.
+   - "answer": رسالة تحتوي على محاولة حقيقية للإجابة عن السؤال التعليمي للمحطة، حتى لو كانت ناقصة أو غير مكتملة أو بدأها بقوله "مش فاهم أوي بس أعتقد...".
+     * في هذه الحالة: intent = "answer".
+     * صنف المحاولة وفق معايير المحطة بدقة: "advanced" أو "medium" أو "weak".
+     * اكتب تعقيبًا توجيهيًا مشجعًا ومحددًا في 1 إلى 3 جمل قصيرة.
 
-ADVANCED:
-يذكر عدة عناصر تحليلية مثل:
-- المنافسين
-- البدائل
-- القدرة الشرائية
-- السلوك
-- حجم الفئة/المشكلة
-- الحلول الحالية
-ويظهر أنه لا يكتفي بمعرفة وجود المشكلة.
+2. أسلوب الحوار ولغة الرد:
+   - لغة عربية بسيطة ومباشرة وواضحة وسهلة على الطلاب.
+   - جمل قصيرة، فكرة واحدة في كل جملة.
+   - إذا كتب الطالب بالعامية المصرية أو طلب التحدث بالمصري: رد بالعامية المصرية الطبيعية البسيطة والودودة.
+   - تجنب الألفاظ الأكاديمية المعقدة، وإذا كان لابد منها فاشرحها فورًا ببساطة (مثال: "القيمة المقدمة، يعني ببساطة الفايدة اللي الطالب هياخدها").
+   - ممنوع منعاً باتاً ذكر التصنيف أو عبارات مثل: "إجابتك ضعيفة"، "إجابتك متوسطة"، "إجابتك متقدمة".
+   - لا تذكر درجات أو تقييمات، ولا تختر المحطة التالية (next_node).
 
-MEDIUM:
-يركز على معرفة الاحتياجات أو خصائص العميل، لكن لا يحلل بصورة كافية كيف يحل العميل المشكلة حاليًا أو ما البدائل الموجودة.
+3. قيود مخرجات JSON الصارمة:
+   - إذا كان intent = "answer": يجب أن يكون classification = "advanced" أو "medium" أو "weak".
+   - إذا كان intent = "support" أو "off_topic": يجب أن يكون classification = "null".
+   - أي تركيبة تخالف هذا هي خطأ تقني مرفوض.`;
 
-WEAK:
-إجابة عامة جدًا أو لا تتناول العميل والمشكلة بصورة تسمح بتقييم وجود فرصة.
+const SYSTEM_INSTRUCTION_V0_2 = `أنت مقيّم تربوي دقيق لنظام تعليمي قائم على حل المشكلات في ريادة الأعمال الرقمية.
+مهمتك تقييم إجابة الطالب وتصنيفها بدقة تامة وموضوعية وفق معايير التقييم (Rubric) الخاصة بالمحطة المحددة.
 
-STUDENT ANSWER:
-${studentAnswer.trim()}
+قواعد صارمة:
+1. التزم بمعايير التقييم المذكورة لكل محطة نصاً وروحاً.
+2. لا تتساهل في التصنيف:
+   - Advanced: الإجابة تحقق المعيار المتقدم بوضوح.
+   - Medium: الإجابة مقبولة جزئياً لكنها تفتقر للعمق المطلوب أو تخلط المفاهيم.
+   - Weak: الإجابة سطحية أو تقفز للحل دون فهم أو تكرر أخطاء شائعة.
+3. التغذية الراجعة (Feedback):
+   - باللغة العربية الفصحى البسيطة.
+   - من جملة إلى 3 جمل قصيرة ومحددة وداعمة.
+   - لا تذكر التصنيف إطلاقاً (ممنوع قول: إجابتك ممتازة/متوسطة/ضعيفة).
+   - لا تحدد المحطة التالية ولا تعلن النتيجة.
+4. الإخراج يجب أن يطابق بدقة مخطط JSON المحدد.`;
 
-FEEDBACK REQUIREMENTS:
-- Arabic.
-- 1 to 3 short sentences.
-- Supportive and specific.
-- Do not mention the classification label.
-- Do not determine next_node or score.
-- Output must conform to the JSON schema.`;
+function getScaffoldingGuidance(supportCount: number): string {
+  if (supportCount === 0) {
+    return "- توجيه الدعم (المحاولة الأولى): أعد صياغة السؤال بطريقة أبسط وأسهل وأقرب لواقع الطالب.";
+  }
+  if (supportCount === 1) {
+    return "- توجيه الدعم (المحاولة الثانية): اضرب مثالاً بسيطاً وقريباً من حياة الطالب يوضح الفكرة دون إعطاء الإجابة الكاملة.";
+  }
+  if (supportCount === 2) {
+    return "- توجيه الدعم (المحاولة الثالثة): قسّم السؤال إلى خطوة صغيرة واحدة واطلب من الطالب التفكير فيها.";
+  }
+  return "- توجيه الدعم (محاولة متقدمة): أعطه بداية مساعدة أو قالباً بسيطاً واطلب منه إكمال الباقي.";
 }
 
-function buildN3Contents(studentAnswer: string): string {
+function buildEvaluationPrompt({
+  nodeId,
+  studentAnswer,
+  scenarioVersion,
+  promptVersion,
+  supportCount,
+  recentHistory,
+}: {
+  nodeId: EvaluatedNodeId;
+  studentAnswer: string;
+  scenarioVersion: string;
+  promptVersion: string;
+  supportCount: number;
+  recentHistory: Array<{ student_answer: string | null; agent_feedback: string | null; turn_kind: TurnKind | null }>;
+}): string {
+  const node = getScenarioNode(nodeId, scenarioVersion);
+
+  let historySnippet = "";
+  if (recentHistory.length > 0) {
+    historySnippet = `\nRECENT CONVERSATION CONTEXT (Bounded history):\n` +
+      recentHistory
+        .map((turn) => {
+          const s = turn.student_answer ? `[الطالب]: ${turn.student_answer}` : "";
+          const a = turn.agent_feedback ? `[المرشد]: ${turn.agent_feedback}` : "";
+          return [s, a].filter(Boolean).join("\n");
+        })
+        .join("\n");
+  }
+
+  const scaffoldingDirective = getScaffoldingGuidance(supportCount);
+
   return `CURRENT NODE:
-N3
+${nodeId} - ${node.title}
 
 NODE QUESTION / CONTEXT:
-اكتشفت أن بعض الطلاب يعتمدون على مجموعات التواصل الاجتماعي للبحث عن المصادر، لكنهم يواجهون مشكلات مثل صعوبة التحقق من الجودة وتشتت الروابط.
+${node.prompt || node.message || ""}
 
-هل ترى هنا فرصة رقمية؟ وما الفجوة التي يمكن لمشروعك استغلالها؟
+LEARNING GOAL & RUBRIC:
+- Advanced: ${node.rubric?.advanced || node.rubric?.advancedOrMedium || "تحقيق المعيار المتقدم بدقة"}
+- Medium: ${node.rubric?.medium || node.rubric?.advancedOrMedium || "تحقيق مقبول جزئياً"}
+- Weak: ${node.rubric?.weak || "إجابة سطحية أو غير مرتبطة"}
+${node.feedbackIntent ? `\nFEEDBACK INTENT:\n- Advanced: ${node.feedbackIntent.advanced || ""}\n- Medium: ${node.feedbackIntent.medium || ""}\n- Weak: ${node.feedbackIntent.weak || ""}` : ""}
 
-LEARNING GOAL:
-اكتشاف الفجوة الرقمية في الحلول الحالية وربطها بنقص حقيقي لدى المستخدم بدلاً من مجرد اقتراح فكرة عامة أو مكررة.
+SCAFFOLDING LEVEL FOR SUPPORT TURNS (Count at this node: ${supportCount}):
+${scaffoldingDirective}
+${historySnippet}
 
-ADVANCED:
-يحدد فجوة واضحة في الحلول الحالية، مثل تنظيم/تجميع/التحقق من المصادر، ويربطها بمشكلة المستخدم.
-
-MEDIUM:
-يقدم فكرة ممكنة لكنها عامة ولا يحدد بوضوح:
-- لمن؟
-- ما المشكلة؟
-- ما القيمة؟
-
-WEAK:
-يركز على فكرة "مبتكرة" دون تحديد النقص في الحلول الحالية أو ما يفتقده الطالب.
-
-STUDENT ANSWER:
+CURRENT STUDENT INPUT:
 ${studentAnswer.trim()}
 
-FEEDBACK REQUIREMENTS:
-- Arabic.
-- 1 to 3 short sentences.
-- Supportive and specific.
-- Do not mention the classification label.
-- Do not determine next_node or score.
-- Output must conform to the JSON schema.`;
+OUTPUT INSTRUCTIONS:
+- First, decide the INTENT:
+  * "support": if the student asks for help, explanation, simplification, examples, asks about meaning of a word, or asks to speak in Egyptian Arabic.
+  * "off_topic": if unrelated conversational chitchat.
+  * "answer": if the student makes a genuine attempt to answer the question, even if partial.
+- If intent is "support": classification MUST be "null", provide 1-3 short supportive sentences in simple Arabic (or simple Egyptian Arabic if student used/asked for it).
+- If intent is "off_topic": classification MUST be "null", provide a polite 1-sentence reply redirecting to the question.
+- If intent is "answer": classification MUST be "advanced", "medium", or "weak" based on rubric. Provide 1-3 short feedback sentences.
+- Conform strictly to JSON schema.`;
 }
 
-function buildN4Contents(studentAnswer: string): string {
-  return `CURRENT NODE:
-N4
-
-NODE QUESTION / CONTEXT:
-اقترح فرصة رقمية محددة لحل هذه المشكلة، واشرح في جملة ما القيمة التي سيحصل عليها العميل منها.
-
-LEARNING GOAL:
-صياغة الفرصة الرقمية والقيمة المقدمة للعميل (المستخدم، المشكلة، الحل، القيمة).
-
-ADVANCED:
-يقترح فرصة رقمية محددة لمعالجة المشكلة ويوضح بدقة القيمة التي سيحصل عليها العميل (المستخدم، المشكلة، الحل، القيمة).
-
-MEDIUM:
-يقترح فرصة أو حلاً رقمياً، لكن صياغة القيمة أو عناصر الفكرة (المستخدم، المشكلة، الحل) تحتاج إلى مزيد من التحديد.
-
-WEAK:
-الفكرة عامة جداً أو غير محددة، ولا توضح المستخدم أو المشكلة أو الحل أو القيمة.
-
-STUDENT ANSWER:
-${studentAnswer.trim()}
-
-FEEDBACK REQUIREMENTS:
-- Arabic.
-- 1 to 3 short sentences.
-- Supportive and specific.
-- Do not mention the classification label.
-- Do not determine next_node or score.
-- Output must conform to the JSON schema.`;
-}
-
-function buildN4RevContents(studentAnswer: string): string {
-  return `CURRENT NODE:
-N4_REV
-
-NODE QUESTION / CONTEXT:
-فكرتك تعالج مشكلة الوصول والتنظيم. لكن رائد الأعمال يبحث أيضًا عن الاستدامة المالية والتمكين الاقتصادي.
-
-كيف يمكن لهذه الفرصة أن تولد عائدًا ماديًا لك؟ ولماذا تعتقد أنها تستحق التطوير؟
-
-LEARNING GOAL:
-تحديد آلية توليد العائد المالي والاستدامة الاقتصادية وتبرير جدوى تطوير الفرصة.
-
-ADVANCED:
-يقترح آلية دخل واضحة ومناسبة للفكرة ويبرر جدوى التطوير.
-
-MEDIUM:
-يذكر آلية دخل أو تبريرًا معقولًا لكن بصورة غير مكتملة.
-
-WEAK:
-لا يقدم تصورًا واقعيًا للدخل أو لا يربط العائد بالفرصة.
-
-STUDENT ANSWER:
-${studentAnswer.trim()}
-
-FEEDBACK REQUIREMENTS:
-- Arabic.
-- 1 to 3 short sentences.
-- Supportive and specific.
-- Do not mention the classification label.
-- Do not determine next_node or score.
-- Output must conform to the JSON schema.`;
-}
-
-function buildN5Contents(studentAnswer: string): string {
-  return `CURRENT NODE:
-N5
-
-NODE QUESTION / CONTEXT:
-أمامك الآن مشروعك المقترح.
-
-ما الأسباب التي تجعلك تختار هذه الفرصة تحديدًا؟ اذكر عاملين على الأقل، منها ما يخص العملاء ومنها ما يخص العائد.
-
-LEARNING GOAL:
-تبرير اختيار الفرصة بالربط بين احتياج حقيقي للعميل (مشكلة/فئة/قيمة) وتحقيق عائد مادي ونموذج دخل مستدام.
-
-ADVANCED:
-يبرر الاختيار من خلال عناصر مثل:
-- مشكلة/احتياج حقيقي
-- فئة مستهدفة واضحة
-- قيمة
-- عائد مادي أو نموذج دخل
-ويظهر ربطًا بين احتياج العميل والقيمة الاقتصادية.
-
-MEDIUM:
-التبرير جيد جزئيًا، لكنه يحتاج توضيح أن الاختيار لا يقوم فقط على إعجاب الطالب بالفكرة بل على حل مشكلة وقابلية التحول إلى قيمة اقتصادية.
-
-WEAK:
-تبرير ضعيف أو ذاتي لا يعتمد على العميل والجدوى الاقتصادية.
-
-STUDENT ANSWER:
-${studentAnswer.trim()}
-
-FEEDBACK REQUIREMENTS:
-- Arabic.
-- 1 to 3 short sentences.
-- Supportive and specific.
-- Do not mention the classification label.
-- Do not determine next_node or score.
-- Output must conform to the JSON schema.`;
-}
-
-function buildN1HContents(studentAnswer: string): string {
-  return `CURRENT NODE:
-N1_H
-
-NODE QUESTION / CONTEXT:
-تخيل أنك لاحظت أن كثيرًا من طلاب الجامعة يجدون صعوبة في العثور على مصادر تعليمية موثوقة لمقرراتهم.
-
-هل يمكن أن تمثل هذه المشكلة نقطة بداية لاكتشاف فرصة رقمية؟ ولماذا؟
-
-LEARNING GOAL:
-التعرف على أن المشكلة أو الاحتياج الحقيقي لدى فئة محددة هو نقطة البداية لاكتشاف الفرصة الرقمية.
-
-ADVANCED:
-يتعرف بوضوح على أن وجود مشكلة حقيقية لدى فئة محددة يمكن أن يمثل نقطة بداية لفرصة رقمية، ويشرح السبب.
-
-MEDIUM:
-يوافق بصورة صحيحة ويقدم تفسيرًا بسيطًا.
-
-WEAK:
-لا يربط المشكلة باكتشاف فرصة أو يعود مرة أخرى للبدء بمنتج دون فهم المشكلة.
-
-STUDENT ANSWER:
-${studentAnswer.trim()}
-
-FEEDBACK REQUIREMENTS:
-- Arabic.
-- 1 to 3 short sentences.
-- Supportive and specific.
-- Do not mention the classification label.
-- Do not determine next_node or score.
-- Output must conform to the JSON schema.`;
-}
-
-function buildN3HContents(studentAnswer: string): string {
-  return `CURRENT NODE:
-N3_H
-
-NODE QUESTION / CONTEXT:
-فكرتك ممكنة، لكنها ما زالت عامة.
-
-أعد صياغة الفجوة في إجابة قصيرة توضح:
-
-- لمن هذه الفرصة؟
-- ما المشكلة المحددة؟
-- ما القيمة التي يمكن أن يقدمها الحل؟
-
-LEARNING GOAL:
-إعادة صياغة الفجوة الرقمية بتحديد الفئة المستهدفة والمشكلة المحددة والقيمة بوضوح كافٍ للانتقال إلى صياغة الفرصة.
-
-ADVANCED:
-يحدد بوضوح واكتمال: الفئة المستهدفة + المشكلة المحددة + القيمة التي يقدمها الحل، بما يكفي تمامًا للانتقال لصياغة الفرصة.
-
-MEDIUM:
-يحدد العناصر المطلوبة (الفئة والمشكلة والقيمة) بصورة مقبولة وكافية للانتقال لصياغة الفرصة، مع وجود إيجاز أو عمومية جزئية.
-
-WEAK:
-يظل عامًا ولا يحدد الفجوة، أو يغفل العناصر الأساسية (الفئة، المشكلة، القيمة).
-
-STUDENT ANSWER:
-${studentAnswer.trim()}
-
-FEEDBACK REQUIREMENTS:
-- Arabic.
-- 1 to 3 short sentences.
-- Supportive and specific.
-- Do not mention the classification label.
-- Do not determine next_node or score.
-- Output must conform to the JSON schema.`;
-}
-
-function buildN5HContents(studentAnswer: string): string {
-  return `CURRENT NODE:
-N5_H
-
-NODE QUESTION / CONTEXT:
-تبريرك جيد، لكن فكر مرة أخرى:
-
-هل اخترت الفرصة لأنها تعجبك فقط، أم لأنها تحل مشكلة حقيقية ويمكن أن تتحول إلى قيمة اقتصادية؟
-
-وضّح السبب.
-
-LEARNING GOAL:
-تحسين تبرير القرار بالربط بين حل مشكلة حقيقية للعميل وإمكانية التحول إلى قيمة اقتصادية والجدوى.
-
-ADVANCED:
-يربط الاختيار بوضوح بحل مشكلة حقيقية للعميل/السوق وبإمكانية التحول إلى قيمة اقتصادية واستدامة مالية.
-
-MEDIUM:
-يربط الاختيار بالمشكلة/العميل وإمكانية القيمة الاقتصادية بصورة مقبولة وكافية حتى وإن كانت موجزة.
-
-WEAK:
-يظل التبرير ذاتيًا أو غير مرتبط بالمشكلة والجدوى الاقتصادية.
-
-STUDENT ANSWER:
-${studentAnswer.trim()}
-
-FEEDBACK REQUIREMENTS:
-- Arabic.
-- 1 to 3 short sentences.
-- Supportive and specific.
-- Do not mention the classification label.
-- Do not determine next_node or score.
-- Output must conform to the JSON schema.`;
-}
-
-async function callGroqEvaluator(contents: string): Promise<EvaluationResult> {
+async function callGroqEvaluator(
+  promptContents: string,
+  promptVersion: string
+): Promise<EvaluationResult> {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey || !apiKey.trim()) {
     throw new Error("Configuration Error: GROQ_API_KEY environment variable is missing.");
@@ -386,13 +172,13 @@ async function callGroqEvaluator(contents: string): Promise<EvaluationResult> {
   const model = process.env.AI_MODEL || "openai/gpt-oss-120b";
   const groq = new Groq({ apiKey });
 
-  let responseText: string | undefined | null;
-  try {
+  if (promptVersion === "0.2") {
+    // Historical 0.2 execution path
     const chatCompletion = await groq.chat.completions.create({
       model,
       messages: [
-        { role: "system", content: SYSTEM_INSTRUCTION },
-        { role: "user", content: contents },
+        { role: "system", content: SYSTEM_INSTRUCTION_V0_2 },
+        { role: "user", content: promptContents },
       ],
       response_format: {
         type: "json_schema",
@@ -411,6 +197,55 @@ async function callGroqEvaluator(contents: string): Promise<EvaluationResult> {
               },
             },
             required: ["classification", "feedback"],
+            additionalProperties: false,
+          },
+        },
+      },
+    });
+
+    const responseText = chatCompletion.choices[0]?.message?.content;
+    if (!responseText || !responseText.trim()) {
+      throw new Error("Technical Error: Model response text is empty.");
+    }
+
+    const parsed = JSON.parse(responseText);
+    return {
+      intent: "answer",
+      classification: parsed.classification as Classification,
+      feedback: parsed.feedback.trim(),
+    };
+  }
+
+  // Current 0.3 execution path
+  let responseText: string | undefined | null;
+  try {
+    const chatCompletion = await groq.chat.completions.create({
+      model,
+      messages: [
+        { role: "system", content: SYSTEM_INSTRUCTION_V0_3 },
+        { role: "user", content: promptContents },
+      ],
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "conversational_evaluation_result",
+          strict: true,
+          schema: {
+            type: "object",
+            properties: {
+              intent: {
+                type: "string",
+                enum: ["answer", "support", "off_topic"],
+              },
+              classification: {
+                type: "string",
+                enum: ["advanced", "medium", "weak", "null"],
+              },
+              feedback: {
+                type: "string",
+              },
+            },
+            required: ["intent", "classification", "feedback"],
             additionalProperties: false,
           },
         },
@@ -445,30 +280,60 @@ async function callGroqEvaluator(contents: string): Promise<EvaluationResult> {
 
   const candidate = parsed as Record<string, unknown>;
   const keys = Object.keys(candidate);
-  const expectedKeys = ["classification", "feedback"];
+  const expectedKeys = ["intent", "classification", "feedback"];
   const hasExactKeys =
-    keys.length === 2 &&
-    keys.includes("classification") &&
-    keys.includes("feedback");
+    keys.length === 3 &&
+    expectedKeys.every((k) => keys.includes(k));
 
   if (!hasExactKeys) {
     throw new Error(
-      `Technical Error: Invalid keys in model response. Expected exactly ['classification', 'feedback'], received: [${keys
+      `Technical Error: Invalid keys in model response. Expected exactly ['intent', 'classification', 'feedback'], received: [${keys
         .map((k) => `'${k}'`)
         .join(", ")}].`
     );
   }
 
-  const allowedClassifications: Classification[] = ["advanced", "medium", "weak"];
+  const allowedIntents: EvaluationIntent[] = ["answer", "support", "off_topic"];
   if (
-    typeof candidate.classification !== "string" ||
-    !allowedClassifications.includes(candidate.classification as Classification)
+    typeof candidate.intent !== "string" ||
+    !allowedIntents.includes(candidate.intent as EvaluationIntent)
   ) {
     throw new Error(
-      `Technical Error: Invalid classification value: ${JSON.stringify(
-        candidate.classification
-      )}. Must be one of: advanced, medium, weak.`
+      `Technical Error: Invalid intent value: ${JSON.stringify(candidate.intent)}`
     );
+  }
+
+  const intent = candidate.intent as EvaluationIntent;
+  const rawClassification = candidate.classification;
+
+  // Local Output Invariants per Approved T54 Contract:
+  // if intent = answer -> classification MUST be advanced | medium | weak
+  // if intent = support | off_topic -> classification MUST be null
+  let finalClassification: Classification | null = null;
+
+  if (intent === "answer") {
+    const validClasses: Classification[] = ["advanced", "medium", "weak"];
+    if (
+      typeof rawClassification !== "string" ||
+      !validClasses.includes(rawClassification as Classification)
+    ) {
+      throw new Error(
+        `Technical Invariant Error: For intent 'answer', classification must be 'advanced', 'medium', or 'weak'. Received: ${JSON.stringify(
+          rawClassification
+        )}`
+      );
+    }
+    finalClassification = rawClassification as Classification;
+  } else {
+    // intent is "support" or "off_topic"
+    if (rawClassification !== "null" && rawClassification !== null) {
+      throw new Error(
+        `Technical Invariant Error: For intent '${intent}', classification must be null. Received: ${JSON.stringify(
+          rawClassification
+        )}`
+      );
+    }
+    finalClassification = null;
   }
 
   if (
@@ -479,112 +344,77 @@ async function callGroqEvaluator(contents: string): Promise<EvaluationResult> {
   }
 
   return {
-    classification: candidate.classification as Classification,
+    intent,
+    classification: finalClassification,
     feedback: candidate.feedback.trim(),
   };
 }
 
 /**
- * Conceptual node evaluator that accepts nodeId and studentAnswer.
+ * Evaluates a student's answer for any evaluated node, with bounded context and scaffolding.
  */
 export async function evaluateNodeAnswer({
   nodeId,
   answer,
+  options = {},
 }: {
   nodeId: EvaluatedNodeId;
   answer: string;
+  options?: EvaluateNodeOptions;
 }): Promise<EvaluationResult> {
   const trimmed = answer ? answer.trim() : "";
   if (!trimmed) {
     throw new Error("Validation Error: Student answer cannot be empty.");
   }
 
-  let contents: string;
-  if (nodeId === "N1") {
-    contents = buildN1Contents(trimmed);
-  } else if (nodeId === "N2") {
-    contents = buildN2Contents(trimmed);
-  } else if (nodeId === "N3") {
-    contents = buildN3Contents(trimmed);
-  } else if (nodeId === "N4") {
-    contents = buildN4Contents(trimmed);
-  } else if (nodeId === "N4_REV") {
-    contents = buildN4RevContents(trimmed);
-  } else if (nodeId === "N5") {
-    contents = buildN5Contents(trimmed);
-  } else if (nodeId === "N1_H") {
-    contents = buildN1HContents(trimmed);
-  } else if (nodeId === "N3_H") {
-    contents = buildN3HContents(trimmed);
-  } else if (nodeId === "N5_H") {
-    contents = buildN5HContents(trimmed);
-  } else {
-    throw new Error(`Unsupported node for evaluation: ${nodeId}`);
+  const scenarioVersion = options.scenarioVersion || "1.1";
+  const promptVersion = options.promptVersion || PROMPT_VERSION;
+
+  let supportCount = 0;
+  let recentHistory: Array<{ student_answer: string | null; agent_feedback: string | null; turn_kind: TurnKind | null }> = [];
+
+  if (options.sessionId) {
+    supportCount = await getSupportTurnCount(options.sessionId, nodeId);
+    recentHistory = await getRecentInteractionsForSession(options.sessionId, 6);
   }
 
-  return callGroqEvaluator(contents);
+  const promptContents = buildEvaluationPrompt({
+    nodeId,
+    studentAnswer: trimmed,
+    scenarioVersion,
+    promptVersion,
+    supportCount,
+    recentHistory,
+  });
+
+  return callGroqEvaluator(promptContents, promptVersion);
 }
 
-/**
- * Evaluates a student's answer for node N1 using the approved Groq model and strict JSON Schema.
- * Preserved for direct backwards compatibility.
- */
-export async function evaluateN1(studentAnswer: string): Promise<EvaluationResult> {
-  return evaluateNodeAnswer({ nodeId: "N1", answer: studentAnswer });
+// Convenience node-specific helpers
+export async function evaluateN1(studentAnswer: string, options?: EvaluateNodeOptions) {
+  return evaluateNodeAnswer({ nodeId: "N1", answer: studentAnswer, options });
 }
-
-/**
- * Evaluates a student's answer for node N2 using the approved Groq model and strict JSON Schema.
- */
-export async function evaluateN2(studentAnswer: string): Promise<EvaluationResult> {
-  return evaluateNodeAnswer({ nodeId: "N2", answer: studentAnswer });
+export async function evaluateN2(studentAnswer: string, options?: EvaluateNodeOptions) {
+  return evaluateNodeAnswer({ nodeId: "N2", answer: studentAnswer, options });
 }
-
-/**
- * Evaluates a student's answer for node N3 using the approved Groq model and strict JSON Schema.
- */
-export async function evaluateN3(studentAnswer: string): Promise<EvaluationResult> {
-  return evaluateNodeAnswer({ nodeId: "N3", answer: studentAnswer });
+export async function evaluateN3(studentAnswer: string, options?: EvaluateNodeOptions) {
+  return evaluateNodeAnswer({ nodeId: "N3", answer: studentAnswer, options });
 }
-
-/**
- * Evaluates a student's answer for node N4 using the approved Groq model and strict JSON Schema.
- */
-export async function evaluateN4(studentAnswer: string): Promise<EvaluationResult> {
-  return evaluateNodeAnswer({ nodeId: "N4", answer: studentAnswer });
+export async function evaluateN4(studentAnswer: string, options?: EvaluateNodeOptions) {
+  return evaluateNodeAnswer({ nodeId: "N4", answer: studentAnswer, options });
 }
-
-/**
- * Evaluates a student's answer for node N4_REV using the approved Groq model and strict JSON Schema.
- */
-export async function evaluateN4Rev(studentAnswer: string): Promise<EvaluationResult> {
-  return evaluateNodeAnswer({ nodeId: "N4_REV", answer: studentAnswer });
+export async function evaluateN4Rev(studentAnswer: string, options?: EvaluateNodeOptions) {
+  return evaluateNodeAnswer({ nodeId: "N4_REV", answer: studentAnswer, options });
 }
-
-/**
- * Evaluates a student's answer for node N5 using the approved Groq model and strict JSON Schema.
- */
-export async function evaluateN5(studentAnswer: string): Promise<EvaluationResult> {
-  return evaluateNodeAnswer({ nodeId: "N5", answer: studentAnswer });
+export async function evaluateN5(studentAnswer: string, options?: EvaluateNodeOptions) {
+  return evaluateNodeAnswer({ nodeId: "N5", answer: studentAnswer, options });
 }
-
-/**
- * Evaluates a student's answer for node N1_H using the approved Groq model and strict JSON Schema.
- */
-export async function evaluateN1H(studentAnswer: string): Promise<EvaluationResult> {
-  return evaluateNodeAnswer({ nodeId: "N1_H", answer: studentAnswer });
+export async function evaluateN1H(studentAnswer: string, options?: EvaluateNodeOptions) {
+  return evaluateNodeAnswer({ nodeId: "N1_H", answer: studentAnswer, options });
 }
-
-/**
- * Evaluates student answer for node N3_H using the approved Groq model and strict JSON Schema.
- */
-export async function evaluateN3H(studentAnswer: string): Promise<EvaluationResult> {
-  return evaluateNodeAnswer({ nodeId: "N3_H", answer: studentAnswer });
+export async function evaluateN3H(studentAnswer: string, options?: EvaluateNodeOptions) {
+  return evaluateNodeAnswer({ nodeId: "N3_H", answer: studentAnswer, options });
 }
-
-/**
- * Evaluates student answer for node N5_H using the approved Groq model and strict JSON Schema.
- */
-export async function evaluateN5H(studentAnswer: string): Promise<EvaluationResult> {
-  return evaluateNodeAnswer({ nodeId: "N5_H", answer: studentAnswer });
+export async function evaluateN5H(studentAnswer: string, options?: EvaluateNodeOptions) {
+  return evaluateNodeAnswer({ nodeId: "N5_H", answer: studentAnswer, options });
 }

@@ -115,7 +115,13 @@ Code   = branch + state + persistence
 - agent_feedback
 - next_node
 - decision_time_ms
+- turn_kind (nullable text: evaluated_answer | conversational_support | off_topic | non_evaluated_answer)
 - created_at
+
+### Versioning Matrix
+
+- **Historical Pilot Baseline**: scenario_version = 1.0 | prompt_version = 0.2
+- **T54 Conversational Evolution**: scenario_version = 1.1 | prompt_version = 0.3
 
 لا نخزن اسم الطالب أو البريد أو رقم الهاتف إلا إذا غير الباحث التصميم صراحة.
 
