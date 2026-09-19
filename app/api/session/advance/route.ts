@@ -1,10 +1,12 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import {
   getSessionById,
   updateSessionState,
 } from "@/lib/server/persistence";
 import { SCENARIO_2_START_NODE_ID } from "@/lib/scenarios/scenario-2";
 import { SCENARIO_3_START_NODE_ID } from "@/lib/scenarios/scenario-3";
+import { SCENARIO_4_START_NODE_ID } from "@/lib/scenarios/scenario-4";
+import { SCENARIO_5_START_NODE_ID } from "@/lib/scenarios/scenario-5";
 
 export async function POST(request: Request) {
   try {
@@ -64,7 +66,7 @@ export async function POST(request: Request) {
     const currentScenario = session.current_scenario || 1;
     const currentNode = session.current_node;
 
-    // Idempotency check: If already at scenario 2 or 3 and not at END of that scenario
+    // Idempotency check: If already at scenario 2, 3, 4, or 5 and not at END of that scenario
     if (currentScenario === 2 && currentNode !== "END") {
       return NextResponse.json({
         currentScenario: 2,
@@ -76,6 +78,22 @@ export async function POST(request: Request) {
     if (currentScenario === 3 && currentNode !== "END") {
       return NextResponse.json({
         currentScenario: 3,
+        currentNode,
+        state: "already_advanced",
+      });
+    }
+
+    if (currentScenario === 4 && currentNode !== "END") {
+      return NextResponse.json({
+        currentScenario: 4,
+        currentNode,
+        state: "already_advanced",
+      });
+    }
+
+    if (currentScenario === 5 && currentNode !== "END") {
+      return NextResponse.json({
+        currentScenario: 5,
         currentNode,
         state: "already_advanced",
       });
@@ -125,17 +143,61 @@ export async function POST(request: Request) {
       });
     }
 
-    // S3 END: Temporary boundary per T54.3 spec
+    // S3 END -> S4
     if (currentScenario === 3) {
+      if (currentNode !== "END") {
+        return NextResponse.json(
+          { error: "لا يمكن الانتقال للسيناريو الرابع قبل إتمام السيناريو الثالث." },
+          { status: 409 }
+        );
+      }
+
+      await updateSessionState({
+        sessionId: session.id,
+        currentScenario: 4,
+        currentNode: SCENARIO_4_START_NODE_ID,
+      });
+
+      return NextResponse.json({
+        currentScenario: 4,
+        currentNode: SCENARIO_4_START_NODE_ID,
+        state: "advanced",
+      });
+    }
+
+    // S4 END -> S5
+    if (currentScenario === 4) {
+      if (currentNode !== "END") {
+        return NextResponse.json(
+          { error: "لا يمكن الانتقال للسيناريو الخامس قبل إتمام السيناريو الرابع." },
+          { status: 409 }
+        );
+      }
+
+      await updateSessionState({
+        sessionId: session.id,
+        currentScenario: 5,
+        currentNode: SCENARIO_5_START_NODE_ID,
+      });
+
+      return NextResponse.json({
+        currentScenario: 5,
+        currentNode: SCENARIO_5_START_NODE_ID,
+        state: "advanced",
+      });
+    }
+
+    // S5 END: Terminal scenario, reached experiment completion boundary
+    if (currentScenario === 5) {
       if (currentNode === "END") {
         return NextResponse.json({
-          currentScenario: 3,
+          currentScenario: 5,
           currentNode: "END",
-          state: "reached_s3_end",
+          state: "reached_s5_end",
         });
       }
       return NextResponse.json(
-        { error: "السيناريو الثالث لا يزال قيد التقدم." },
+        { error: "السيناريو الخامس لا يزال قيد التقدم." },
         { status: 409 }
       );
     }

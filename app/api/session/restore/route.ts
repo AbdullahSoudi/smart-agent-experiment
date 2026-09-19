@@ -59,6 +59,25 @@ export async function POST(request: Request) {
       turnKind: inter.turn_kind ?? null,
     }));
 
+    // Calculate Scenario 4 crisis timer state if applicable
+    let crisisRemainingSeconds: number | null = null;
+    let crisisExpired = false;
+    let crisisStartedAt: string | null = null;
+
+    if (session.current_scenario === 4) {
+      const crisisStart = rawInteractions.find(
+        (i) => i.scenario_id === 4 && i.node_id === "N2" && i.student_answer === "CRISIS_START"
+      );
+      if (crisisStart) {
+        crisisStartedAt = crisisStart.created_at;
+        const now = Date.now();
+        const startMs = Date.parse(crisisStart.created_at);
+        const elapsedSec = Math.floor(Math.max(0, now - startMs) / 1000);
+        crisisRemainingSeconds = Math.max(0, 60 - elapsedSec);
+        crisisExpired = crisisRemainingSeconds <= 0;
+      }
+    }
+
     return NextResponse.json({
       status: session.status,
       currentNode: session.current_node,
@@ -66,6 +85,9 @@ export async function POST(request: Request) {
       studentName: session.student_name ?? null,
       studentCode: session.student_code,
       currentScenario: session.current_scenario ?? null,
+      crisisRemainingSeconds,
+      crisisExpired,
+      crisisStartedAt,
       history,
     });
   } catch {

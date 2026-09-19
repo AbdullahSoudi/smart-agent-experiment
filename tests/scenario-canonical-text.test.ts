@@ -114,3 +114,145 @@ test("Canonical Text Protection: Scenario 3 Researcher Wording", async (t) => {
     );
   });
 });
+import {
+  SCENARIO_4_CALM_OPENING,
+  CRISIS_CHOICE_A,
+  CRISIS_CHOICE_B,
+  CRISIS_CHOICE_C,
+  N3_A_CONSEQUENCE,
+  N3_B_CONSEQUENCE,
+  N3_C_CONSEQUENCE,
+  RECOVERY_PROMPT,
+  RECOVERY_CHOICE_A,
+  RECOVERY_CHOICE_B,
+} from "../lib/scenarios/scenario-4";
+import {
+  SCENARIO_5_CANONICAL_OPENING,
+  N2_DASHBOARD_PROMPT,
+  N3_A_FEEDBACK,
+  N3_B_FEEDBACK,
+  N3_C_FEEDBACK,
+  N4_BUDGET_PROMPT,
+  S5_END_TEXT,
+} from "../lib/scenarios/scenario-5";
+
+test("Canonical Text Protection: Scenario 4 Researcher Wording", async (t) => {
+  const spec4 = fs.readFileSync("research/scenarios/scenario-4.md", "utf8");
+
+  await t.test("Scenario 4 Calm Opening matches spec verbatim", () => {
+    assert.ok(
+      spec4.includes(SCENARIO_4_CALM_OPENING),
+      "Scenario 4 calm opening must exist verbatim in scenario-4.md"
+    );
+  });
+
+  await t.test("Crisis Choice A matches spec verbatim", () => {
+    assert.ok(
+      spec4.includes(CRISIS_CHOICE_A),
+      "Crisis choice A must exist verbatim in scenario-4.md"
+    );
+  });
+
+  await t.test("Crisis Choice B matches spec verbatim", () => {
+    assert.ok(
+      spec4.includes(CRISIS_CHOICE_B),
+      "Crisis choice B must exist verbatim in scenario-4.md"
+    );
+  });
+
+  await t.test("Crisis Choice C matches spec verbatim", () => {
+    assert.ok(
+      spec4.includes(CRISIS_CHOICE_C),
+      "Crisis choice C must exist verbatim in scenario-4.md"
+    );
+  });
+
+  await t.test("Consequence N3-A matches spec verbatim", () => {
+    assert.ok(
+      spec4.includes(N3_A_CONSEQUENCE),
+      "Consequence N3-A must exist verbatim in scenario-4.md"
+    );
+  });
+
+  await t.test("Consequence N3-B matches spec verbatim", () => {
+    assert.ok(
+      spec4.includes(N3_B_CONSEQUENCE),
+      "Consequence N3-B must exist verbatim in scenario-4.md"
+    );
+  });
+
+  await t.test("Consequence N3-C matches spec verbatim", () => {
+    assert.ok(
+      spec4.includes(N3_C_CONSEQUENCE),
+      "Consequence N3-C must exist verbatim in scenario-4.md"
+    );
+  });
+
+  await t.test("Recovery prompt and choices match spec verbatim", () => {
+    assert.ok(
+      spec4.includes(RECOVERY_PROMPT),
+      "Recovery prompt must exist verbatim in scenario-4.md"
+    );
+    assert.ok(
+      spec4.includes(RECOVERY_CHOICE_A),
+      "Recovery choice A must exist verbatim in scenario-4.md"
+    );
+    assert.ok(
+      spec4.includes(RECOVERY_CHOICE_B),
+      "Recovery choice B must exist verbatim in scenario-4.md"
+    );
+  });
+});
+
+test("Canonical Text Protection: Scenario 5 Researcher Wording", async (t) => {
+  const spec5 = fs.readFileSync("research/scenarios/scenario-5.md", "utf8");
+
+  await t.test("Scenario 5 Opening matches spec verbatim", () => {
+    assert.ok(
+      spec5.includes(SCENARIO_5_CANONICAL_OPENING),
+      "Scenario 5 opening must exist verbatim in scenario-5.md"
+    );
+  });
+
+  await t.test("Fixed campaign results dashboard prompt matches spec verbatim", () => {
+    assert.ok(
+      spec5.includes(N2_DASHBOARD_PROMPT),
+      "N2 dashboard prompt must exist verbatim in scenario-5.md"
+    );
+  });
+
+  await t.test("CPA vanity metric correction N3-A matches spec verbatim", () => {
+    assert.ok(
+      spec5.includes(N3_A_FEEDBACK),
+      "N3-A CPA correction must exist verbatim in scenario-5.md"
+    );
+  });
+
+  await t.test("Advanced feedback N3-B matches spec verbatim", () => {
+    assert.ok(
+      spec5.includes(N3_B_FEEDBACK),
+      "N3-B advanced feedback must exist verbatim in scenario-5.md"
+    );
+  });
+
+  await t.test("Fallback calculation hint N3-C matches spec verbatim", () => {
+    assert.ok(
+      spec5.includes(N3_C_FEEDBACK),
+      "N3-C fallback hint must exist verbatim in scenario-5.md"
+    );
+  });
+
+  await t.test("N4 budget allocation prompt matches spec verbatim", () => {
+    assert.ok(
+      spec5.includes(N4_BUDGET_PROMPT),
+      "N4 budget prompt must exist verbatim in scenario-5.md"
+    );
+  });
+
+  await t.test("Scenario 5 final analytical report END text matches spec verbatim", () => {
+    assert.ok(
+      spec5.includes(S5_END_TEXT),
+      "S5 END report text must exist verbatim in scenario-5.md"
+    );
+  });
+});

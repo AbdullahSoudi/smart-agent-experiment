@@ -300,3 +300,92 @@ export async function getRecentInteractionsForSession(
   }
   return (data as Array<{ student_answer: string | null; agent_feedback: string | null; turn_kind: TurnKind | null }>).reverse();
 }
+/**
+ * Atomically advances the session currentNode if and only if the session is currently
+ * at `fromNode` and in `scenarioId`. Returns true if this transition won the race,
+ * false if another concurrent request or timeout already transitioned the session.
+ */
+export async function advanceCrisisDecisionConditional(
+  sessionId: string,
+  fromNode: string,
+  toNode: string,
+  scenarioId: number
+): Promise<boolean> {
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("sessions")
+    .update({ current_node: toNode })
+    .eq("id", sessionId)
+    .eq("current_node", fromNode)
+    .eq("current_scenario", scenarioId)
+    .select("id");
+
+  return !error && Array.isArray(data) && data.length > 0;
+}
+
+/**
+ * Retrieves the idempotent crisis-start interaction for S4 if it exists.
+ */
+export async function getCrisisStartInteraction(
+  sessionId: string
+): Promise<InteractionRecord | null> {
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("interactions")
+    .select("*")
+    .eq("session_id", sessionId)
+    .eq("scenario_id", 4)
+    .eq("node_id", "N2")
+    .eq("student_answer", "CRISIS_START")
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return data as InteractionRecord;
+}
+
+/**
+ * Ensures exactly one crisis-start interaction is persisted as the authoritative
+ * server-backed timing anchor for Scenario 4.
+ */
+export async function ensureCrisisStartInteraction(
+  sessionId: string
+): Promise<InteractionRecord> {
+  const existing = await getCrisisStartInteraction(sessionId);
+  if (existing) {
+    return existing;
+  }
+  return await recordInteraction({
+    sessionId,
+    scenarioId: 4,
+    nodeId: "N2",
+    studentAnswer: "CRISIS_START",
+    turnKind: "non_evaluated_answer",
+    classification: null,
+    agentFeedback: null,
+    nextNode: null,
+  });
+}
+
+/**
+ * Retrieves the persisted final crisis decision interaction if already resolved.
+ */
+export async function getCrisisDecisionInteraction(
+  sessionId: string
+): Promise<InteractionRecord | null> {
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("interactions")
+    .select("*")
+    .eq("session_id", sessionId)
+    .eq("scenario_id", 4)
+    .eq("node_id", "N2")
+    .neq("student_answer", "CRISIS_START")
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return data as InteractionRecord;
+}
