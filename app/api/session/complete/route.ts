@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import {
   getSessionById,
   updateSessionState,
@@ -11,7 +11,7 @@ export async function POST(request: Request) {
       body = await request.json();
     } catch {
       return NextResponse.json(
-        { error: "طلب غير صالح: تنسيق البيانات غير صحيح." },
+        { error: "??? ??? ????: ????? ???????? ??? ????." },
         { status: 400 }
       );
     }
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
       !("sessionId" in body)
     ) {
       return NextResponse.json(
-        { error: "البيانات المطلوبة غير مكتملة." },
+        { error: "???????? ???????? ??? ??????." },
         { status: 400 }
       );
     }
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
 
     if (typeof sessionId !== "string" || !sessionId.trim()) {
       return NextResponse.json(
-        { error: "معرف الجلسة غير صالح." },
+        { error: "???? ?????? ??? ????." },
         { status: 400 }
       );
     }
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
     const session = await getSessionById(trimmedSessionId);
     if (!session) {
       return NextResponse.json(
-        { error: "الجلسة غير موجودة." },
+        { error: "?????? ??? ??????." },
         { status: 404 }
       );
     }
@@ -58,11 +58,11 @@ export async function POST(request: Request) {
       });
     }
 
-    // 3. In sequential journey (2.0-dev), overall completion is ONLY allowed after Scenario 5
-    if (session.scenario_version === "2.0-dev") {
+    // 3. In sequential journey (2.0), overall completion is ONLY allowed after Scenario 5
+    if (session.scenario_version === "2.0") {
       if (session.current_scenario !== 5 || session.current_node !== "END") {
         return NextResponse.json(
-          { error: "لا يمكن إنهاء التجربة قبل إكمال جميع السيناريوهات الخمسة." },
+          { error: "?? ???? ????? ??????? ??? ????? ???? ???????????? ??????." },
           { status: 409 }
         );
       }
@@ -71,7 +71,7 @@ export async function POST(request: Request) {
     // 4. Validate session is active and at END node
     if (session.current_node !== "END" || session.status !== "active") {
       return NextResponse.json(
-        { error: "هذه الجلسة ليست في حالة اكتمال جاهزة للإنهاء." },
+        { error: "??? ?????? ???? ?? ???? ?????? ????? ???????." },
         { status: 409 }
       );
     }
@@ -91,7 +91,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     return NextResponse.json(
-      { error: "تعذر إنهاء الجلسة حاليًا. حاول مرة أخرى." },
+      { error: "???? ????? ?????? ??????. ???? ??? ????." },
       { status: 500 }
     );
   }

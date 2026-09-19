@@ -1,4 +1,4 @@
-﻿import test, { describe, it } from "node:test";
+import test, { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { getScenarioNodeByContext } from "../lib/scenarios/registry";
 import { getJourneyProgress } from "../lib/journey";
@@ -64,7 +64,7 @@ describe("T54.3 Session Resume & Chat Guard Invariants", () => {
       currentScenario: 3,
       currentNode: "END",
       status: "active",
-      scenarioVersion: "2.0-dev",
+      scenarioVersion: "2.0",
     };
 
     // Simulate chat guard check
@@ -79,9 +79,9 @@ describe("T54.3 Session Resume & Chat Guard Invariants", () => {
     const status = sessionData.status;
 
     // Guard rules in chat/page.tsx
-    if (version !== "2.0-dev" && (activeNode === "END" || status === "completed")) {
+    if (version !== "2.0" && (activeNode === "END" || status === "completed")) {
       mockRouter.replace("/complete");
-    } else if (version === "2.0-dev" && status === "completed") {
+    } else if (version === "2.0" && status === "completed") {
       mockRouter.replace("/complete");
     }
 
@@ -95,7 +95,7 @@ describe("T54.3 Session Resume & Chat Guard Invariants", () => {
     // All S3 cross-scenario nodes resolve safely through registry without throwing
     const s3Nodes = ["N1", "N2_A", "N2_B", "N2_C", "N3", "N4", "END"];
     for (const node of s3Nodes) {
-      const view = getScenarioNodeByContext(3, node, "2.0-dev");
+      const view = getScenarioNodeByContext(3, node, "2.0");
       assert.ok(view, `Node ${node} must resolve in scenario 3 context`);
       assert.equal(view.id, node);
     }
@@ -123,16 +123,16 @@ describe("T54.3 Session Resume & Chat Guard Invariants", () => {
       currentScenario: 5,
       currentNode: "END",
       status: "completed",
-      scenarioVersion: "2.0-dev",
+      scenarioVersion: "2.0",
     };
 
-    if (completedSession.scenarioVersion !== "2.0-dev" && (completedSession.currentNode === "END" || completedSession.status === "completed")) {
+    if (completedSession.scenarioVersion !== "2.0" && (completedSession.currentNode === "END" || completedSession.status === "completed")) {
       mockRouter.replace("/complete");
-    } else if (completedSession.scenarioVersion === "2.0-dev" && completedSession.status === "completed") {
+    } else if (completedSession.scenarioVersion === "2.0" && completedSession.status === "completed") {
       mockRouter.replace("/complete");
     }
 
-    assert.equal(redirectedTo, "/complete", "Completed 2.0-dev session must redirect to /complete");
+    assert.equal(redirectedTo, "/complete", "Completed 2.0 session must redirect to /complete");
   });
 
   it("5. missing/invalid session still redirects safely to start", () => {
@@ -159,11 +159,11 @@ describe("T54.3 Session Resume & Chat Guard Invariants", () => {
 
   it("6. structured S3 card formats all five Arabic labels without exposing raw JSON or enums", () => {
     const rawJson = JSON.stringify({
-      customerSegments: "الطلاب ذوي الدخل المحدود في الجامعات الحكومية",
-      valueProposition: "منصة لتبادل ومشاركة المراجع الدراسية بأسعار مخفضة",
-      channels: "تطبيق الهاتف ومجموعات التيليجرام",
-      revenueStreams: "اشتراكات شهرية إلزامية بقيمة 500 دولار أمريكي",
-      costStructure: "استضافة سحابية بسيطة وصيانة وتطوير برمجي",
+      customerSegments: "?????? ??? ????? ??????? ?? ???????? ????????",
+      valueProposition: "???? ?????? ??????? ??????? ???????? ?????? ?????",
+      channels: "????? ?????? ???????? ??????????",
+      revenueStreams: "???????? ????? ??????? ????? 500 ????? ??????",
+      costStructure: "??????? ?????? ????? ?????? ?????? ?????",
     });
 
     assert.ok(isStructuredBusinessModel(rawJson));
@@ -173,11 +173,11 @@ describe("T54.3 Session Resume & Chat Guard Invariants", () => {
     const formatted = formatBusinessModelDisplay(blocks!);
 
     // Confirm all 5 Arabic labels
-    assert.ok(formatted.includes("شرائح العملاء"));
-    assert.ok(formatted.includes("القيمة المقترحة"));
-    assert.ok(formatted.includes("قنوات التوزيع والوصول"));
-    assert.ok(formatted.includes("مصادر الإيرادات"));
-    assert.ok(formatted.includes("هيكل التكاليف"));
+    assert.ok(formatted.includes("????? ???????"));
+    assert.ok(formatted.includes("?????? ????????"));
+    assert.ok(formatted.includes("????? ??????? ???????"));
+    assert.ok(formatted.includes("????? ?????????"));
+    assert.ok(formatted.includes("???? ????????"));
 
     // Confirm no raw JSON formatting
     assert.ok(!formatted.includes('{"customerSegments"'));

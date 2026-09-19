@@ -20,7 +20,7 @@ describe("Researcher Report Derivation & Objective Evidence", () => {
     status: "completed",
     current_scenario: 5,
     current_node: "END",
-    scenario_version: "2.0-dev",
+    scenario_version: "2.0",
     prompt_version: "0.3",
     provider: "groq",
     model_id: "openai/gpt-oss-120b",

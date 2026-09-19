@@ -55,8 +55,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Only applicable to sequential 2.0-dev journey
-    if (session.scenario_version !== "2.0-dev") {
+    // Only applicable to sequential 2.0 journey
+    if (session.scenario_version !== "2.0") {
       return NextResponse.json(
         { error: "هذه الجلسة تتبع نموذج النسخ التاريخية ولا تدعم الانتقال المتسلسل." },
         { status: 400 }

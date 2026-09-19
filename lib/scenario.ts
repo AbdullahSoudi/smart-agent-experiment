@@ -5,7 +5,7 @@
  * Versions:
  *   - 1.0: Frozen historical baseline
  *   - 1.1: Simplified instructional Arabic wording (pilot evolution)
- *   - 2.0-dev: Verbatim canonical researcher-authored wording for the five-scenario sequential journey
+ *   - 2.0: Verbatim canonical researcher-authored wording for the five-scenario sequential journey
  *
  * Rubrics, educational objectives, and deterministic transition topology
  * are 100% identical between versions.
@@ -94,14 +94,14 @@ export interface ScenarioNode {
 
 export const START_NODE_ID: NodeId = "N1";
 export const TERMINAL_NODE_ID: NodeId = "END";
-export const DEFAULT_SCENARIO_VERSION = "2.0-dev";
-export const SCENARIO_VERSION = "2.0-dev";
+export const DEFAULT_SCENARIO_VERSION = "2.0";
+export const SCENARIO_VERSION = "2.0";
 
 export const SCENARIO_1_CANONICAL_OPENING =
   "مرحباً بك.\n\nتخيل أنك تريد إنشاء مشروع رقمي صغير يمكن أن يحقق لك استقلالاً مالياً، ولكن لديك ميزانية محدودة، ولا تملك منتجاً محدداً حتى الآن.\n\nأمامك فرصة للبحث عن مشكلة حقيقية يعاني منها إحدى الفئات المستهدفة وتحويلها إلى فرصة مشروع رقمي يدر عائداً.\n\nمن أين ستبدأ؟";
 
 /**
- * Canonical Researcher-Authored Scenario 1 Nodes (v2.0-dev).
+ * Canonical Researcher-Authored Scenario 1 Nodes (v2.0).
  * Verbatim text from authoritative research document: السيناريو الاول اكتشاف الفرص الرقمية.docx
  */
 export const SCENARIO_NODES_V2_0_DEV: Record<Scenario1NodeId, ScenarioNode> = {
@@ -640,7 +640,7 @@ export const SCENARIO_NODES_V1_1: Record<Scenario1NodeId, ScenarioNode> = {
 /**
  * Returns scenario nodes dictionary according to the requested scenario version.
  */
-export function getScenarioNodes(version: string = "2.0-dev"): Record<Scenario1NodeId, ScenarioNode> {
+export function getScenarioNodes(version: string = "2.0"): Record<Scenario1NodeId, ScenarioNode> {
   if (version === "1.0") {
     return SCENARIO_NODES_V1_0;
   }
@@ -653,7 +653,7 @@ export function getScenarioNodes(version: string = "2.0-dev"): Record<Scenario1N
 /**
  * Returns a specific node from the scenario with version awareness.
  */
-export function getScenarioNode(nodeId: NodeId, version: string = "2.0-dev"): ScenarioNode {
+export function getScenarioNode(nodeId: NodeId, version: string = "2.0"): ScenarioNode {
   const nodes = getScenarioNodes(version);
   const node = nodes[nodeId as Scenario1NodeId];
   if (!node) {
@@ -663,6 +663,6 @@ export function getScenarioNode(nodeId: NodeId, version: string = "2.0-dev"): Sc
 }
 
 /**
- * Default active scenario nodes (v2.0-dev for new sessions).
+ * Default active scenario nodes (v2.0 for new sessions).
  */
 export const SCENARIO_NODES: Record<Scenario1NodeId, ScenarioNode> = SCENARIO_NODES_V2_0_DEV;

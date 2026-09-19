@@ -148,7 +148,7 @@ describe("T54.2 Student Name Validation & Normalization", () => {
 });
 
 describe("T54.2 Scenario 1 Canonical Researcher Text Verbatim Check", () => {
-  it("v2.0-dev contains canonical researcher-authored opening verbatim", () => {
+  it("v2.0 contains canonical researcher-authored opening verbatim", () => {
     assert.ok(SCENARIO_1_CANONICAL_OPENING.includes("مرحباً بك."));
     assert.ok(
       SCENARIO_1_CANONICAL_OPENING.includes(
@@ -162,7 +162,7 @@ describe("T54.2 Scenario 1 Canonical Researcher Text Verbatim Check", () => {
     );
   });
 
-  it("v2.0-dev N1 prompt is researcher canonical verbatim", () => {
+  it("v2.0 N1 prompt is researcher canonical verbatim", () => {
     const n1 = SCENARIO_NODES_V2_0_DEV.N1;
     assert.ok(n1.prompt?.includes("لديك ميزانية محدودة ولا توجد لديك فكرة مشروع محددة حتى الآن"));
     assert.ok(n1.prompt?.includes("أ) البحث أولاً عن احتياجات ومشكلات العملاء."));
@@ -174,7 +174,7 @@ describe("T54.2 Scenario 1 Canonical Researcher Text Verbatim Check", () => {
     assert.ok(n1.prompt?.includes("أي الخيارين تختار؟ ولماذا؟"));
   });
 
-  it("v2.0-dev N1_F golden rule and prompt are researcher canonical verbatim", () => {
+  it("v2.0 N1_F golden rule and prompt are researcher canonical verbatim", () => {
     const n1f = SCENARIO_NODES_V2_0_DEV.N1_F;
     assert.ok(
       n1f.prompt?.includes(
@@ -192,7 +192,7 @@ describe("T54.2 Scenario 1 Canonical Researcher Text Verbatim Check", () => {
   it("getScenarioNodes preserves backward compatibility for v1.0 and v1.1", () => {
     const v10 = getScenarioNodes("1.0");
     const v11 = getScenarioNodes("1.1");
-    const v20 = getScenarioNodes("2.0-dev");
+    const v20 = getScenarioNodes("2.0");
 
     // v1.0 prompt check
     assert.ok(v10.N1.prompt?.includes("أنت طالب جامعي تلاحظ أن زملاءك"));
@@ -200,7 +200,7 @@ describe("T54.2 Scenario 1 Canonical Researcher Text Verbatim Check", () => {
     // v1.1 prompt check
     assert.ok(v11.N1.prompt?.includes("أنت طالب جامعي، وشايف إن زمايلك بيعانوا"));
 
-    // v2.0-dev prompt check
+    // v2.0 prompt check
     assert.ok(
       v20.N1.prompt?.includes("لديك ميزانية محدودة ولا توجد لديك فكرة مشروع محددة")
     );

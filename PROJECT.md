@@ -126,6 +126,7 @@ Code   = branch + state + persistence
 - **Historical Pilot Baseline**: scenario_version = 1.0 | prompt_version = 0.2
 - **T54 Conversational Evolution**: scenario_version = 1.1 | prompt_version = 0.3
 - **T54.2 Sequential Journey Foundation**: scenario_version = 2.0-dev | prompt_version = 0.3
+- **T55 Experiment Freeze**: scenario_version = 2.0 | prompt_version = 0.3 | model = openai/gpt-oss-120b
 
 يتم تخزين اسم الطالب (student_name) وكود المشارك (student_code) لربط جلسة الطالب واستئنافها دون إنشاء جلسات مكررة، مع حظر إعادة تشغيل الجلسات المكتملة وحماية سرية بيانات المشاركين.
 

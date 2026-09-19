@@ -32,7 +32,7 @@ export interface UnifiedNodeView {
 export function getScenarioNodeByContext(
   scenarioId: ScenarioId | number | null | undefined,
   nodeId: string,
-  version: string = "2.0-dev"
+  version: string = "2.0"
 ): UnifiedNodeView {
   // Scenario 4 strict resolution
   if (scenarioId === 4) {

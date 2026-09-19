@@ -70,7 +70,7 @@ export default function ChatPage() {
 
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [currentNodeId, setCurrentNodeId] = useState<string>(START_NODE_ID);
-  const [scenarioVersion, setScenarioVersion] = useState<string>("2.0-dev");
+  const [scenarioVersion, setScenarioVersion] = useState<string>("2.0");
   const [studentName, setStudentName] = useState<string | null>(null);
   const [studentCode, setStudentCode] = useState<string | null>(null);
   const [currentScenario, setCurrentScenario] = useState<ScenarioId>(1);
@@ -169,7 +169,7 @@ export default function ChatPage() {
 
         setSessionId(storedSessionId);
         setCurrentNodeId(data.currentNode);
-        const version = data.scenarioVersion || "2.0-dev";
+        const version = data.scenarioVersion || "2.0";
         setScenarioVersion(version);
         setStudentName(data.studentName || null);
         setStudentCode(data.studentCode || null);
@@ -189,7 +189,7 @@ export default function ChatPage() {
         try {
           const startNodeS1 = getScenarioNode(START_NODE_ID, version);
           const initialTextS1 =
-            version === "2.0-dev" && startNodeS1.prompt
+            version === "2.0" && startNodeS1.prompt
               ? `${SCENARIO_1_CANONICAL_OPENING}\n\n${startNodeS1.prompt}`
               : startNodeS1.prompt;
 

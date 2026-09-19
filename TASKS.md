@@ -109,7 +109,7 @@
 - [x] T54.3 — Implement scenarios 2 and 3
 - [x] T54.4 — Implement scenarios 4 and 5
 - [x] T54.5 — Add researcher report and verify full journey
-- [ ] T55 — Freeze App / Scenario / Prompt / Model versions
+- [x] T55 — Freeze App / Scenario / Prompt / Model versions
 - [ ] T56 — Tag experiment release v1.0
 
 ---

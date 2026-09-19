@@ -112,7 +112,7 @@ export async function POST(request: Request) {
 
       await recordInteraction({
         sessionId: session.id,
-        scenarioId: session.current_scenario ?? (session.scenario_version === "2.0-dev" ? 1 : null),
+        scenarioId: session.current_scenario ?? (session.scenario_version === "2.0" ? 1 : null),
         nodeId: "N5",
         studentAnswer: trimmedAnswer,
         classification: null,
@@ -152,7 +152,7 @@ export async function POST(request: Request) {
     // 5. Persist interaction (Order: interaction -> session update)
     await recordInteraction({
         sessionId: session.id,
-        scenarioId: session.current_scenario ?? (session.scenario_version === "2.0-dev" ? 1 : null),
+        scenarioId: session.current_scenario ?? (session.scenario_version === "2.0" ? 1 : null),
       nodeId: "N5",
       studentAnswer: trimmedAnswer,
       classification: evaluationResult.classification,
