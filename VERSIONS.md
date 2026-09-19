@@ -1,4 +1,4 @@
-# VERSIONS � Experiment Release Freeze (T55)
+# VERSIONS — Experiment Release Freeze (T55)
 
 **Status:** FROZEN
 
@@ -70,7 +70,7 @@ Values written into the `sessions` table for experiment participants:
 
 Per `PROJECT.md` section 8 (Research Reproducibility):
 
-> ?? ??? ????? ????????? ?? ???Rubric ?? Prompt ????? ??? ?????? ??? ???? ???? ???? ????.
+> لا يتم تعديل السيناريو أو الـRubric أو Prompt أثناء جمع العينة إلا لعطل تقني قهري موثق.
 >
 > (The scenario, rubric, or prompt shall not be changed during sample collection except for a
 > documented, unavoidable technical failure.)

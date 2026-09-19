@@ -11,7 +11,7 @@ export async function POST(request: Request) {
       body = await request.json();
     } catch {
       return NextResponse.json(
-        { error: "??? ??? ????: ????? ???????? ??? ????." },
+        { error: "طلب غير صالح: تنسيق البيانات غير صحيح." },
         { status: 400 }
       );
     }
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
       !("sessionId" in body)
     ) {
       return NextResponse.json(
-        { error: "???????? ???????? ??? ??????." },
+        { error: "البيانات المطلوبة غير مكتملة." },
         { status: 400 }
       );
     }
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
 
     if (typeof sessionId !== "string" || !sessionId.trim()) {
       return NextResponse.json(
-        { error: "???? ?????? ??? ????." },
+        { error: "معرف الجلسة غير صالح." },
         { status: 400 }
       );
     }
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
     const session = await getSessionById(trimmedSessionId);
     if (!session) {
       return NextResponse.json(
-        { error: "?????? ??? ??????." },
+        { error: "الجلسة غير موجودة." },
         { status: 404 }
       );
     }
@@ -62,7 +62,7 @@ export async function POST(request: Request) {
     if (session.scenario_version === "2.0") {
       if (session.current_scenario !== 5 || session.current_node !== "END") {
         return NextResponse.json(
-          { error: "?? ???? ????? ??????? ??? ????? ???? ???????????? ??????." },
+          { error: "لا يمكن إنهاء التجربة قبل إكمال جميع السيناريوهات الخمسة." },
           { status: 409 }
         );
       }
@@ -71,7 +71,7 @@ export async function POST(request: Request) {
     // 4. Validate session is active and at END node
     if (session.current_node !== "END" || session.status !== "active") {
       return NextResponse.json(
-        { error: "??? ?????? ???? ?? ???? ?????? ????? ???????." },
+        { error: "هذه الجلسة ليست في حالة اكتمال جاهزة للإنهاء." },
         { status: 409 }
       );
     }
@@ -91,7 +91,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     return NextResponse.json(
-      { error: "???? ????? ?????? ??????. ???? ??? ????." },
+      { error: "تعذر إنهاء الجلسة حاليًا. حاول مرة أخرى." },
       { status: 500 }
     );
   }
