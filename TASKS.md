@@ -108,7 +108,7 @@
 - [x] T54.2 — Add student identity + sequential journey foundation
 - [x] T54.3 — Implement scenarios 2 and 3
 - [x] T54.4 — Implement scenarios 4 and 5
-- [ ] T54.5 — Add researcher report and verify full journey
+- [x] T54.5 — Add researcher report and verify full journey
 - [ ] T55 — Freeze App / Scenario / Prompt / Model versions
 - [ ] T56 — Tag experiment release v1.0
 

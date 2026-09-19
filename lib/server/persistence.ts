@@ -389,3 +389,37 @@ export async function getCrisisDecisionInteraction(
   if (error || !data) return null;
   return data as InteractionRecord;
 }
+/**
+ * Retrieves all sequential journey sessions (where student_name and current_scenario are populated).
+ * Excludes legacy 1.x pilot sessions without student identity.
+ */
+export async function getSequentialSessions(): Promise<SessionRecord[]> {
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("sessions")
+    .select("*")
+    .not("student_name", "is", null)
+    .not("current_scenario", "is", null)
+    .order("created_at", { ascending: false });
+
+  if (error || !data) return [];
+  return data as SessionRecord[];
+}
+
+/**
+ * Retrieves all interactions for a list of session IDs, ordered chronologically.
+ */
+export async function getInteractionsForMultipleSessions(
+  sessionIds: string[]
+): Promise<InteractionRecord[]> {
+  if (sessionIds.length === 0) return [];
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("interactions")
+    .select("*")
+    .in("session_id", sessionIds)
+    .order("created_at", { ascending: true });
+
+  if (error || !data) return [];
+  return data as InteractionRecord[];
+}
