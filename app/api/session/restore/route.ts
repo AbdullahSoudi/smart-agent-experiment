@@ -51,6 +51,7 @@ export async function POST(request: Request) {
     // Provide sanitized history for client-side transcript reconstruction
     // Strictly exclude classification, scores, decision times, and provider internals
     const history = rawInteractions.map((inter) => ({
+      scenarioId: inter.scenario_id ?? 1,
       nodeId: inter.node_id,
       studentAnswer: inter.student_answer,
       feedback: inter.agent_feedback,

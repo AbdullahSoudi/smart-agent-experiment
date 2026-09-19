@@ -60,6 +60,7 @@ export default function HomePage() {
       }
 
       if (data.sessionId) {
+        sessionStorage.removeItem("experiment_session_id");
         sessionStorage.setItem("experiment_session_id", data.sessionId);
         router.push("/chat");
       } else {

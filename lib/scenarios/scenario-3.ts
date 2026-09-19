@@ -164,8 +164,8 @@ export function formatBusinessModelDisplay(blocks: BusinessModelBlocks): string 
   return [
     "📋 لوحة نموذج العمل التجاري:",
     `• شرائح العملاء: ${blocks.customerSegments}`,
-    `• القيمة المقدمة: ${blocks.valueProposition}`,
-    `• القنوات: ${blocks.channels}`,
+    `• القيمة المقترحة: ${blocks.valueProposition}`,
+    `• قنوات التوزيع والوصول: ${blocks.channels}`,
     `• مصادر الإيرادات: ${blocks.revenueStreams}`,
     `• هيكل التكاليف: ${blocks.costStructure}`,
   ].join("\n");

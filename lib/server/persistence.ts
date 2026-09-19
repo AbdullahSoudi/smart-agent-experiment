@@ -226,6 +226,7 @@ export async function getSessionsByStudentCode(
 }
 
 export interface RestorationInteraction {
+  scenario_id?: number | null;
   node_id: NodeId;
   student_answer: string | null;
   agent_feedback: string | null;
@@ -245,7 +246,7 @@ export async function getInteractionsForSession(
 
   const { data, error } = await supabase
     .from("interactions")
-    .select("node_id, student_answer, agent_feedback, next_node, turn_kind, created_at")
+    .select("node_id, student_answer, agent_feedback, next_node, turn_kind, created_at, scenario_id")
     .eq("session_id", sessionId)
     .order("created_at", { ascending: true })
     .order("id", { ascending: true });

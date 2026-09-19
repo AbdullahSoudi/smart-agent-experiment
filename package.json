@@ -12,7 +12,7 @@
     "spike:n1": "tsx spike/evaluate-n1.ts",
     "eval:n1": "tsx spike/run-n1-eval.ts",
     "test:conversational": "tsx --env-file=.env.local --test tests/conversational_evaluator.test.ts",
-    "test:scenarios": "tsx --test tests/scenario-canonical-text.test.ts tests/scenario-2-transitions.test.ts tests/scenario-3-transitions.test.ts tests/scenario-3-strict-ai.test.ts"
+    "test:scenarios": "tsx --test tests/scenario-canonical-text.test.ts tests/scenario-2-transitions.test.ts tests/scenario-3-transitions.test.ts tests/scenario-3-strict-ai.test.ts tests/session-resume-guard.test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",

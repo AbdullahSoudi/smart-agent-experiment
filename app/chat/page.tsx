@@ -123,6 +123,12 @@ export default function ChatPage() {
           return;
         }
 
+        // Sequential journey: Only redirect to complete if entire experiment status is completed
+        if (version === "2.0-dev" && data.status === "completed") {
+          router.replace("/complete");
+          return;
+        }
+
         // Sequential journey: Check if at S3 END (temporary boundary)
         if (scenarioNum === 3 && activeNode === "END") {
           setS3Completed(true);
@@ -132,131 +138,136 @@ export default function ChatPage() {
         const restoredMessages: ChatMessage[] = [];
         let msgIdCounter = 1;
 
-        // Opening prompt of Scenario 1
-        const startNodeS1 = getScenarioNode(START_NODE_ID, version);
-        const initialTextS1 =
-          version === "2.0-dev" && startNodeS1.prompt
-            ? `${SCENARIO_1_CANONICAL_OPENING}\n\n${startNodeS1.prompt}`
-            : startNodeS1.prompt;
+        try {
+          // Opening prompt of Scenario 1
+          const startNodeS1 = getScenarioNode(START_NODE_ID, version);
+          const initialTextS1 =
+            version === "2.0-dev" && startNodeS1.prompt
+              ? `${SCENARIO_1_CANONICAL_OPENING}\n\n${startNodeS1.prompt}`
+              : startNodeS1.prompt;
 
-        if (initialTextS1) {
-          restoredMessages.push({
-            id: `msg-${msgIdCounter++}`,
-            sender: "assistant",
-            text: initialTextS1,
-          });
-        }
-
-        let trackedScenario = 1;
-        let trackedNode = START_NODE_ID;
-
-        if (Array.isArray(data.history) && data.history.length > 0) {
-          for (const item of data.history) {
-            const itemScenario = item.scenarioId || 1;
-
-            // Check if scenario advanced between interactions
-            if (itemScenario > trackedScenario) {
-              for (let s = trackedScenario + 1; s <= itemScenario; s++) {
-                if (s === 2) {
-                  restoredMessages.push({
-                    id: `msg-${msgIdCounter++}`,
-                    sender: "assistant",
-                    text: SCENARIO_2_CANONICAL_OPENING,
-                  });
-                } else if (s === 3) {
-                  restoredMessages.push({
-                    id: `msg-${msgIdCounter++}`,
-                    sender: "assistant",
-                    text: SCENARIO_3_CANONICAL_OPENING,
-                  });
-                }
-              }
-              trackedScenario = itemScenario;
-            }
-
-            // Student message (format structured model if JSON)
-            if (item.studentAnswer) {
-              let studentDisplayText = item.studentAnswer;
-              if (isStructuredBusinessModel(item.studentAnswer)) {
-                const parsedBlocks = deserializeBusinessModel(item.studentAnswer);
-                if (parsedBlocks) {
-                  studentDisplayText = formatBusinessModelDisplay(parsedBlocks);
-                }
-              }
-              restoredMessages.push({
-                id: `msg-${msgIdCounter++}`,
-                sender: "student",
-                text: studentDisplayText,
-              });
-            }
-
-            // Assistant response
-            if (item.feedback) {
-              restoredMessages.push({
-                id: `msg-${msgIdCounter++}`,
-                sender: "assistant",
-                text: item.feedback,
-              });
-            }
-
-            // If node transitioned within scenario
-            if (item.nextNode && item.nextNode !== item.nodeId) {
-              trackedNode = item.nextNode;
-              if (trackedNode !== "END") {
-                const nextNodeDef = getScenarioNodeByContext(
-                  itemScenario,
-                  trackedNode,
-                  version
-                );
-                const nextText = nextNodeDef.prompt || nextNodeDef.message;
-                if (nextText) {
-                  restoredMessages.push({
-                    id: `msg-${msgIdCounter++}`,
-                    sender: "assistant",
-                    text: nextText,
-                  });
-                }
-              }
-            }
-          }
-        }
-
-        // If scenario has advanced past the last interaction
-        if (scenarioNum > trackedScenario) {
-          for (let s = trackedScenario + 1; s <= scenarioNum; s++) {
-            if (s === 2) {
-              restoredMessages.push({
-                id: `msg-${msgIdCounter++}`,
-                sender: "assistant",
-                text: SCENARIO_2_CANONICAL_OPENING,
-              });
-            } else if (s === 3) {
-              restoredMessages.push({
-                id: `msg-${msgIdCounter++}`,
-                sender: "assistant",
-                text: SCENARIO_3_CANONICAL_OPENING,
-              });
-            }
-          }
-        } else if (scenarioNum === trackedScenario && trackedNode !== activeNode && activeNode !== "END") {
-          const currentNodeDef = getScenarioNodeByContext(
-            scenarioNum,
-            activeNode,
-            version
-          );
-          const currentText = currentNodeDef.prompt || currentNodeDef.message;
-          if (currentText) {
+          if (initialTextS1) {
             restoredMessages.push({
               id: `msg-${msgIdCounter++}`,
               sender: "assistant",
-              text: currentText,
+              text: initialTextS1,
             });
           }
+
+          let trackedScenario = 1;
+          let trackedNode = START_NODE_ID;
+
+          if (Array.isArray(data.history) && data.history.length > 0) {
+            for (const item of data.history) {
+              const itemScenario = item.scenarioId || 1;
+
+              // Check if scenario advanced between interactions
+              if (itemScenario > trackedScenario) {
+                for (let s = trackedScenario + 1; s <= itemScenario; s++) {
+                  if (s === 2) {
+                    restoredMessages.push({
+                      id: `msg-${msgIdCounter++}`,
+                      sender: "assistant",
+                      text: SCENARIO_2_CANONICAL_OPENING,
+                    });
+                  } else if (s === 3) {
+                    restoredMessages.push({
+                      id: `msg-${msgIdCounter++}`,
+                      sender: "assistant",
+                      text: SCENARIO_3_CANONICAL_OPENING,
+                    });
+                  }
+                }
+                trackedScenario = itemScenario;
+              }
+
+              // Student message (format structured model if JSON)
+              if (item.studentAnswer) {
+                let studentDisplayText = item.studentAnswer;
+                if (isStructuredBusinessModel(item.studentAnswer)) {
+                  const parsedBlocks = deserializeBusinessModel(item.studentAnswer);
+                  if (parsedBlocks) {
+                    studentDisplayText = formatBusinessModelDisplay(parsedBlocks);
+                  }
+                }
+                restoredMessages.push({
+                  id: `msg-${msgIdCounter++}`,
+                  sender: "student",
+                  text: studentDisplayText,
+                });
+              }
+
+              // Assistant response
+              if (item.feedback) {
+                restoredMessages.push({
+                  id: `msg-${msgIdCounter++}`,
+                  sender: "assistant",
+                  text: item.feedback,
+                });
+              }
+
+              // If node transitioned within scenario
+              if (item.nextNode && item.nextNode !== item.nodeId) {
+                trackedNode = item.nextNode;
+                if (trackedNode !== "END") {
+                  const nextNodeDef = getScenarioNodeByContext(
+                    itemScenario,
+                    trackedNode,
+                    version
+                  );
+                  const nextText = nextNodeDef.prompt || nextNodeDef.message;
+                  if (nextText) {
+                    restoredMessages.push({
+                      id: `msg-${msgIdCounter++}`,
+                      sender: "assistant",
+                      text: nextText,
+                    });
+                  }
+                }
+              }
+            }
+          }
+
+          // If scenario has advanced past the last interaction
+          if (scenarioNum > trackedScenario) {
+            for (let s = trackedScenario + 1; s <= scenarioNum; s++) {
+              if (s === 2) {
+                restoredMessages.push({
+                  id: `msg-${msgIdCounter++}`,
+                  sender: "assistant",
+                  text: SCENARIO_2_CANONICAL_OPENING,
+                });
+              } else if (s === 3) {
+                restoredMessages.push({
+                  id: `msg-${msgIdCounter++}`,
+                  sender: "assistant",
+                  text: SCENARIO_3_CANONICAL_OPENING,
+                });
+              }
+            }
+          } else if (scenarioNum === trackedScenario && trackedNode !== activeNode && activeNode !== "END") {
+            const currentNodeDef = getScenarioNodeByContext(
+              scenarioNum,
+              activeNode,
+              version
+            );
+            const currentText = currentNodeDef.prompt || currentNodeDef.message;
+            if (currentText) {
+              restoredMessages.push({
+                id: `msg-${msgIdCounter++}`,
+                sender: "assistant",
+                text: currentText,
+              });
+            }
+          }
+        } catch (reconstructErr) {
+          console.warn("Warning: Error reconstructing transcript history:", reconstructErr);
         }
 
         setMessages(restoredMessages);
         setIsRestoring(false);
-      } catch {
+      } catch (err) {
+        console.error("Session restore failed:", err);
         router.replace("/");
       }
     };
