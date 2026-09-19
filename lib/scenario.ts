@@ -97,6 +97,15 @@ export const TERMINAL_NODE_ID: NodeId = "END";
 export const DEFAULT_SCENARIO_VERSION = "2.0";
 export const SCENARIO_VERSION = "2.0";
 
+/**
+ * Returns true only for versions that participate in the five-scenario sequential journey.
+ * - "2.0": Frozen production release
+ * - "2.0-dev": Historical pre-freeze development version (backward-compatibility only)
+ */
+export function isSequentialJourneyVersion(version: string | null | undefined): boolean {
+  return version === "2.0" || version === "2.0-dev";
+}
+
 export const SCENARIO_1_CANONICAL_OPENING =
   "مرحباً بك.\n\nتخيل أنك تريد إنشاء مشروع رقمي صغير يمكن أن يحقق لك استقلالاً مالياً، ولكن لديك ميزانية محدودة، ولا تملك منتجاً محدداً حتى الآن.\n\nأمامك فرصة للبحث عن مشكلة حقيقية يعاني منها إحدى الفئات المستهدفة وتحويلها إلى فرصة مشروع رقمي يدر عائداً.\n\nمن أين ستبدأ؟";
 

@@ -3,6 +3,7 @@ import {
   getSessionById,
   updateSessionState,
 } from "@/lib/server/persistence";
+import { isSequentialJourneyVersion } from "@/lib/scenario";
 
 export async function POST(request: Request) {
   try {
@@ -58,8 +59,8 @@ export async function POST(request: Request) {
       });
     }
 
-    // 3. In sequential journey (2.0), overall completion is ONLY allowed after Scenario 5
-    if (session.scenario_version === "2.0") {
+    // 3. In sequential journey (2.0 / 2.0-dev), overall completion is ONLY allowed after Scenario 5
+    if (isSequentialJourneyVersion(session.scenario_version)) {
       if (session.current_scenario !== 5 || session.current_node !== "END") {
         return NextResponse.json(
           { error: "لا يمكن إنهاء التجربة قبل إكمال جميع السيناريوهات الخمسة." },

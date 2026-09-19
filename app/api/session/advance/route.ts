@@ -3,6 +3,7 @@ import {
   getSessionById,
   updateSessionState,
 } from "@/lib/server/persistence";
+import { isSequentialJourneyVersion } from "@/lib/scenario";
 import { SCENARIO_2_START_NODE_ID } from "@/lib/scenarios/scenario-2";
 import { SCENARIO_3_START_NODE_ID } from "@/lib/scenarios/scenario-3";
 import { SCENARIO_4_START_NODE_ID } from "@/lib/scenarios/scenario-4";
@@ -55,8 +56,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Only applicable to sequential 2.0 journey
-    if (session.scenario_version !== "2.0") {
+    // Only applicable to sequential journey (2.0 / 2.0-dev)
+    if (!isSequentialJourneyVersion(session.scenario_version)) {
       return NextResponse.json(
         { error: "هذه الجلسة تتبع نموذج النسخ التاريخية ولا تدعم الانتقال المتسلسل." },
         { status: 400 }

@@ -6,6 +6,7 @@ import {
   START_NODE_ID,
   getScenarioNode,
   SCENARIO_1_CANONICAL_OPENING,
+  isSequentialJourneyVersion,
 } from "@/lib/scenario";
 import {
   MAX_STUDENT_ANSWER_LENGTH,
@@ -189,7 +190,7 @@ export default function ChatPage() {
         try {
           const startNodeS1 = getScenarioNode(START_NODE_ID, version);
           const initialTextS1 =
-            version === "2.0" && startNodeS1.prompt
+            isSequentialJourneyVersion(version) && startNodeS1.prompt
               ? `${SCENARIO_1_CANONICAL_OPENING}\n\n${startNodeS1.prompt}`
               : startNodeS1.prompt;
 

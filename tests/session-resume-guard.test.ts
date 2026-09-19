@@ -2,6 +2,11 @@ import test, { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { getScenarioNodeByContext } from "../lib/scenarios/registry";
 import { getJourneyProgress } from "../lib/journey";
+import { isSequentialJourneyVersion, SCENARIO_VERSION, DEFAULT_SCENARIO_VERSION } from "../lib/scenario";
+import { SCENARIO_2_START_NODE_ID } from "../lib/scenarios/scenario-2";
+import { SCENARIO_3_START_NODE_ID } from "../lib/scenarios/scenario-3";
+import { SCENARIO_4_START_NODE_ID } from "../lib/scenarios/scenario-4";
+import { SCENARIO_5_START_NODE_ID } from "../lib/scenarios/scenario-5";
 import { isStructuredBusinessModel, deserializeBusinessModel, formatBusinessModelDisplay } from "../lib/scenarios/scenario-3";
 
 describe("T54.3 Session Resume & Chat Guard Invariants", () => {
@@ -79,9 +84,9 @@ describe("T54.3 Session Resume & Chat Guard Invariants", () => {
     const status = sessionData.status;
 
     // Guard rules in chat/page.tsx
-    if (version !== "2.0" && (activeNode === "END" || status === "completed")) {
+    if (!isSequentialJourneyVersion(version) && (activeNode === "END" || status === "completed")) {
       mockRouter.replace("/complete");
-    } else if (version === "2.0" && status === "completed") {
+    } else if (isSequentialJourneyVersion(version) && status === "completed") {
       mockRouter.replace("/complete");
     }
 
@@ -126,9 +131,9 @@ describe("T54.3 Session Resume & Chat Guard Invariants", () => {
       scenarioVersion: "2.0",
     };
 
-    if (completedSession.scenarioVersion !== "2.0" && (completedSession.currentNode === "END" || completedSession.status === "completed")) {
+    if (!isSequentialJourneyVersion(completedSession.scenarioVersion) && (completedSession.currentNode === "END" || completedSession.status === "completed")) {
       mockRouter.replace("/complete");
-    } else if (completedSession.scenarioVersion === "2.0" && completedSession.status === "completed") {
+    } else if (isSequentialJourneyVersion(completedSession.scenarioVersion) && completedSession.status === "completed") {
       mockRouter.replace("/complete");
     }
 
@@ -189,5 +194,260 @@ describe("T54.3 Session Resume & Chat Guard Invariants", () => {
     assert.ok(!formatted.includes("channel_gap"));
     assert.ok(!formatted.includes("advanced"));
     assert.ok(!formatted.includes("weak"));
+  });
+});
+
+describe("Legacy 2.0-dev Sequential Compatibility Invariants", () => {
+  // Pure state transition validator matching app/api/session/advance/route.ts
+  function simulateAdvance(session: {
+    scenario_version: string;
+    status: string;
+    current_scenario?: number | null;
+    current_node: string;
+  }): { status: number; body: Record<string, unknown> } {
+    if (session.status !== "active") {
+      return { status: 409, body: { error: "الجلسة غير نشطة." } };
+    }
+
+    if (!isSequentialJourneyVersion(session.scenario_version)) {
+      return {
+        status: 400,
+        body: { error: "هذه الجلسة تتبع نموذج النسخ التاريخية ولا تدعم الانتقال المتسلسل." },
+      };
+    }
+
+    const currentScenario = session.current_scenario || 1;
+    const currentNode = session.current_node;
+
+    if (currentScenario === 1) {
+      if (currentNode !== "END") {
+        return { status: 409, body: { error: "لا يمكن الانتقال للسيناريو الثاني قبل إتمام السيناريو الأول." } };
+      }
+      return {
+        status: 200,
+        body: { currentScenario: 2, currentNode: SCENARIO_2_START_NODE_ID, state: "advanced" },
+      };
+    }
+
+    if (currentScenario === 2) {
+      if (currentNode !== "END") {
+        return { status: 409, body: { error: "لا يمكن الانتقال للسيناريو الثالث قبل إتمام السيناريو الثاني." } };
+      }
+      return {
+        status: 200,
+        body: { currentScenario: 3, currentNode: SCENARIO_3_START_NODE_ID, state: "advanced" },
+      };
+    }
+
+    if (currentScenario === 3) {
+      if (currentNode !== "END") {
+        return { status: 409, body: { error: "لا يمكن الانتقال للسيناريو الرابع قبل إتمام السيناريو الثالث." } };
+      }
+      return {
+        status: 200,
+        body: { currentScenario: 4, currentNode: SCENARIO_4_START_NODE_ID, state: "advanced" },
+      };
+    }
+
+    if (currentScenario === 4) {
+      if (currentNode !== "END") {
+        return { status: 409, body: { error: "لا يمكن الانتقال للسيناريو الخامس قبل إتمام السيناريو الرابع." } };
+      }
+      return {
+        status: 200,
+        body: { currentScenario: 5, currentNode: SCENARIO_5_START_NODE_ID, state: "advanced" },
+      };
+    }
+
+    if (currentScenario === 5) {
+      if (currentNode === "END") {
+        return { status: 200, body: { currentScenario: 5, currentNode: "END", state: "reached_s5_end" } };
+      }
+      return { status: 409, body: { error: "السيناريو الخامس لا يزال قيد التقدم." } };
+    }
+
+    return { status: 400, body: { error: "حالة السيناريو الحالية غير مدعومة للانتقال." } };
+  }
+
+  // Pure state transition validator matching app/api/session/complete/route.ts
+  function simulateComplete(session: {
+    id: string;
+    scenario_version: string;
+    status: string;
+    current_scenario?: number | null;
+    current_node: string;
+    finished_at?: string | null;
+  }): { status: number; body: Record<string, unknown> } {
+    // 2. Safe idempotency for duplicate completion calls
+    if (
+      session.status === "completed" &&
+      session.current_node === "END" &&
+      Boolean(session.finished_at)
+    ) {
+      return { status: 200, body: { completed: true } };
+    }
+
+    // 3. In sequential journey (2.0 / 2.0-dev), overall completion is ONLY allowed after Scenario 5
+    if (isSequentialJourneyVersion(session.scenario_version)) {
+      if (session.current_scenario !== 5 || session.current_node !== "END") {
+        return {
+          status: 409,
+          body: { error: "لا يمكن إنهاء التجربة قبل إكمال جميع السيناريوهات الخمسة." },
+        };
+      }
+    }
+
+    // 4. Validate session is active and at END node
+    if (session.current_node !== "END" || session.status !== "active") {
+      return {
+        status: 409,
+        body: { error: "هذه الجلسة ليست في حالة اكتمال جاهزة للإنهاء." },
+      };
+    }
+
+    return { status: 200, body: { completed: true } };
+  }
+
+  it("1. 2.0 session advances normally", () => {
+    const s1 = simulateAdvance({
+      scenario_version: "2.0",
+      status: "active",
+      current_scenario: 1,
+      current_node: "END",
+    });
+    assert.equal(s1.status, 200);
+    assert.equal(s1.body.currentScenario, 2);
+    assert.equal(s1.body.currentNode, SCENARIO_2_START_NODE_ID);
+    assert.equal(s1.body.state, "advanced");
+  });
+
+  it("2. 2.0-dev active session advances normally", () => {
+    const s1 = simulateAdvance({
+      scenario_version: "2.0-dev",
+      status: "active",
+      current_scenario: 1,
+      current_node: "END",
+    });
+    assert.equal(s1.status, 200);
+    assert.equal(s1.body.currentScenario, 2);
+    assert.equal(s1.body.currentNode, SCENARIO_2_START_NODE_ID);
+    assert.equal(s1.body.state, "advanced");
+
+    const s2 = simulateAdvance({
+      scenario_version: "2.0-dev",
+      status: "active",
+      current_scenario: 2,
+      current_node: "END",
+    });
+    assert.equal(s2.status, 200);
+    assert.equal(s2.body.currentScenario, 3);
+    assert.equal(s2.body.currentNode, SCENARIO_3_START_NODE_ID);
+    assert.equal(s2.body.state, "advanced");
+  });
+
+  it("3. 2.0-dev S3 END -> S4 allowed", () => {
+    const res = simulateAdvance({
+      scenario_version: "2.0-dev",
+      status: "active",
+      current_scenario: 3,
+      current_node: "END",
+    });
+    assert.equal(res.status, 200);
+    assert.equal(res.body.currentScenario, 4);
+    assert.equal(res.body.currentNode, SCENARIO_4_START_NODE_ID);
+    assert.equal(res.body.state, "advanced");
+  });
+
+  it("4. 2.0-dev S4 END -> S5 allowed", () => {
+    const res = simulateAdvance({
+      scenario_version: "2.0-dev",
+      status: "active",
+      current_scenario: 4,
+      current_node: "END",
+    });
+    assert.equal(res.status, 200);
+    assert.equal(res.body.currentScenario, 5);
+    assert.equal(res.body.currentNode, SCENARIO_5_START_NODE_ID);
+    assert.equal(res.body.state, "advanced");
+  });
+
+  it("5. 2.0-dev S1-S4 cannot overall-complete", () => {
+    for (const sc of [1, 2, 3, 4]) {
+      const res = simulateComplete({
+        id: "sess-2-0-dev",
+        scenario_version: "2.0-dev",
+        status: "active",
+        current_scenario: sc,
+        current_node: "END",
+      });
+      assert.equal(res.status, 409, `Scenario ${sc} END must not overall-complete`);
+      assert.equal(res.body.error, "لا يمكن إنهاء التجربة قبل إكمال جميع السيناريوهات الخمسة.");
+    }
+  });
+
+  it("6. 2.0-dev S5 END can overall-complete", () => {
+    const res = simulateComplete({
+      id: "sess-2-0-dev",
+      scenario_version: "2.0-dev",
+      status: "active",
+      current_scenario: 5,
+      current_node: "END",
+    });
+    assert.equal(res.status, 200);
+    assert.equal(res.body.completed, true);
+  });
+
+  it("7. completed 2.0-dev completion remains idempotent", () => {
+    const res = simulateComplete({
+      id: "sess-2-0-dev-completed",
+      scenario_version: "2.0-dev",
+      status: "completed",
+      current_scenario: 5,
+      current_node: "END",
+      finished_at: "2026-09-19T20:00:00.000Z",
+    });
+    assert.equal(res.status, 200);
+    assert.equal(res.body.completed, true);
+  });
+
+  it("8. new session version remains exactly 2.0", () => {
+    assert.equal(SCENARIO_VERSION, "2.0");
+    assert.equal(DEFAULT_SCENARIO_VERSION, "2.0");
+    assert.equal(isSequentialJourneyVersion(SCENARIO_VERSION), true);
+    assert.notEqual(SCENARIO_VERSION, "2.0-dev");
+  });
+
+  it("9. unrelated historical 1.x behavior unchanged", () => {
+    assert.equal(isSequentialJourneyVersion("1.0"), false);
+    assert.equal(isSequentialJourneyVersion("1.1"), false);
+    assert.equal(isSequentialJourneyVersion(undefined), false);
+    assert.equal(isSequentialJourneyVersion(null), false);
+
+    // 1.x sessions cannot advance sequentially
+    const advance1_0 = simulateAdvance({
+      scenario_version: "1.0",
+      status: "active",
+      current_scenario: 1,
+      current_node: "END",
+    });
+    assert.equal(advance1_0.status, 400);
+
+    const advance1_1 = simulateAdvance({
+      scenario_version: "1.1",
+      status: "active",
+      current_scenario: 1,
+      current_node: "END",
+    });
+    assert.equal(advance1_1.status, 400);
+
+    // 1.x single-scenario session at END completes directly without requiring S5
+    const complete1_0 = simulateComplete({
+      id: "sess-1-0",
+      scenario_version: "1.0",
+      status: "active",
+      current_node: "END",
+    });
+    assert.equal(complete1_0.status, 200);
+    assert.equal(complete1_0.body.completed, true);
   });
 });
