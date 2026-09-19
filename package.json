@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "test:transitions": "tsx --test tests/transitions.test.ts",
+    "test:journey": "tsx --test tests/journey.test.ts",
     "spike:n1": "tsx spike/evaluate-n1.ts",
     "eval:n1": "tsx spike/run-n1-eval.ts",
     "test:conversational": "tsx --env-file=.env.local --test tests/conversational_evaluator.test.ts"

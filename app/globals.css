@@ -1014,3 +1014,129 @@ button[aria-busy="true"] {
     border-radius: 50%;
   }
 }
+
+/* ==========================================================================
+   Sequential Five-Skill Journey Progress Component
+   ========================================================================== */
+
+.mentor-chat-header-user {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.125rem;
+}
+
+.mentor-user-greeting {
+  font-size: 0.925rem;
+  font-weight: 600;
+  color: #1C2428;
+}
+
+.mentor-user-code {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-family: monospace;
+}
+
+.journey-progress-strip {
+  background-color: #F8F7F4;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  padding: 0.5rem 1.25rem;
+}
+
+.journey-progress-container {
+  max-width: 840px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.journey-active-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #1C2428;
+  white-space: nowrap;
+}
+
+.journey-kicker {
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+.journey-active-title {
+  font-weight: 700;
+  color: #0f766e;
+}
+
+.journey-steps-chips {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 0.125rem 0;
+}
+
+.journey-steps-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.journey-step-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.journey-step-completed {
+  background-color: rgba(16, 185, 129, 0.12);
+  color: #059669;
+  font-weight: 500;
+}
+
+.journey-step-active {
+  background-color: #0f766e;
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(15, 118, 110, 0.2);
+}
+
+.journey-step-upcoming {
+  background-color: rgba(0, 0, 0, 0.04);
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+.step-marker {
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
+@media (max-width: 640px) {
+  .journey-progress-container {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.375rem;
+  }
+  .journey-steps-chips {
+    width: 100%;
+    gap: 0.25rem;
+  }
+  .journey-step-chip {
+    font-size: 0.75rem;
+    padding: 0.2rem 0.5rem;
+  }
+  .mentor-chat-header-user {
+    align-items: flex-start;
+  }
+}

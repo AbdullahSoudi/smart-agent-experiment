@@ -6,11 +6,17 @@ import {
   NodeId,
   START_NODE_ID,
   getScenarioNode,
+  SCENARIO_1_CANONICAL_OPENING,
 } from "@/lib/scenario";
 import {
   MAX_STUDENT_ANSWER_LENGTH,
   ANSWER_TOO_LONG_ERROR,
 } from "@/lib/validation";
+import {
+  ScenarioId,
+  getJourneyProgress,
+  getScenarioMeta,
+} from "@/lib/journey";
 
 interface ChatMessage {
   id: string;
@@ -23,7 +29,11 @@ export default function ChatPage() {
 
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [currentNodeId, setCurrentNodeId] = useState<NodeId>(START_NODE_ID);
-  const [scenarioVersion, setScenarioVersion] = useState<string>("1.1");
+  const [scenarioVersion, setScenarioVersion] = useState<string>("2.0-dev");
+  const [studentName, setStudentName] = useState<string | null>(null);
+  const [studentCode, setStudentCode] = useState<string | null>(null);
+  const [currentScenario, setCurrentScenario] = useState<ScenarioId>(1);
+
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [studentAnswer, setStudentAnswer] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -70,10 +80,19 @@ export default function ChatPage() {
 
         const data = await res.json();
         const activeNode: NodeId = data.currentNode;
-        const version: string = data.scenarioVersion || "1.1";
+        const version: string = data.scenarioVersion || "2.0-dev";
+        const scenarioNum: ScenarioId =
+          typeof data.currentScenario === "number" &&
+          data.currentScenario >= 1 &&
+          data.currentScenario <= 5
+            ? (data.currentScenario as ScenarioId)
+            : 1;
 
         setScenarioVersion(version);
         setCurrentNodeId(activeNode);
+        setStudentName(data.studentName || null);
+        setStudentCode(data.studentCode || null);
+        setCurrentScenario(scenarioNum);
 
         if (activeNode === "END" || data.status === "completed") {
           router.replace("/complete");
@@ -86,11 +105,16 @@ export default function ChatPage() {
 
         // Opening prompt of START_NODE_ID
         const startNode = getScenarioNode(START_NODE_ID, version);
-        if (startNode.prompt) {
+        const initialText =
+          version === "2.0-dev" && startNode.prompt
+            ? `${SCENARIO_1_CANONICAL_OPENING}\n\n${startNode.prompt}`
+            : startNode.prompt;
+
+        if (initialText) {
           restoredMessages.push({
             id: `msg-${msgIdCounter++}`,
             sender: "assistant",
-            text: startNode.prompt,
+            text: initialText,
           });
         }
 
@@ -253,14 +277,14 @@ export default function ChatPage() {
       case "N5_H":
         return "/api/n5-h/submit";
       default:
-        return "/api/n1/submit";
+        throw new Error(`Unhandled submit endpoint for node: ${nodeId}`);
     }
   };
 
-  // Submit regular text message
+  // Free-text submit handler
   const handleSendMessage = async () => {
     const trimmed = studentAnswer.trim();
-    if (!trimmed || isSubmittingRef.current || !sessionId) {
+    if (!trimmed || isSubmitting || !sessionId) {
       return;
     }
 
@@ -269,24 +293,23 @@ export default function ChatPage() {
       return;
     }
 
-    // Synchronous guard
     isSubmittingRef.current = true;
     setIsSubmitting(true);
     setErrorMessage(null);
 
-    const userMsgId = `msg-${Date.now()}-user`;
+    const endpoint = getNodeSubmitEndpoint(currentNodeId);
+
+    // Optimistically append student message
     setMessages((prev) => [
       ...prev,
-      { id: userMsgId, sender: "student", text: trimmed },
+      { id: `msg-${Date.now()}-user`, sender: "student", text: trimmed },
     ]);
     setStudentAnswer("");
-
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
 
     try {
-      const endpoint = getNodeSubmitEndpoint(currentNodeId);
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -296,47 +319,36 @@ export default function ChatPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setErrorMessage(data.error || "تعذر إرسال الرسالة حاليًا. حاول مرة أخرى.");
+        setErrorMessage(data.error || "تعذر إرسال الإجابة. حاول مرة أخرى.");
         return;
       }
 
+      // Append assistant conversational response
+      if (data.feedback) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `msg-${Date.now()}-assistant`,
+            sender: "assistant",
+            text: data.feedback,
+          },
+        ]);
+      }
+
       const nextNode: NodeId = data.nextNode;
-      const feedback: string | null = data.feedback;
+      const prevNode = currentNodeId;
+      setCurrentNodeId(nextNode);
 
-      if (nextNode === currentNodeId) {
-        // Conversational Support or Off-Topic: remain at current node
-        if (feedback) {
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: `msg-${Date.now()}-assistant`,
-              sender: "assistant",
-              text: feedback,
-            },
-          ]);
-        }
-      } else {
-        // Node advanced deterministically!
-        if (feedback) {
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: `msg-${Date.now()}-feedback`,
-              sender: "assistant",
-              text: feedback,
-            },
-          ]);
-        }
+      // Terminal node
+      if (nextNode === "END") {
+        router.replace("/complete");
+        return;
+      }
 
-        if (nextNode === "END") {
-          setTimeout(() => router.replace("/complete"), 1200);
-          return;
-        }
-
-        setCurrentNodeId(nextNode);
+      // If transition moved to a new node, append that node's prompt
+      if (nextNode !== prevNode) {
         const nextDef = getScenarioNode(nextNode, scenarioVersion);
         const nextText = nextDef.prompt || nextDef.message;
-
         if (nextText) {
           setMessages((prev) => [
             ...prev,
@@ -356,9 +368,11 @@ export default function ChatPage() {
     }
   };
 
-  // Submit quick choice for N1_F
+  // Quick reply handler (N1_F)
   const handleQuickChoice = async (choiceText: string) => {
-    if (isSubmittingRef.current || !sessionId) return;
+    if (isSubmitting || !sessionId) {
+      return;
+    }
 
     isSubmittingRef.current = true;
     setIsSubmitting(true);
@@ -421,9 +435,12 @@ export default function ChatPage() {
   const isN1F = currentNodeId === "N1_F";
   const isN2H = currentNodeId === "N2_H";
 
+  const journeyProgress = getJourneyProgress(currentScenario);
+  const activeSkillMeta = getScenarioMeta(currentScenario);
+
   return (
     <div className="mentor-chat-viewport" dir="rtl">
-      {/* Mentor Header */}
+      {/* Mentor Header with Identity */}
       <header className="mentor-chat-header">
         <div className="mentor-chat-header-content">
           <div className="mentor-brand">
@@ -434,15 +451,56 @@ export default function ChatPage() {
               </svg>
             </div>
             <div className="mentor-title-group">
-              <h1 className="mentor-title">الوكيل الذكي لاكتشاف الفرص الرقمية</h1>
+              <h1 className="mentor-title">المرشد الريادي الذكي</h1>
               <div className="mentor-status-badge">
                 <span className="mentor-status-dot" aria-hidden="true" />
                 <span className="mentor-status-text">جلسة نشطة</span>
               </div>
             </div>
           </div>
+
+          {/* Participant subtle identity */}
+          {studentName && (
+            <div className="mentor-chat-header-user">
+              <span className="mentor-user-greeting">أهلاً، {studentName}</span>
+              {studentCode && (
+                <span className="mentor-user-code">{studentCode}</span>
+              )}
+            </div>
+          )}
         </div>
       </header>
+
+      {/* Five-Skill Sequential Journey Progress Strip */}
+      <nav className="journey-progress-strip" aria-label="مسار المهارات الريادية">
+        <div className="journey-progress-container">
+          <div className="journey-active-badge">
+            <span className="journey-kicker">المهارة الحالية:</span>
+            <span className="journey-active-title">
+              {activeSkillMeta?.skillTitle || "اكتشاف الفرص الرقمية"}
+            </span>
+          </div>
+          <div className="journey-steps-chips" role="list">
+            {journeyProgress.map((item) => (
+              <div
+                key={item.id}
+                role="listitem"
+                className={`journey-step-chip journey-step-${item.state}`}
+                title={item.skillTitle}
+              >
+                <span className="step-marker" aria-hidden="true">
+                  {item.state === "completed"
+                    ? "✓"
+                    : item.state === "active"
+                    ? "●"
+                    : "○"}
+                </span>
+                <span className="step-title-text">{item.skillTitle}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </nav>
 
       {/* Main Conversation Stream */}
       <main className="mentor-chat-main" aria-label="محادثة الإرشاد الذكي">
@@ -478,7 +536,7 @@ export default function ChatPage() {
                 <span className="thinking-dot" />
                 <span className="thinking-dot" />
                 <span className="thinking-dot" />
-                <span className="thinking-label">الوكيل بيفكر...</span>
+                <span className="thinking-label">المرشد يفكر...</span>
               </div>
             </div>
           )}

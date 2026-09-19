@@ -1,11 +1,11 @@
 /**
  * Server-only persistence layer for research experiment sessions and interactions.
  *
- * Source of Truth: PROJECT.md Section 6, SCENARIO_SPEC.md & PILOT_ISSUES.md
+ * Source of Truth: PROJECT.md Section 6, SCENARIO_SPEC.md, PILOT_ISSUES.md, and research/scenarios/JOURNEY.md
  * Architecture Invariant:
  *   - AI evaluates intent, classification + feedback
  *   - Application code deterministically calculates transitions and next_node
- *   - Persistence stores already-decided values and turn_kind
+ *   - Persistence stores already-decided values, turn_kind, and scenario_id
  */
 
 import type { NodeId } from "../scenario";
@@ -20,8 +20,10 @@ export type TurnKind =
 
 export interface SessionRecord {
   id: string;
+  student_name: string | null;
   student_code: string;
   status: string;
+  current_scenario: number | null;
   current_node: NodeId;
   scenario_version: string;
   prompt_version: string;
@@ -34,6 +36,7 @@ export interface SessionRecord {
 export interface InteractionRecord {
   id: string;
   session_id: string;
+  scenario_id: number | null;
   node_id: NodeId;
   student_answer: string | null;
   classification: Classification | null;
@@ -45,8 +48,10 @@ export interface InteractionRecord {
 }
 
 export interface CreateSessionInput {
+  studentName?: string | null;
   studentCode: string;
   status: string;
+  currentScenario?: number | null;
   currentNode: NodeId;
   scenarioVersion: string;
   promptVersion: string;
@@ -56,6 +61,7 @@ export interface CreateSessionInput {
 
 export interface RecordInteractionInput {
   sessionId: string;
+  scenarioId?: number | null;
   nodeId: NodeId;
   studentAnswer?: string | null;
   classification?: Classification | null;
@@ -68,6 +74,7 @@ export interface RecordInteractionInput {
 export interface UpdateSessionStateInput {
   sessionId: string;
   currentNode?: NodeId;
+  currentScenario?: number | null;
   status?: string;
   finishedAt?: string | null;
 }
@@ -84,8 +91,10 @@ export async function createSession(
   const { data, error } = await supabase
     .from("sessions")
     .insert({
+      student_name: input.studentName ?? null,
       student_code: input.studentCode,
       status: input.status,
+      current_scenario: input.currentScenario ?? null,
       current_node: input.currentNode,
       scenario_version: input.scenarioVersion,
       prompt_version: input.promptVersion,
@@ -105,6 +114,7 @@ export async function createSession(
 /**
  * Persists an interaction turn in public.interactions.
  * Supports evaluated turns, conversational support, off-topic turns, and non-evaluated turns.
+ * Supports nullable scenario_id for five-scenario journey tracking.
  */
 export async function recordInteraction(
   input: RecordInteractionInput
@@ -115,6 +125,7 @@ export async function recordInteraction(
     .from("interactions")
     .insert({
       session_id: input.sessionId,
+      scenario_id: input.scenarioId ?? null,
       node_id: input.nodeId,
       student_answer: input.studentAnswer ?? null,
       classification: input.classification ?? null,
@@ -134,7 +145,7 @@ export async function recordInteraction(
 }
 
 /**
- * Updates an existing session's current_node, status, and/or finished_at
+ * Updates an existing session's current_node, current_scenario, status, and/or finished_at
  * in public.sessions based on already-decided application state.
  */
 export async function updateSessionState(
@@ -146,6 +157,9 @@ export async function updateSessionState(
 
   if (input.currentNode !== undefined) {
     updatePayload.current_node = input.currentNode;
+  }
+  if (input.currentScenario !== undefined) {
+    updatePayload.current_scenario = input.currentScenario;
   }
   if (input.status !== undefined) {
     updatePayload.status = input.status;
@@ -188,6 +202,27 @@ export async function getSessionById(
   }
 
   return data as SessionRecord | null;
+}
+
+/**
+ * Retrieves all sessions for a given student_code, ordered by started_at descending.
+ */
+export async function getSessionsByStudentCode(
+  studentCode: string
+): Promise<SessionRecord[]> {
+  const supabase = getSupabaseServerClient();
+
+  const { data, error } = await supabase
+    .from("sessions")
+    .select("*")
+    .eq("student_code", studentCode)
+    .order("started_at", { ascending: false });
+
+  if (error) {
+    throw new Error("Failed to load sessions for student code", { cause: error });
+  }
+
+  return (data || []) as SessionRecord[];
 }
 
 export interface RestorationInteraction {

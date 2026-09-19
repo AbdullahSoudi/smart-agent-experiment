@@ -49,7 +49,7 @@ export async function POST(request: Request) {
     const rawInteractions = await getInteractionsForSession(trimmedSessionId);
 
     // Provide sanitized history for client-side transcript reconstruction
-    // Exclude classification, scores, and provider internals
+    // Strictly exclude classification, scores, decision times, and provider internals
     const history = rawInteractions.map((inter) => ({
       nodeId: inter.node_id,
       studentAnswer: inter.student_answer,
@@ -62,12 +62,14 @@ export async function POST(request: Request) {
       status: session.status,
       currentNode: session.current_node,
       scenarioVersion: session.scenario_version,
+      studentName: session.student_name ?? null,
+      studentCode: session.student_code,
+      currentScenario: session.current_scenario ?? null,
       history,
     });
-  } catch (error) {
-    console.error("Session restore error:", error);
+  } catch {
     return NextResponse.json(
-      { error: "تعذر استعادة الجلسة حاليًا. حاول مرة أخرى." },
+      { error: "تعذر استعادة الجلسة حالياً. حاول مرة أخرى." },
       { status: 500 }
     );
   }

@@ -95,8 +95,10 @@ Code   = branch + state + persistence
 ### sessions
 
 - id
+- student_name (nullable text — added in T54.2)
 - student_code
 - status
+- current_scenario (nullable integer 1..5 — added in T54.2)
 - current_node
 - scenario_version
 - prompt_version
@@ -109,6 +111,7 @@ Code   = branch + state + persistence
 
 - id
 - session_id
+- scenario_id (nullable integer 1..5 — added in T54.2)
 - node_id
 - student_answer
 - classification
@@ -122,8 +125,9 @@ Code   = branch + state + persistence
 
 - **Historical Pilot Baseline**: scenario_version = 1.0 | prompt_version = 0.2
 - **T54 Conversational Evolution**: scenario_version = 1.1 | prompt_version = 0.3
+- **T54.2 Sequential Journey Foundation**: scenario_version = 2.0-dev | prompt_version = 0.3
 
-لا نخزن اسم الطالب أو البريد أو رقم الهاتف إلا إذا غير الباحث التصميم صراحة.
+يتم تخزين اسم الطالب (student_name) وكود المشارك (student_code) لربط جلسة الطالب واستئنافها دون إنشاء جلسات مكررة، مع حظر إعادة تشغيل الجلسات المكتملة وحماية سرية بيانات المشاركين.
 
 ---
 
