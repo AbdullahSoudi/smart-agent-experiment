@@ -106,7 +106,7 @@
 - [x] T54 — Fix only approved pilot issues
 - [x] T54.1 — Freeze sequential five-scenario specification
 - [x] T54.2 — Add student identity + sequential journey foundation
-- [ ] T54.3 — Implement scenarios 2 and 3
+- [x] T54.3 — Implement scenarios 2 and 3
 - [ ] T54.4 — Implement scenarios 4 and 5
 - [ ] T54.5 — Add researcher report and verify full journey
 - [ ] T55 — Freeze App / Scenario / Prompt / Model versions

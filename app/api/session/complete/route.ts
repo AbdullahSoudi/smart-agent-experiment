@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import {
   getSessionById,
   updateSessionState,
@@ -58,7 +58,17 @@ export async function POST(request: Request) {
       });
     }
 
-    // 3. Validate session is active and at END node
+    // 3. In sequential journey (2.0-dev), overall completion is ONLY allowed after Scenario 5
+    if (session.scenario_version === "2.0-dev") {
+      if (session.current_scenario !== 5 || session.current_node !== "END") {
+        return NextResponse.json(
+          { error: "لا يمكن إنهاء التجربة قبل إكمال جميع السيناريوهات الخمسة." },
+          { status: 409 }
+        );
+      }
+    }
+
+    // 4. Validate session is active and at END node
     if (session.current_node !== "END" || session.status !== "active") {
       return NextResponse.json(
         { error: "هذه الجلسة ليست في حالة اكتمال جاهزة للإنهاء." },
@@ -66,7 +76,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 4. Update session to completed state with server timestamp
+    // 5. Update session to completed state with server timestamp
     const finishedAt = new Date().toISOString();
     await updateSessionState({
       sessionId: session.id,
@@ -75,7 +85,7 @@ export async function POST(request: Request) {
       finishedAt,
     });
 
-    // 5. Minimal client response
+    // 6. Minimal client response
     return NextResponse.json({
       completed: true,
     });

@@ -1,9 +1,8 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
-  NodeId,
   START_NODE_ID,
   getScenarioNode,
   SCENARIO_1_CANONICAL_OPENING,
@@ -17,6 +16,18 @@ import {
   getJourneyProgress,
   getScenarioMeta,
 } from "@/lib/journey";
+import {
+  SCENARIO_2_CANONICAL_OPENING,
+} from "@/lib/scenarios/scenario-2";
+import {
+  SCENARIO_3_CANONICAL_OPENING,
+  BUSINESS_MODEL_LABELS,
+  type BusinessModelBlocks,
+  deserializeBusinessModel,
+  isStructuredBusinessModel,
+  formatBusinessModelDisplay,
+} from "@/lib/scenarios/scenario-3";
+import { getScenarioNodeByContext } from "@/lib/scenarios/registry";
 
 interface ChatMessage {
   id: string;
@@ -28,7 +39,7 @@ export default function ChatPage() {
   const router = useRouter();
 
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [currentNodeId, setCurrentNodeId] = useState<NodeId>(START_NODE_ID);
+  const [currentNodeId, setCurrentNodeId] = useState<string>(START_NODE_ID);
   const [scenarioVersion, setScenarioVersion] = useState<string>("2.0-dev");
   const [studentName, setStudentName] = useState<string | null>(null);
   const [studentCode, setStudentCode] = useState<string | null>(null);
@@ -40,6 +51,18 @@ export default function ChatPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isRestoring, setIsRestoring] = useState(true);
   const [autoContinueTrigger, setAutoContinueTrigger] = useState(0);
+
+  // S3 structured inputs state
+  const [s3Blocks, setS3Blocks] = useState<BusinessModelBlocks>({
+    customerSegments: "",
+    valueProposition: "",
+    channels: "",
+    revenueStreams: "",
+    costStructure: "",
+  });
+  const [showS3Support, setShowS3Support] = useState(false);
+  const [s3SupportQuery, setS3SupportQuery] = useState("");
+  const [s3Completed, setS3Completed] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -79,7 +102,7 @@ export default function ChatPage() {
         }
 
         const data = await res.json();
-        const activeNode: NodeId = data.currentNode;
+        const activeNode: string = data.currentNode;
         const version: string = data.scenarioVersion || "2.0-dev";
         const scenarioNum: ScenarioId =
           typeof data.currentScenario === "number" &&
@@ -94,40 +117,76 @@ export default function ChatPage() {
         setStudentCode(data.studentCode || null);
         setCurrentScenario(scenarioNum);
 
-        if (activeNode === "END" || data.status === "completed") {
+        // Historical sessions complete immediately if at END
+        if (version !== "2.0-dev" && (activeNode === "END" || data.status === "completed")) {
           router.replace("/complete");
           return;
+        }
+
+        // Sequential journey: Check if at S3 END (temporary boundary)
+        if (scenarioNum === 3 && activeNode === "END") {
+          setS3Completed(true);
         }
 
         // Reconstruct conversation stream from history
         const restoredMessages: ChatMessage[] = [];
         let msgIdCounter = 1;
 
-        // Opening prompt of START_NODE_ID
-        const startNode = getScenarioNode(START_NODE_ID, version);
-        const initialText =
-          version === "2.0-dev" && startNode.prompt
-            ? `${SCENARIO_1_CANONICAL_OPENING}\n\n${startNode.prompt}`
-            : startNode.prompt;
+        // Opening prompt of Scenario 1
+        const startNodeS1 = getScenarioNode(START_NODE_ID, version);
+        const initialTextS1 =
+          version === "2.0-dev" && startNodeS1.prompt
+            ? `${SCENARIO_1_CANONICAL_OPENING}\n\n${startNodeS1.prompt}`
+            : startNodeS1.prompt;
 
-        if (initialText) {
+        if (initialTextS1) {
           restoredMessages.push({
             id: `msg-${msgIdCounter++}`,
             sender: "assistant",
-            text: initialText,
+            text: initialTextS1,
           });
         }
 
+        let trackedScenario = 1;
         let trackedNode = START_NODE_ID;
 
         if (Array.isArray(data.history) && data.history.length > 0) {
           for (const item of data.history) {
-            // Student message
+            const itemScenario = item.scenarioId || 1;
+
+            // Check if scenario advanced between interactions
+            if (itemScenario > trackedScenario) {
+              for (let s = trackedScenario + 1; s <= itemScenario; s++) {
+                if (s === 2) {
+                  restoredMessages.push({
+                    id: `msg-${msgIdCounter++}`,
+                    sender: "assistant",
+                    text: SCENARIO_2_CANONICAL_OPENING,
+                  });
+                } else if (s === 3) {
+                  restoredMessages.push({
+                    id: `msg-${msgIdCounter++}`,
+                    sender: "assistant",
+                    text: SCENARIO_3_CANONICAL_OPENING,
+                  });
+                }
+              }
+              trackedScenario = itemScenario;
+            }
+
+            // Student message (format structured model if JSON)
             if (item.studentAnswer) {
+              let studentDisplayText = item.studentAnswer;
+              if (isStructuredBusinessModel(item.studentAnswer)) {
+                const parsedBlocks = deserializeBusinessModel(item.studentAnswer);
+                if (parsedBlocks) {
+                  studentDisplayText = formatBusinessModelDisplay(parsedBlocks);
+                }
+              }
               restoredMessages.push({
                 id: `msg-${msgIdCounter++}`,
                 sender: "student",
-                text: item.studentAnswer,
+                text: studentDisplayText,
               });
             }
 
@@ -140,11 +199,15 @@ export default function ChatPage() {
               });
             }
 
-            // If node transitioned to a different node, show that node's prompt
+            // If node transitioned within scenario
             if (item.nextNode && item.nextNode !== item.nodeId) {
               trackedNode = item.nextNode;
               if (trackedNode !== "END") {
-                const nextNodeDef = getScenarioNode(trackedNode, version);
+                const nextNodeDef = getScenarioNodeByContext(
+                  itemScenario,
+                  trackedNode,
+                  version
+                );
                 const nextText = nextNodeDef.prompt || nextNodeDef.message;
                 if (nextText) {
                   restoredMessages.push({
@@ -158,9 +221,29 @@ export default function ChatPage() {
           }
         }
 
-        // If trackedNode is different from activeNode and not already displayed
-        if (trackedNode !== activeNode) {
-          const currentNodeDef = getScenarioNode(activeNode, version);
+        // If scenario has advanced past the last interaction
+        if (scenarioNum > trackedScenario) {
+          for (let s = trackedScenario + 1; s <= scenarioNum; s++) {
+            if (s === 2) {
+              restoredMessages.push({
+                id: `msg-${msgIdCounter++}`,
+                sender: "assistant",
+                text: SCENARIO_2_CANONICAL_OPENING,
+              });
+            } else if (s === 3) {
+              restoredMessages.push({
+                id: `msg-${msgIdCounter++}`,
+                sender: "assistant",
+                text: SCENARIO_3_CANONICAL_OPENING,
+              });
+            }
+          }
+        } else if (scenarioNum === trackedScenario && trackedNode !== activeNode && activeNode !== "END") {
+          const currentNodeDef = getScenarioNodeByContext(
+            scenarioNum,
+            activeNode,
+            version
+          );
           const currentText = currentNodeDef.prompt || currentNodeDef.message;
           if (currentText) {
             restoredMessages.push({
@@ -181,9 +264,9 @@ export default function ChatPage() {
     restoreSession();
   }, [router]);
 
-  // Handle N2_H auto-continue
+  // Handle N2_H auto-continue for Scenario 1
   useEffect(() => {
-    if (isRestoring || currentNodeId !== "N2_H" || !sessionId) {
+    if (isRestoring || currentScenario !== 1 || currentNodeId !== "N2_H" || !sessionId) {
       return;
     }
 
@@ -196,7 +279,7 @@ export default function ChatPage() {
       setErrorMessage(null);
 
       try {
-        const res = await fetch("/api/n2-h/submit", {
+        const res = await fetch("/api/n2-h/continue", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ sessionId }),
@@ -207,15 +290,15 @@ export default function ChatPage() {
         }
 
         const data = await res.json();
-        const nextNode: NodeId = data.nextNode;
+        const nextNode: string = data.nextNode;
         setCurrentNodeId(nextNode);
 
         if (nextNode === "END") {
-          router.replace("/complete");
+          await advanceScenario(1);
           return;
         }
 
-        const nextDef = getScenarioNode(nextNode, scenarioVersion);
+        const nextDef = getScenarioNode(nextNode as any, scenarioVersion);
         if (nextDef.prompt) {
           setMessages((prev) => [
             ...prev,
@@ -227,66 +310,134 @@ export default function ChatPage() {
           ]);
         }
       } catch {
-        setErrorMessage("تعذر المتابعة تلقائيًا. يرجى الضغط على زر المتابعة.");
+        setErrorMessage("تعذر المتابعة التلقائية. يرجى إعادة المحاولة.");
       } finally {
-        isSubmittingRef.current = false;
         setIsSubmitting(false);
+        isSubmittingRef.current = false;
       }
-    }, 1800);
+    }, 1500);
 
     return () => {
       isCancelled = true;
       clearTimeout(timer);
     };
-  }, [currentNodeId, sessionId, isRestoring, autoContinueTrigger, router, scenarioVersion]);
+  }, [currentNodeId, sessionId, isRestoring, scenarioVersion, autoContinueTrigger, currentScenario]);
 
-  // Auto-resize textarea
-  const handleTextareaInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setStudentAnswer(e.target.value);
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 180)}px`;
+  // Advance scenario helper
+  const advanceScenario = async (fromScenario: ScenarioId) => {
+    if (!sessionId) return;
+    try {
+      const advRes = await fetch("/api/session/advance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId }),
+      });
+
+      if (!advRes.ok) {
+        throw new Error("Failed to advance scenario");
+      }
+
+      const advData = await advRes.json();
+      const nextScenario: ScenarioId = advData.currentScenario;
+      const nextNode: string = advData.currentNode;
+
+      setCurrentScenario(nextScenario);
+      setCurrentNodeId(nextNode);
+
+      if (fromScenario === 1 && nextScenario === 2) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `msg-${Date.now()}-s2-open`,
+            sender: "assistant",
+            text: SCENARIO_2_CANONICAL_OPENING,
+          },
+        ]);
+      } else if (fromScenario === 2 && nextScenario === 3) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `msg-${Date.now()}-s3-open`,
+            sender: "assistant",
+            text: SCENARIO_3_CANONICAL_OPENING,
+          },
+        ]);
+      } else if (fromScenario === 3) {
+        setS3Completed(true);
+      }
+    } catch {
+      setErrorMessage("تعذر الانتقال للسيناريو التالي تلقائياً. أعد تحديث الصفحة.");
+    }
+  };
+  // Quick choice handler for S1 N1_F
+  const handleQuickChoice = async (choiceText: string) => {
+    if (isSubmitting || isSubmittingRef.current || !sessionId) return;
+    isSubmittingRef.current = true;
+    setIsSubmitting(true);
+    setErrorMessage(null);
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `msg-${Date.now()}-student`,
+        sender: "student",
+        text: choiceText,
+      },
+    ]);
+
+    try {
+      const res = await fetch("/api/n1-f/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId, choice: choiceText }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "فشل إرسال الخيار");
+      }
+
+      const data = await res.json();
+      const nextNode: string = data.nextNode;
+      setCurrentNodeId(nextNode);
+
+      if (data.feedback) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `msg-${Date.now()}-feedback`,
+            sender: "assistant",
+            text: data.feedback,
+          },
+        ]);
+      }
+
+      if (nextNode !== "END") {
+        const nextDef = getScenarioNode(nextNode as any, scenarioVersion);
+        const promptText = nextDef.prompt || nextDef.message;
+        if (promptText) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `msg-${Date.now()}-next`,
+              sender: "assistant",
+              text: promptText,
+            },
+          ]);
+        }
+      }
+    } catch (err: any) {
+      setErrorMessage(err.message || "حدث خطأ أثناء الإرسال. حاول مرة أخرى.");
+    } finally {
+      setIsSubmitting(false);
+      isSubmittingRef.current = false;
     }
   };
 
-  // Submit route dispatcher
-  const getNodeSubmitEndpoint = (nodeId: NodeId): string => {
-    switch (nodeId) {
-      case "N1":
-        return "/api/n1/submit";
-      case "N1_H":
-        return "/api/n1-h/submit";
-      case "N1_F":
-        return "/api/n1-f/submit";
-      case "N2":
-        return "/api/n2/submit";
-      case "N2_H":
-        return "/api/n2-h/submit";
-      case "N3":
-        return "/api/n3/submit";
-      case "N3_H":
-        return "/api/n3-h/submit";
-      case "N4":
-        return "/api/n4/submit";
-      case "N4_REV":
-        return "/api/n4-rev/submit";
-      case "N4_H":
-        return "/api/n4-h/submit";
-      case "N5":
-        return "/api/n5/submit";
-      case "N5_H":
-        return "/api/n5-h/submit";
-      default:
-        throw new Error(`Unhandled submit endpoint for node: ${nodeId}`);
-    }
-  };
-
-  // Free-text submit handler
+  // Submit handler for normal free-text answers
   const handleSendMessage = async () => {
     const trimmed = studentAnswer.trim();
-    if (!trimmed || isSubmitting || !sessionId) {
-      return;
-    }
+    if (!trimmed || isSubmitting || isSubmittingRef.current || !sessionId) return;
 
     if (trimmed.length > MAX_STUDENT_ANSWER_LENGTH) {
       setErrorMessage(ANSWER_TOO_LONG_ERROR);
@@ -297,80 +448,141 @@ export default function ChatPage() {
     setIsSubmitting(true);
     setErrorMessage(null);
 
-    const endpoint = getNodeSubmitEndpoint(currentNodeId);
-
-    // Optimistically append student message
     setMessages((prev) => [
       ...prev,
-      { id: `msg-${Date.now()}-user`, sender: "student", text: trimmed },
+      {
+        id: `msg-${Date.now()}-student`,
+        sender: "student",
+        text: trimmed,
+      },
     ]);
     setStudentAnswer("");
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-    }
 
     try {
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId, answer: trimmed }),
-      });
+      let res: Response;
 
-      const data = await res.json();
+      // Dispatch to appropriate scenario route
+      if (currentScenario === 2) {
+        res = await fetch("/api/s2/submit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId, answer: trimmed }),
+        });
+      } else if (currentScenario === 3) {
+        res = await fetch("/api/s3/submit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId, answer: trimmed }),
+        });
+      } else {
+        // Scenario 1 routes
+        const endpoint =
+          currentNodeId === "N1"
+            ? "/api/n1/submit"
+            : currentNodeId === "N1_H"
+            ? "/api/n1-h/submit"
+            : currentNodeId === "N2"
+            ? "/api/n2/submit"
+            : currentNodeId === "N3"
+            ? "/api/n3/submit"
+            : currentNodeId === "N3_H"
+            ? "/api/n3-h/submit"
+            : currentNodeId === "N4"
+            ? "/api/n4/submit"
+            : currentNodeId === "N4_REV"
+            ? "/api/n4-rev/submit"
+            : currentNodeId === "N5"
+            ? "/api/n5/submit"
+            : currentNodeId === "N5_H"
+            ? "/api/n5-h/submit"
+            : "/api/n1/submit";
 
-      if (!res.ok) {
-        setErrorMessage(data.error || "تعذر إرسال الإجابة. حاول مرة أخرى.");
-        return;
+        res = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId, answer: trimmed }),
+        });
       }
 
-      // Append assistant conversational response
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "فشل إرسال الإجابة");
+      }
+
+      const data = await res.json();
+      const nextNode: string = data.nextNode;
+      const staySameNode = nextNode === currentNodeId;
+
       if (data.feedback) {
         setMessages((prev) => [
           ...prev,
           {
-            id: `msg-${Date.now()}-assistant`,
+            id: `msg-${Date.now()}-feedback`,
             sender: "assistant",
             text: data.feedback,
           },
         ]);
       }
 
-      const nextNode: NodeId = data.nextNode;
-      const prevNode = currentNodeId;
-      setCurrentNodeId(nextNode);
+      if (!staySameNode) {
+        setCurrentNodeId(nextNode);
 
-      // Terminal node
-      if (nextNode === "END") {
-        router.replace("/complete");
-        return;
-      }
+        if (nextNode === "END") {
+          if (scenarioVersion === "2.0-dev") {
+            await advanceScenario(currentScenario);
+          } else {
+            try {
+              await fetch("/api/session/complete", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ sessionId }),
+              });
+            } catch {
+              // Non-blocking
+            }
+            router.replace("/complete");
+          }
+          return;
+        }
 
-      // If transition moved to a new node, append that node's prompt
-      if (nextNode !== prevNode) {
-        const nextDef = getScenarioNode(nextNode, scenarioVersion);
-        const nextText = nextDef.prompt || nextDef.message;
-        if (nextText) {
+        const nextDef = getScenarioNodeByContext(
+          currentScenario,
+          nextNode,
+          scenarioVersion
+        );
+        const nextPrompt = nextDef.prompt || nextDef.message;
+        if (nextPrompt) {
           setMessages((prev) => [
             ...prev,
             {
               id: `msg-${Date.now()}-next`,
               sender: "assistant",
-              text: nextText,
+              text: nextPrompt,
             },
           ]);
         }
       }
-    } catch {
-      setErrorMessage("تعذر الاتصال بالخادم. يرجى المحاولة مرة أخرى.");
+    } catch (err: any) {
+      setErrorMessage(err.message || "حدث خطأ أثناء إرسال الإجابة. حاول مرة أخرى.");
     } finally {
-      isSubmittingRef.current = false;
       setIsSubmitting(false);
+      isSubmittingRef.current = false;
     }
   };
 
-  // Quick reply handler (N1_F)
-  const handleQuickChoice = async (choiceText: string) => {
-    if (isSubmitting || !sessionId) {
+  // Submit handler for Scenario 3 structured 5 blocks
+  const handleS3BlocksSubmit = async () => {
+    if (
+      !s3Blocks.customerSegments.trim() ||
+      !s3Blocks.valueProposition.trim() ||
+      !s3Blocks.channels.trim() ||
+      !s3Blocks.revenueStreams.trim() ||
+      !s3Blocks.costStructure.trim() ||
+      isSubmitting ||
+      isSubmittingRef.current ||
+      !sessionId
+    ) {
+      setErrorMessage("يرجى ملء جميع الكتل الخمس لنموذج العمل التجاري.");
       return;
     }
 
@@ -378,49 +590,105 @@ export default function ChatPage() {
     setIsSubmitting(true);
     setErrorMessage(null);
 
+    // Display formatted card in conversation stream
+    const displayCard = formatBusinessModelDisplay(s3Blocks);
     setMessages((prev) => [
       ...prev,
-      { id: `msg-${Date.now()}-user`, sender: "student", text: choiceText },
+      {
+        id: `msg-${Date.now()}-student`,
+        sender: "student",
+        text: displayCard,
+      },
     ]);
 
     try {
-      const res = await fetch("/api/n1-f/submit", {
+      const res = await fetch("/api/s3/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId, choice: choiceText }),
+        body: JSON.stringify({
+          sessionId,
+          blocks: s3Blocks,
+        }),
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
-        setErrorMessage(data.error || "تعذر إرسال الاختيار. حاول مرة أخرى.");
-        return;
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "فشل إرسال نموذج العمل");
       }
 
-      const nextNode: NodeId = data.nextNode;
-      setCurrentNodeId(nextNode);
+      const data = await res.json();
+      const nextNode: string = data.nextNode;
+      const staySameNode = nextNode === currentNodeId;
 
-      if (nextNode === "END") {
-        router.replace("/complete");
-        return;
-      }
-
-      const nextDef = getScenarioNode(nextNode, scenarioVersion);
-      if (nextDef.prompt) {
+      if (data.feedback) {
         setMessages((prev) => [
           ...prev,
           {
-            id: `msg-${Date.now()}-next`,
+            id: `msg-${Date.now()}-feedback`,
             sender: "assistant",
-            text: nextDef.prompt || "",
+            text: data.feedback,
           },
         ]);
       }
-    } catch {
-      setErrorMessage("تعذر الاتصال بالخادم. يرجى المحاولة مرة أخرى.");
+
+      if (!staySameNode) {
+        setCurrentNodeId(nextNode);
+      }
+    } catch (err: any) {
+      setErrorMessage(err.message || "حدث خطأ أثناء إرسال نموذج العمل. حاول مرة أخرى.");
     } finally {
-      isSubmittingRef.current = false;
       setIsSubmitting(false);
+      isSubmittingRef.current = false;
+    }
+  };
+
+  // Submit handler for S3 support question during N1
+  const handleS3SupportSubmit = async () => {
+    const trimmed = s3SupportQuery.trim();
+    if (!trimmed || isSubmitting || isSubmittingRef.current || !sessionId) return;
+
+    isSubmittingRef.current = true;
+    setIsSubmitting(true);
+    setErrorMessage(null);
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `msg-${Date.now()}-student`,
+        sender: "student",
+        text: trimmed,
+      },
+    ]);
+    setS3SupportQuery("");
+
+    try {
+      const res = await fetch("/api/s3/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId, answer: trimmed }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "فشل إرسال السؤال");
+      }
+
+      const data = await res.json();
+      if (data.feedback) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `msg-${Date.now()}-feedback`,
+            sender: "assistant",
+            text: data.feedback,
+          },
+        ]);
+      }
+    } catch (err: any) {
+      setErrorMessage(err.message || "حدث خطأ أثناء إرسال السؤال. حاول مرة أخرى.");
+    } finally {
+      setIsSubmitting(false);
+      isSubmittingRef.current = false;
     }
   };
 
@@ -431,9 +699,20 @@ export default function ChatPage() {
     }
   };
 
-  const activeNodeDef = getScenarioNode(currentNodeId, scenarioVersion);
-  const isN1F = currentNodeId === "N1_F";
-  const isN2H = currentNodeId === "N2_H";
+  const handleTextareaInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setStudentAnswer(e.target.value);
+    e.target.style.height = "auto";
+    e.target.style.height = `${Math.min(e.target.scrollHeight, 140)}px`;
+  };
+  const activeNodeDef = getScenarioNodeByContext(
+    currentScenario,
+    currentNodeId,
+    scenarioVersion
+  );
+
+  const isN1F = currentScenario === 1 && currentNodeId === "N1_F";
+  const isN2H = currentScenario === 1 && currentNodeId === "N2_H";
+  const isS3Structured = currentScenario === 3 && currentNodeId === "N1" && !s3Completed;
 
   const journeyProgress = getJourneyProgress(currentScenario);
   const activeSkillMeta = getScenarioMeta(currentScenario);
@@ -519,7 +798,7 @@ export default function ChatPage() {
                 </div>
               )}
               <div className="chat-bubble">
-                <p className="bubble-text">{msg.text}</p>
+                <p className="bubble-text" style={{ whiteSpace: "pre-line" }}>{msg.text}</p>
               </div>
             </div>
           ))}
@@ -541,7 +820,7 @@ export default function ChatPage() {
             </div>
           )}
 
-          {/* Quick Reply Choices for N1_F */}
+          {/* Quick Reply Choices for S1 N1_F */}
           {isN1F && !isSubmitting && (
             <div className="quick-reply-container" role="group" aria-label="خيارات المتابعة">
               {"choices" in activeNodeDef && Array.isArray(activeNodeDef.choices) ? (
@@ -560,7 +839,7 @@ export default function ChatPage() {
             </div>
           )}
 
-          {/* Auto-continue helper for N2_H if needed */}
+          {/* Auto-continue helper for S1 N2_H if needed */}
           {isN2H && errorMessage && (
             <div className="retry-container">
               <button
@@ -570,6 +849,17 @@ export default function ChatPage() {
               >
                 متابعة الخطوة التالية
               </button>
+            </div>
+          )}
+
+          {/* S3 Completion Temporary Boundary Notice */}
+          {s3Completed && (
+            <div className="s3-completed-notice" role="status">
+              <div className="s3-completed-icon">✓</div>
+              <div className="s3-completed-text">
+                <h3>أحسنت! لقد أتممت بنجاح السيناريو الثالث: بناء وتخطيط نموذج العمل التجاري.</h3>
+                <p>تم حفظ تقدمك في هذه المرحلة بنجاح ضمن مسار التجربة.</p>
+              </div>
             </div>
           )}
 
@@ -586,7 +876,136 @@ export default function ChatPage() {
             </div>
           )}
 
-          {!isN1F && !isN2H ? (
+          {/* S3 N1 Structured 5-Block Input */}
+          {isS3Structured ? (
+            <div className="s3-structured-composer">
+              <div className="s3-composer-header">
+                <h2 className="s3-composer-title">تعبئة لوحة نموذج العمل التجاري</h2>
+                <button
+                  type="button"
+                  className="btn-s3-support-toggle"
+                  onClick={() => setShowS3Support(!showS3Support)}
+                >
+                  {showS3Support ? "إغلاق الاستفسار" : "اسأل المرشد لتوضيح أحد المفاهيم"}
+                </button>
+              </div>
+
+              {showS3Support && (
+                <div className="s3-support-inline">
+                  <input
+                    type="text"
+                    className="s3-support-input"
+                    placeholder="اكتب سؤالك أو المصطلح الذي تريد توضيحه..."
+                    value={s3SupportQuery}
+                    onChange={(e) => setS3SupportQuery(e.target.value)}
+                    disabled={isSubmitting}
+                  />
+                  <button
+                    type="button"
+                    className="btn-mentor-action"
+                    onClick={handleS3SupportSubmit}
+                    disabled={isSubmitting || !s3SupportQuery.trim()}
+                  >
+                    إرسال السؤال
+                  </button>
+                </div>
+              )}
+
+              <div className="s3-blocks-grid">
+                <div className="s3-field-group">
+                  <label className="s3-field-label">1. {BUSINESS_MODEL_LABELS.customerSegments}</label>
+                  <input
+                    type="text"
+                    className="s3-field-input"
+                    placeholder="مثال: طلاب الجامعات محدودي الدخل..."
+                    value={s3Blocks.customerSegments}
+                    onChange={(e) =>
+                      setS3Blocks((prev) => ({ ...prev, customerSegments: e.target.value }))
+                    }
+                    disabled={isSubmitting}
+                  />
+                </div>
+
+                <div className="s3-field-group">
+                  <label className="s3-field-label">2. {BUSINESS_MODEL_LABELS.valueProposition}</label>
+                  <input
+                    type="text"
+                    className="s3-field-input"
+                    placeholder="مثال: منصة رقمية لتبادل الكتب المستعملة..."
+                    value={s3Blocks.valueProposition}
+                    onChange={(e) =>
+                      setS3Blocks((prev) => ({ ...prev, valueProposition: e.target.value }))
+                    }
+                    disabled={isSubmitting}
+                  />
+                </div>
+
+                <div className="s3-field-group">
+                  <label className="s3-field-label">3. {BUSINESS_MODEL_LABELS.channels}</label>
+                  <input
+                    type="text"
+                    className="s3-field-input"
+                    placeholder="مثال: تطبيق الجوال، مجموعات التيليجرام الجامعية..."
+                    value={s3Blocks.channels}
+                    onChange={(e) =>
+                      setS3Blocks((prev) => ({ ...prev, channels: e.target.value }))
+                    }
+                    disabled={isSubmitting}
+                  />
+                </div>
+
+                <div className="s3-field-group">
+                  <label className="s3-field-label">4. {BUSINESS_MODEL_LABELS.revenueStreams}</label>
+                  <input
+                    type="text"
+                    className="s3-field-input"
+                    placeholder="مثال: عمولة 5% على كل عملية بيع ناجحة..."
+                    value={s3Blocks.revenueStreams}
+                    onChange={(e) =>
+                      setS3Blocks((prev) => ({ ...prev, revenueStreams: e.target.value }))
+                    }
+                    disabled={isSubmitting}
+                  />
+                </div>
+
+                <div className="s3-field-group s3-field-full">
+                  <label className="s3-field-label">5. {BUSINESS_MODEL_LABELS.costStructure}</label>
+                  <input
+                    type="text"
+                    className="s3-field-input"
+                    placeholder="مثال: استضافة سحابية، بوابات الدفع الإلكتروني..."
+                    value={s3Blocks.costStructure}
+                    onChange={(e) =>
+                      setS3Blocks((prev) => ({ ...prev, costStructure: e.target.value }))
+                    }
+                    disabled={isSubmitting}
+                  />
+                </div>
+              </div>
+
+              <div className="s3-submit-actions">
+                <button
+                  type="button"
+                  className="btn-mentor-action btn-s3-submit"
+                  onClick={handleS3BlocksSubmit}
+                  disabled={
+                    isSubmitting ||
+                    !s3Blocks.customerSegments.trim() ||
+                    !s3Blocks.valueProposition.trim() ||
+                    !s3Blocks.channels.trim() ||
+                    !s3Blocks.revenueStreams.trim() ||
+                    !s3Blocks.costStructure.trim()
+                  }
+                >
+                  إرسال نموذج العمل للتدقيق
+                </button>
+              </div>
+            </div>
+          ) : s3Completed ? (
+            <div className="composer-hint-banner">
+              <span>اكتملت هذه المرحلة بنجاح. شكراً لك!</span>
+            </div>
+          ) : !isN1F && !isN2H ? (
             <div className="composer-input-wrapper">
               <textarea
                 ref={textareaRef}

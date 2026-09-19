@@ -11,12 +11,31 @@
  * are 100% identical between versions.
  */
 
+export type Scenario1NodeId =
+  | "N1"
+  | "N1_H"
+  | "N1_F"
+  | "N2"
+  | "N2_H"
+  | "N3"
+  | "N3_H"
+  | "N4"
+  | "N4_REV"
+  | "N4_H"
+  | "N5"
+  | "N5_H"
+  | "END";
+
 export type NodeId =
   | "N1"
   | "N1_H"
   | "N1_F"
   | "N2"
   | "N2_H"
+  | "N2_F"
+  | "N2_A"
+  | "N2_B"
+  | "N2_C"
   | "N3"
   | "N3_H"
   | "N4"
@@ -82,7 +101,7 @@ export const SCENARIO_1_CANONICAL_OPENING =
  * Canonical Researcher-Authored Scenario 1 Nodes (v2.0-dev).
  * Verbatim text from authoritative research document: السيناريو الاول اكتشاف الفرص الرقمية.docx
  */
-export const SCENARIO_NODES_V2_0_DEV: Record<NodeId, ScenarioNode> = {
+export const SCENARIO_NODES_V2_0_DEV: Record<Scenario1NodeId, ScenarioNode> = {
   N1: {
     id: "N1",
     title: "تحديد نقطة البداية",
@@ -289,7 +308,7 @@ export const SCENARIO_NODES_V2_0_DEV: Record<NodeId, ScenarioNode> = {
 /**
  * Historical Scenario v1.0 nodes (preserved for research reproducibility).
  */
-export const SCENARIO_NODES_V1_0: Record<NodeId, ScenarioNode> = {
+export const SCENARIO_NODES_V1_0: Record<Scenario1NodeId, ScenarioNode> = {
   N1: {
     id: "N1",
     title: "اكتشاف المشكلة والاحتياج",
@@ -490,7 +509,7 @@ export const SCENARIO_NODES_V1_0: Record<NodeId, ScenarioNode> = {
 /**
  * Historical Scenario v1.1 nodes (pilot evolution wording).
  */
-export const SCENARIO_NODES_V1_1: Record<NodeId, ScenarioNode> = {
+export const SCENARIO_NODES_V1_1: Record<Scenario1NodeId, ScenarioNode> = {
   N1: {
     id: "N1",
     title: "اكتشاف المشكلة واحتياج الطلاب",
@@ -618,7 +637,7 @@ export const SCENARIO_NODES_V1_1: Record<NodeId, ScenarioNode> = {
 /**
  * Returns scenario nodes dictionary according to the requested scenario version.
  */
-export function getScenarioNodes(version: string = "2.0-dev"): Record<NodeId, ScenarioNode> {
+export function getScenarioNodes(version: string = "2.0-dev"): Record<Scenario1NodeId, ScenarioNode> {
   if (version === "1.0") {
     return SCENARIO_NODES_V1_0;
   }
@@ -633,7 +652,7 @@ export function getScenarioNodes(version: string = "2.0-dev"): Record<NodeId, Sc
  */
 export function getScenarioNode(nodeId: NodeId, version: string = "2.0-dev"): ScenarioNode {
   const nodes = getScenarioNodes(version);
-  const node = nodes[nodeId];
+  const node = nodes[nodeId as Scenario1NodeId];
   if (!node) {
     throw new Error(`Node not found in scenario: ${nodeId} (version ${version})`);
   }
@@ -643,4 +662,4 @@ export function getScenarioNode(nodeId: NodeId, version: string = "2.0-dev"): Sc
 /**
  * Default active scenario nodes (v2.0-dev for new sessions).
  */
-export const SCENARIO_NODES: Record<NodeId, ScenarioNode> = SCENARIO_NODES_V2_0_DEV;
+export const SCENARIO_NODES: Record<Scenario1NodeId, ScenarioNode> = SCENARIO_NODES_V2_0_DEV;
