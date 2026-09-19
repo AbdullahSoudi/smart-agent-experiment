@@ -139,7 +139,7 @@ export default function ChatPage() {
   // Session restore & bootstrap
   useEffect(() => {
     const restoreSession = async () => {
-      const storedSessionId = localStorage.getItem("smart_agent_session_id");
+      const storedSessionId = sessionStorage.getItem("experiment_session_id");
 
       if (!storedSessionId) {
         router.replace("/");
@@ -154,7 +154,7 @@ export default function ChatPage() {
         });
 
         if (!res.ok) {
-          localStorage.removeItem("smart_agent_session_id");
+          sessionStorage.removeItem("experiment_session_id");
           router.replace("/");
           return;
         }

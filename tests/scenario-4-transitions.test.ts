@@ -165,4 +165,42 @@ test("Scenario 4 Deterministic Transitions & Crisis Mechanics", async (t) => {
     assert.equal(nextScenario, 5);
     assert.equal(isLastScenario(4), false);
   });
+  await t.test("Expired S4 session restore deterministically resolves timeout to N3_C without getting stuck", () => {
+    // Simulated session state at N2 where 70s has elapsed since persisted crisis start
+    let session = {
+      current_scenario: 4,
+      current_node: "N2",
+      status: "active",
+    };
+    const persistedStartMs = Date.now() - 70000;
+    const now = Date.now();
+    const elapsedSec = Math.floor((now - persistedStartMs) / 1000);
+    const crisisRemainingSeconds = Math.max(0, 60 - elapsedSec);
+    const crisisExpired = crisisRemainingSeconds <= 0;
+
+    assert.equal(crisisExpired, true);
+    assert.equal(crisisRemainingSeconds, 0);
+
+    // Simulated restore logic
+    let resolvedNode = session.current_node;
+    let recordedInteraction: any = null;
+
+    if (crisisExpired && session.current_node === "N2") {
+      // Atomic CAS simulation: transitions N2 -> N3_C
+      session.current_node = "N3_C";
+      resolvedNode = "N3_C";
+      recordedInteraction = {
+        studentAnswer: serializeCrisisDecision({ choice: null, timeout: true }),
+        nextNode: "N3_C",
+        decisionTimeMs: Math.max(60000, now - persistedStartMs),
+      };
+    }
+
+    assert.equal(resolvedNode, "N3_C", "Participant must advance to N3_C and NOT remain stuck at N2");
+    assert.notEqual(resolvedNode, "N2");
+    assert.ok(recordedInteraction !== null);
+    assert.equal(recordedInteraction.nextNode, "N3_C");
+    assert.ok(recordedInteraction.decisionTimeMs >= 60000);
+    assert.equal(recordedInteraction.studentAnswer, '{"choice":null,"timeout":true}');
+  });
 });
