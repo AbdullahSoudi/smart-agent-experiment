@@ -10,7 +10,7 @@ import {
   deriveFullParticipantReport,
   formatDuration,
 } from "../lib/research/report";
-import type { SessionRecord, InteractionRecord } from "../lib/server/persistence";
+import { isSequentialParticipantSession, type SessionRecord, type InteractionRecord } from "../lib/server/persistence";
 
 describe("Researcher Report Derivation & Objective Evidence", () => {
   const mockSession: SessionRecord = {
@@ -306,5 +306,78 @@ describe("Researcher Report Derivation & Objective Evidence", () => {
     assert.equal((full as any).masteryPercentage, undefined);
     assert.equal((full as any).totalScore, undefined);
     assert.equal((full as any).grade, undefined);
+  });
+});
+
+describe("Researcher Participant Inclusion & Sequential Compatibility", () => {
+  it("includes frozen 2.0 sequential participant", () => {
+    assert.equal(
+      isSequentialParticipantSession({
+        student_name: "طالب تجريبي",
+        current_scenario: 1,
+        scenario_version: "2.0",
+      }),
+      true
+    );
+  });
+
+  it("includes legacy 2.0-dev sequential participant", () => {
+    assert.equal(
+      isSequentialParticipantSession({
+        student_name: "طالب تجريبي 543",
+        current_scenario: 5,
+        scenario_version: "2.0-dev",
+      }),
+      true
+    );
+  });
+
+  it("excludes legacy 1.x historical row", () => {
+    assert.equal(
+      isSequentialParticipantSession({
+        student_name: "طالب تجريبي قديم",
+        current_scenario: 1,
+        scenario_version: "1.0",
+      }),
+      false
+    );
+    assert.equal(
+      isSequentialParticipantSession({
+        student_name: "طالب تجريبي قديم",
+        current_scenario: 1,
+        scenario_version: "1.1",
+      }),
+      false
+    );
+  });
+
+  it("excludes participant with null or empty student_name", () => {
+    assert.equal(
+      isSequentialParticipantSession({
+        student_name: null,
+        current_scenario: 1,
+        scenario_version: "2.0",
+      }),
+      false
+    );
+    assert.equal(
+      isSequentialParticipantSession({
+        student_name: "   ",
+        current_scenario: 1,
+        scenario_version: "2.0",
+      }),
+      false
+    );
+  });
+
+  it("excludes participant with null current_scenario", () => {
+    assert.equal(
+      isSequentialParticipantSession({
+        student_name: "طالب تجريبي",
+        current_scenario: null,
+        scenario_version: "2.0",
+      }),
+      false
+    );
   });
 });

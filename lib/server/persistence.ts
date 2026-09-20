@@ -8,7 +8,7 @@
  *   - Persistence stores already-decided values, turn_kind, and scenario_id
  */
 
-import type { NodeId } from "../scenario";
+import { isSequentialJourneyVersion, type NodeId } from "../scenario";
 import type { Classification } from "../transitions";
 import { getSupabaseServerClient } from "./supabase";
 
@@ -390,6 +390,19 @@ export async function getCrisisDecisionInteraction(
   return data as InteractionRecord;
 }
 /**
+ * Predicate to determine if a session qualifies as a sequential research participant.
+ * Must have structural participant identity (student_name, current_scenario)
+ * and participate in the sequential journey (2.0 or 2.0-dev).
+ */
+export function isSequentialParticipantSession(
+  session: Pick<SessionRecord, "student_name" | "current_scenario" | "scenario_version">
+): boolean {
+  if (!session.student_name || session.student_name.trim().length === 0) return false;
+  if (session.current_scenario === null || session.current_scenario === undefined) return false;
+  return isSequentialJourneyVersion(session.scenario_version);
+}
+
+/**
  * Retrieves all sequential journey sessions (where student_name and current_scenario are populated).
  * Excludes legacy 1.x pilot sessions without student identity.
  */
@@ -400,10 +413,10 @@ export async function getSequentialSessions(): Promise<SessionRecord[]> {
     .select("*")
     .not("student_name", "is", null)
     .not("current_scenario", "is", null)
-    .order("created_at", { ascending: false });
+    .order("started_at", { ascending: false });
 
   if (error || !data) return [];
-  return data as SessionRecord[];
+  return (data as SessionRecord[]).filter(isSequentialParticipantSession);
 }
 
 /**
