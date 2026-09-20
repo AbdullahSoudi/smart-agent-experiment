@@ -9,6 +9,8 @@ import {
   deriveScenario5Report,
   deriveFullParticipantReport,
   formatDuration,
+  formatRelativeTimeArabic,
+  deriveFreshnessIndicator,
 } from "../lib/research/report";
 import { isSequentialParticipantSession, type SessionRecord, type InteractionRecord } from "../lib/server/persistence";
 
@@ -379,5 +381,188 @@ describe("Researcher Participant Inclusion & Sequential Compatibility", () => {
       }),
       false
     );
+  });
+});
+
+describe("Truthful Duration & Participant Activity Derivation", () => {
+  const baseSession: SessionRecord = {
+    id: "session-dur-test",
+    student_name: "مشارك تجريبي",
+    student_code: "STU_DUR_01",
+    status: "active",
+    current_scenario: 2,
+    current_node: "N1",
+    scenario_version: "2.0",
+    prompt_version: "0.3",
+    provider: "groq",
+    model_id: "openai/gpt-oss-120b",
+    started_at: "2026-09-20T10:00:00.000Z",
+    finished_at: null,
+  };
+
+  it("A. completed session calculates duration = finished_at - started_at with 'مدة الجلسة'", () => {
+    const completedSession: SessionRecord = {
+      ...baseSession,
+      status: "completed",
+      finished_at: "2026-09-20T10:25:00.000Z", // 25 minutes
+    };
+    const summary = deriveParticipantSummary(completedSession, []);
+    assert.equal(summary.durationSeconds, 1500);
+    assert.equal(summary.durationLabel, "مدة الجلسة");
+    assert.ok(summary.durationFormatted.includes("25 دقيقة"));
+  });
+
+  it("B. active session calculates duration = latest interaction - started_at with 'المدة المسجلة'", () => {
+    const inters: InteractionRecord[] = [
+      {
+        id: "d1",
+        session_id: baseSession.id,
+        scenario_id: 1,
+        node_id: "N1",
+        student_answer: "إجابة 1",
+        classification: "advanced",
+        agent_feedback: null,
+        next_node: "N2",
+        decision_time_ms: null,
+        turn_kind: "evaluated_answer",
+        created_at: "2026-09-20T10:05:00.000Z",
+      },
+      {
+        id: "d2",
+        session_id: baseSession.id,
+        scenario_id: 1,
+        node_id: "N2",
+        student_answer: "إجابة 2",
+        classification: "medium",
+        agent_feedback: null,
+        next_node: "N3",
+        decision_time_ms: null,
+        turn_kind: "evaluated_answer",
+        created_at: "2026-09-20T10:12:30.000Z", // +12m 30s
+      },
+    ];
+
+    const summary = deriveParticipantSummary(baseSession, inters);
+    assert.equal(summary.durationSeconds, 750); // 12m 30s
+    assert.equal(summary.durationLabel, "المدة المسجلة");
+    assert.ok(summary.durationFormatted.includes("12 دقيقة و 30 ثانية"));
+    assert.equal(summary.lastActivityAt, "2026-09-20T10:12:30.000Z");
+  });
+
+  it("C. active session with very old start but recent/limited interactions does NOT use wall-clock time", () => {
+    const oldSession: SessionRecord = {
+      ...baseSession,
+      started_at: "2026-09-18T08:00:00.000Z", // started 2+ days ago
+      finished_at: null,
+      status: "active",
+    };
+    const inters: InteractionRecord[] = [
+      {
+        id: "d3",
+        session_id: oldSession.id,
+        scenario_id: 1,
+        node_id: "N1",
+        student_answer: "إجابة واحدة فقط",
+        classification: "advanced",
+        agent_feedback: null,
+        next_node: "N2",
+        decision_time_ms: null,
+        turn_kind: "evaluated_answer",
+        created_at: "2026-09-18T08:10:00.000Z", // 10 minutes after start
+      },
+    ];
+
+    const summary = deriveParticipantSummary(oldSession, inters);
+    // Must be exactly 10 minutes (600s), NOT 1000+ or 2880+ minutes
+    assert.equal(summary.durationSeconds, 600);
+    assert.ok(summary.durationFormatted.includes("10 دقيقة"));
+    assert.ok(summary.durationSeconds < 3600);
+  });
+
+  it("D. session with no interactions safely outputs null duration and 'لم يبدأ التفاعل بعد'", () => {
+    const freshSession: SessionRecord = {
+      ...baseSession,
+      started_at: "2026-09-20T10:00:00.000Z",
+      finished_at: null,
+      status: "active",
+    };
+    const summary = deriveParticipantSummary(freshSession, []);
+    assert.equal(summary.durationSeconds, null);
+    assert.equal(summary.durationFormatted, "—");
+    assert.equal(summary.lastActivityAt, null);
+    assert.equal(summary.lastActivityRelative, "لم يبدأ التفاعل بعد");
+    assert.equal(summary.freshnessLabel, "لم يبدأ بعد");
+  });
+
+  it("E. last activity chooses chronologically latest interaction regardless of array ordering", () => {
+    const inters: InteractionRecord[] = [
+      {
+        id: "ord-3",
+        session_id: baseSession.id,
+        scenario_id: 1,
+        node_id: "N3",
+        student_answer: "أحدث",
+        classification: "advanced",
+        agent_feedback: null,
+        next_node: "N4",
+        decision_time_ms: null,
+        turn_kind: "evaluated_answer",
+        created_at: "2026-09-20T10:20:00.000Z", // latest
+      },
+      {
+        id: "ord-1",
+        session_id: baseSession.id,
+        scenario_id: 1,
+        node_id: "N1",
+        student_answer: "أول",
+        classification: "advanced",
+        agent_feedback: null,
+        next_node: "N2",
+        decision_time_ms: null,
+        turn_kind: "evaluated_answer",
+        created_at: "2026-09-20T10:05:00.000Z", // earliest
+      },
+      {
+        id: "ord-2",
+        session_id: baseSession.id,
+        scenario_id: 1,
+        node_id: "N2",
+        student_answer: "أوسط",
+        classification: "advanced",
+        agent_feedback: null,
+        next_node: "N3",
+        decision_time_ms: null,
+        turn_kind: "evaluated_answer",
+        created_at: "2026-09-20T10:15:00.000Z", // middle
+      },
+    ];
+
+    const summary = deriveParticipantSummary(baseSession, inters);
+    assert.equal(summary.lastActivityAt, "2026-09-20T10:20:00.000Z");
+    assert.equal(summary.durationSeconds, 1200); // 10:00 to 10:20 = 20 mins
+  });
+
+  it("F. 2.0-dev and 2.0 reports both continue working identically", () => {
+    const session20: SessionRecord = {
+      ...baseSession,
+      scenario_version: "2.0",
+      status: "completed",
+      finished_at: "2026-09-20T10:15:00.000Z",
+    };
+    const session20dev: SessionRecord = {
+      ...baseSession,
+      scenario_version: "2.0-dev",
+      status: "completed",
+      finished_at: "2026-09-20T10:15:00.000Z",
+    };
+
+    const report20 = deriveFullParticipantReport(session20, []);
+    const report20dev = deriveFullParticipantReport(session20dev, []);
+
+    assert.equal(report20.summary.studentCode, "STU_DUR_01");
+    assert.equal(report20dev.summary.studentCode, "STU_DUR_01");
+    assert.equal(report20.summary.durationFormatted, report20dev.summary.durationFormatted);
+    assert.equal(report20.summary.durationSeconds, 900);
+    assert.equal(report20dev.summary.durationSeconds, 900);
   });
 });

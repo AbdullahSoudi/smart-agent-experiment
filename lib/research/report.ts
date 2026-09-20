@@ -12,6 +12,10 @@ export interface ParticipantSummary {
   finishedAt: string | null;
   durationSeconds: number | null;
   durationFormatted: string;
+  durationLabel: string;
+  lastActivityAt: string | null;
+  lastActivityRelative: string;
+  freshnessLabel: string;
   currentScenario: number;
   currentNode: string;
   completedSkillsCount: number;
@@ -92,6 +96,69 @@ export interface FullParticipantReport {
   chronologicalInteractions: InteractionRecord[];
 }
 
+
+/**
+ * Formats a timestamp into an objective human-friendly Arabic relative time string.
+ * Example: "الآن", "منذ 3 دقائق", "منذ ساعتين", "منذ يوم"
+ */
+export function formatRelativeTimeArabic(
+  timestamp: string | null | undefined,
+  referenceMs: number = Date.now()
+): string {
+  if (!timestamp) return "لم يبدأ التفاعل بعد";
+  const ms = Date.parse(timestamp);
+  if (isNaN(ms)) return "لم يبدأ التفاعل بعد";
+
+  const elapsedMs = Math.max(0, referenceMs - ms);
+  const elapsedMinutes = Math.floor(elapsedMs / (1000 * 60));
+  const elapsedHours = Math.floor(elapsedMinutes / 60);
+  const elapsedDays = Math.floor(elapsedHours / 24);
+
+  if (elapsedMinutes < 1) return "الآن";
+  if (elapsedMinutes === 1) return "منذ دقيقة";
+  if (elapsedMinutes === 2) return "منذ دقيقتين";
+  if (elapsedMinutes >= 3 && elapsedMinutes <= 10) return `منذ ${elapsedMinutes} دقائق`;
+  if (elapsedMinutes < 60) return `منذ ${elapsedMinutes} دقيقة`;
+
+  if (elapsedHours === 1) return "منذ ساعة";
+  if (elapsedHours === 2) return "منذ ساعتين";
+  if (elapsedHours >= 3 && elapsedHours <= 10) return `منذ ${elapsedHours} ساعات`;
+  if (elapsedHours < 24) return `منذ ${elapsedHours} ساعة`;
+
+  if (elapsedDays === 1) return "منذ يوم";
+  if (elapsedDays === 2) return "منذ يومين";
+  if (elapsedDays >= 3 && elapsedDays <= 10) return `منذ ${elapsedDays} أيام`;
+  return `منذ ${elapsedDays} يوم`;
+}
+
+/**
+ * Derives UI-only freshness indicator based on the last interaction timestamp.
+ * Threshold: <= 15 minutes is "نشط مؤخرًا", > 15 minutes is "غير نشط حاليًا".
+ * Purely a derived UI indicator; never persisted or treated as scientific metric.
+ */
+export function deriveFreshnessIndicator(
+  session: Pick<SessionRecord, "status">,
+  lastActivityAt: string | null | undefined,
+  referenceMs: number = Date.now()
+): { label: string; state: "recent" | "stale" | "completed" | "none" } {
+  if (session.status === "completed") {
+    return { label: "مكتمل", state: "completed" };
+  }
+  if (!lastActivityAt) {
+    return { label: "لم يبدأ بعد", state: "none" };
+  }
+  const ms = Date.parse(lastActivityAt);
+  if (isNaN(ms)) {
+    return { label: "لم يبدأ بعد", state: "none" };
+  }
+  const elapsedMs = Math.max(0, referenceMs - ms);
+  const elapsedMinutes = Math.floor(elapsedMs / (1000 * 60));
+  if (elapsedMinutes <= 15) {
+    return { label: "نشط مؤخرًا", state: "recent" };
+  }
+  return { label: "غير نشط حاليًا", state: "stale" };
+}
+
 export function formatDuration(seconds: number | null): string {
   if (seconds === null || isNaN(seconds) || seconds < 0) return "—";
   const mins = Math.floor(seconds / 60);
@@ -103,7 +170,8 @@ export function formatDuration(seconds: number | null): string {
 
 export function deriveParticipantSummary(
   session: SessionRecord,
-  interactions: InteractionRecord[]
+  interactions: InteractionRecord[] = [],
+  referenceMs: number = Date.now()
 ): ParticipantSummary {
   const sessionInteractions = interactions.filter((i) => i.session_id === session.id);
 
@@ -116,10 +184,8 @@ export function deriveParticipantSummary(
   let weakCount = 0;
 
   for (const inter of sessionInteractions) {
-    if (inter.student_answer === "CRISIS_START") {
-      // Internal timing anchor, not counted as learner attempt
-      continue;
-    }
+    if (inter.student_answer === "CRISIS_START") continue;
+
     if (inter.turn_kind === "evaluated_answer") evaluatedCount++;
     else if (inter.turn_kind === "conversational_support") supportCount++;
     else if (inter.turn_kind === "off_topic") offTopicCount++;
@@ -130,19 +196,50 @@ export function deriveParticipantSummary(
     else if (inter.classification === "weak") weakCount++;
   }
 
-  // Calculate duration
-  let durationSeconds: number | null = null;
-  if (session.started_at) {
-    const startMs = Date.parse(session.started_at);
-    const endMs = session.finished_at
-      ? Date.parse(session.finished_at)
-      : sessionInteractions.length > 0
-      ? Date.parse(sessionInteractions[sessionInteractions.length - 1].created_at)
-      : Date.now();
-    if (!isNaN(startMs) && !isNaN(endMs) && endMs >= startMs) {
-      durationSeconds = Math.floor((endMs - startMs) / 1000);
+  // Determine chronologically latest interaction timestamp for this session
+  let lastActivityAt: string | null = null;
+  let latestInterMs = -Infinity;
+  for (const inter of sessionInteractions) {
+    if (inter.created_at) {
+      const ms = Date.parse(inter.created_at);
+      if (!isNaN(ms) && ms > latestInterMs) {
+        latestInterMs = ms;
+        lastActivityAt = inter.created_at;
+      }
     }
   }
+
+  // Calculate duration according to research rules
+  let durationSeconds: number | null = null;
+  let durationLabel: string = "المدة المسجلة";
+
+  const isCompleted = session.status === "completed" && !!session.finished_at;
+
+  if (isCompleted) {
+    durationLabel = "مدة الجلسة";
+    const startMs = Date.parse(session.started_at);
+    const finishMs = Date.parse(session.finished_at!);
+    if (!isNaN(startMs) && !isNaN(finishMs) && finishMs >= startMs) {
+      durationSeconds = Math.floor((finishMs - startMs) / 1000);
+    }
+  } else {
+    // Incomplete / active session: derive recorded_duration = last_activity_at - started_at
+    durationLabel = "المدة المسجلة";
+    if (lastActivityAt && session.started_at) {
+      const startMs = Date.parse(session.started_at);
+      const lastMs = Date.parse(lastActivityAt);
+      if (!isNaN(startMs) && !isNaN(lastMs) && lastMs >= startMs) {
+        durationSeconds = Math.floor((lastMs - startMs) / 1000);
+      }
+    } else {
+      // No interactions stored: duration is null (displayed as "—")
+      durationSeconds = null;
+    }
+  }
+
+  const durationFormatted = durationSeconds !== null ? formatDuration(durationSeconds) : "—";
+  const lastActivityRelative = formatRelativeTimeArabic(lastActivityAt, referenceMs);
+  const freshness = deriveFreshnessIndicator(session, lastActivityAt, referenceMs);
 
   // Completed skills calculation
   let completedSkillsCount = 0;
@@ -169,7 +266,11 @@ export function deriveParticipantSummary(
     startedAt: session.started_at,
     finishedAt: session.finished_at,
     durationSeconds,
-    durationFormatted: formatDuration(durationSeconds),
+    durationFormatted,
+    durationLabel,
+    lastActivityAt,
+    lastActivityRelative,
+    freshnessLabel: freshness.label,
     currentScenario: session.current_scenario ?? 1,
     currentNode: session.current_node,
     completedSkillsCount,
@@ -181,7 +282,7 @@ export function deriveParticipantSummary(
     advancedCount,
     mediumCount,
     weakCount,
-    scenarioPathSummary: pathParts.join(" | ") || "—",
+    scenarioPathSummary: pathParts.join(" | ") || "لا توجد مسارات مسجلة",
   };
 }
 
