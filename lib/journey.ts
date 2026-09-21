@@ -28,6 +28,14 @@ export const SHORT_SKILL_TITLES: Record<ScenarioId, string> = {
   5: "التسويق",
 } as const;
 
+export const STEPPER_SKILL_TITLES: Record<ScenarioId, string> = {
+  1: "اكتشاف الفرص",
+  2: "توليد الأفكار",
+  3: "نموذج العمل",
+  4: "المخاطر",
+  5: "التسويق",
+} as const;
+
 export const SCENARIOS_JOURNEY: readonly ScenarioMeta[] = [
   {
     id: 1,
@@ -157,7 +165,14 @@ export function getJourneyProgressPercent(
     typeof currentScenario === "number" && currentScenario >= 1 && currentScenario <= 5
       ? currentScenario
       : 1;
-  return safeCurrent * 20;
+  // Progress means completed journey stages only:
+  // Before completing S1: 0%
+  // After S1 (S2 active): 20%
+  // After S2 (S3 active): 40%
+  // After S3 (S4 active): 60%
+  // After S4 (S5 active): 80%
+  // After completing S5: 100%
+  return (safeCurrent - 1) * 20;
 }
 
 /**

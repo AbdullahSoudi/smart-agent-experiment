@@ -1387,25 +1387,16 @@ export default function ChatPage() {
         </div>
       </header>
 
-      {/* 2. Unified Journey Progress Strip & Overall Horizontal Progress Bar */}
-      <nav className="journey-progress-strip" aria-label="مسار المهارات الريادية">
-        <div className="journey-progress-container">
-          <div className="journey-meta-row">
-            <div className="journey-stage-info">
-              <span className="journey-stage-badge">المرحلة {currentScenario} من 5</span>
-              <span className="journey-stage-title">
-                {activeSkillMeta?.skillTitle || "اكتشاف الفرص الرقمية"}
-              </span>
-            </div>
-
-            {/* General Active UI Timer (SessionStorage Only, No DB Interaction) */}
-            <div className="journey-timer-badge" aria-label="الوقت المنقضي">
-              <span className="timer-label">الوقت المنقضي:</span>
-              <span className="timer-value">{formatElapsedActiveTime(activeElapsedSeconds)}</span>
-            </div>
+      {/* Mobile Journey Summary (<768px) */}
+      <div className="journey-mobile-summary" aria-label="ملخص مسار المرحلة">
+        <div className="journey-mobile-header">
+          <div>
+            <span className="journey-mobile-badge">المرحلة {currentScenario} من 5 · </span>
+            <span className="journey-mobile-title">{activeSkillMeta?.skillTitle || "اكتشاف الفرص الرقمية"}</span>
           </div>
-
-          {/* Overall Horizontal Progress Bar (Journey-based: 20%, 40%, 60%, 80%, 100%) */}
+          <span className="journey-mobile-timer">⏱ {formatElapsedActiveTime(activeElapsedSeconds)}</span>
+        </div>
+        <div className="journey-mobile-progress-row">
           <div
             className="journey-progress-bar-track"
             role="progressbar"
@@ -1414,37 +1405,87 @@ export default function ChatPage() {
             aria-valuemax={100}
             aria-label="التقدم في مسار المهارات"
           >
-            <div
-              className="journey-progress-bar-fill"
-              style={{ width: `${progressPercentage}%` }}
-            />
+            <div className="journey-progress-bar-fill" style={{ width: `${progressPercentage}%` }} />
           </div>
-
-          {/* Five Sequential Skill Chips */}
-          <div className="journey-steps-chips" role="list">
-            {journeyProgress.map((item) => (
-              <div
-                key={item.id}
-                role="listitem"
-                className={`journey-step-chip journey-step-${item.state}`}
-                title={item.skillTitle}
-              >
-                <span className="step-marker" aria-hidden="true">
-                  {item.state === "completed"
-                    ? "✓"
-                    : item.state === "active"
-                    ? "●"
-                    : "○"}
-                </span>
-                <span className="step-title-text">{item.shortTitle}</span>
-              </div>
-            ))}
-          </div>
+          <span className="journey-mobile-percent">{progressPercentage}%</span>
         </div>
-      </nav>
+      </div>
 
-      {/* 3. Main Centered Conversation Workspace */}
-      <main className="mentor-chat-main" aria-label="محادثة الإرشاد الذكي">
+      {/* Two-Column Desktop/Tablet Workspace Container */}
+      <div className="mentor-workspace-container">
+        <div className="mentor-workspace-layout">
+          {/* Slim Vertical Side Rail (240–280px) */}
+          <aside className="journey-rail" aria-label="مسار الرحلة التعليمية">
+            <div className="journey-rail-card">
+              <div className="journey-rail-stage-badge">المرحلة {currentScenario} من 5</div>
+              <div className="journey-rail-stage-title">
+                {activeSkillMeta?.skillTitle || "اكتشاف الفرص الرقمية"}
+              </div>
+
+              <div className="journey-rail-progress-section">
+                <div className="journey-rail-progress-header">
+                  <span className="journey-rail-progress-label">التقدم في الرحلة</span>
+                  <span className="journey-rail-progress-value">{progressPercentage}%</span>
+                </div>
+                <div
+                  className="journey-progress-bar-track"
+                  role="progressbar"
+                  aria-valuenow={progressPercentage}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label="التقدم في الرحلة"
+                >
+                  <div
+                    className="journey-progress-bar-fill"
+                    style={{ width: `${progressPercentage}%` }}
+                  />
+                </div>
+              </div>
+
+              <nav className="journey-stepper-vertical" aria-label="خطوات المهارات الخمس">
+                {journeyProgress.map((item) => {
+                  const isCurrent = item.state === "active";
+                  const isCompleted = item.state === "completed";
+                  const icon = isCompleted ? "✓" : isCurrent ? "●" : "○";
+                  const stateLabel = isCompleted ? "مكتملة" : isCurrent ? "حالية" : "قادمة";
+                  const stepperTitles: Record<number, string> = {
+                    1: "اكتشاف الفرص",
+                    2: "توليد الأفكار",
+                    3: "نموذج العمل",
+                    4: "المخاطر",
+                    5: "التسويق",
+                  };
+                  const stepperTitle = stepperTitles[item.id] || item.shortTitle;
+
+                  return (
+                    <div
+                      key={item.id}
+                      className={`journey-step-item ${isCurrent ? "journey-step-active" : isCompleted ? "journey-step-completed" : "journey-step-upcoming"}`}
+                      aria-current={isCurrent ? "step" : undefined}
+                    >
+                      <span className="journey-step-icon" aria-hidden="true">{icon}</span>
+                      <span className="journey-step-title">{stepperTitle}</span>
+                      <span className="sr-only">({stateLabel})</span>
+                    </div>
+                  );
+                })}
+              </nav>
+
+              <div className="journey-rail-timer-section">
+                <div className="journey-rail-timer-label">الوقت المنقضي</div>
+                <div
+                  className="journey-rail-timer-value"
+                  aria-label={`الوقت المنقضي: ${formatElapsedActiveTime(activeElapsedSeconds)}`}
+                >
+                  {formatElapsedActiveTime(activeElapsedSeconds)}
+                </div>
+              </div>
+            </div>
+          </aside>
+
+          {/* Main Workspace Column (72–76%) */}
+          <div className="mentor-workspace-main">
+            <main className="mentor-chat-main" aria-label="محادثة الإرشاد الذكي">
         <div className="mentor-stream-container">
           {/* S1: Deterministic Thinking Panel Inline when answers exist */}
           {currentScenario === 1 && currentNodeId !== "END" && s1LatestAnswer && (
@@ -2191,6 +2232,9 @@ export default function ChatPage() {
           )}
         </div>
       </footer>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

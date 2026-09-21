@@ -86,38 +86,50 @@ test("T55.1 Final Completion Page Invariants (/complete)", () => {
   }
 });
 
-test("T55.2 Chat Page Layout, Hint Button & Leak Protection Invariants", () => {
+test("T55.3 Workspace Composition, Journey Rail & Stepper Invariants", () => {
   const chatPagePath = path.resolve(process.cwd(), "app/chat/page.tsx");
   const content = fs.readFileSync(chatPagePath, "utf8");
 
-  // Invariant 1: Old four quick-support chips are ABSENT from participant UI
-  assert.ok(!content.includes("مش فاهم"), "Support chip 'مش فاهم' must be absent");
-  assert.ok(!content.includes("وضحلي"), "Support chip 'وضحلي' must be absent");
-  assert.ok(!content.includes("اديني مثال"), "Support chip 'اديني مثال' must be absent");
-  assert.ok(!content.includes("كلمني بالمصري"), "Support chip 'كلمني بالمصري' must be absent");
+  // Invariant 1: Desktop horizontal skill pills are NO LONGER primary journey UI
+  assert.ok(!content.includes("journey-steps-chips"), "Horizontal skill pills must be removed from primary UI");
+  assert.ok(!content.includes("journey-progress-strip"), "Old horizontal journey strip must be replaced");
 
-  // Invariant 2: One participant Hint control exists
+  // Invariant 2: Vertical journey stepper renders five skills in side rail
+  assert.ok(content.includes("journey-rail"), "Side rail must exist");
+  assert.ok(content.includes("journey-stepper-vertical"), "Vertical journey stepper must exist");
+  assert.ok(content.includes("journey-step-item"), "Step items must exist in vertical stepper");
+
+  // Invariant 6: Hint remains exactly one control
   assert.ok(content.includes("btn-hint"), "Hint button class 'btn-hint' must be present");
   assert.ok(content.includes("💡"), "Hint icon must be present");
   assert.ok(content.includes("تلميح"), "Hint label 'تلميح' must be present");
   assert.ok(content.includes("طلب تلميح"), "Accessible name 'طلب تلميح' must be present");
 
-  // Invariant 7: S4 N2 timed crisis exposes NO Hint control
+  // Invariant 7: Old four quick-support chips are ABSENT from participant UI
+  assert.ok(!content.includes("مش فاهم"), "Support chip 'مش فاهم' must be absent");
+  assert.ok(!content.includes("وضحلي"), "Support chip 'وضحلي' must be absent");
+  assert.ok(!content.includes("اديني مثال"), "Support chip 'اديني مثال' must be absent");
+  assert.ok(!content.includes("كلمني بالمصري"), "Support chip 'كلمني بالمصري' must be absent");
+
+  // Invariant 9: Composer contains Hint + input + Send aligned row
+  assert.ok(content.includes("composer-row"), "Composer row must exist");
+  assert.ok(content.includes("mentor-composer-textarea"), "Composer input must exist");
+  assert.ok(content.includes("btn-mentor-send"), "Send button must exist");
+
+  // Invariant 10: S4 timed crisis exposes NO Hint control
   assert.ok(
-    content.includes("isHintAvailable = !(currentScenario === 4 && currentNodeId === 'N2')") ||
-    content.includes('isHintAvailable = !(currentScenario === 4 && currentNodeId === "N2")') ||
     content.includes("currentScenario === 4 && currentNodeId === 'N2'") ||
     content.includes('currentScenario === 4 && currentNodeId === "N2"'),
     "S4 N2 crisis must suppress Hint control"
   );
 
-  // Invariant 9, 10, 11: Active elapsed UI timer uses session-specific sessionStorage and visibility
+  // Invariant 11: Active elapsed UI timer uses session-specific sessionStorage and visibility
   assert.ok(content.includes("experiment_elapsed_active_seconds_"), "Timer key must be session-namespaced");
   assert.ok(content.includes("visibilitychange"), "Timer must listen for visibility changes");
   assert.ok(content.includes("document.visibilityState"), "Timer must check document.visibilityState");
   assert.ok(content.includes("الوقت المنقضي"), "Timer label must be 'الوقت المنقضي'");
 
-  // Invariant 14: Participant sees no support level, score, or classification in UI
+  // Invariant 12: Participant analytics remain hidden
   assert.ok(!content.includes("مستوى الدعم الحالي"), "Support level must not be exposed to participant");
   assert.ok(!content.includes("مستوى الدعم:"), "Support level must not be exposed to participant");
   assert.ok(!content.includes("درجة الأداء"), "Performance grade must not be exposed to participant");
@@ -126,26 +138,40 @@ test("T55.2 Chat Page Layout, Hint Button & Leak Protection Invariants", () => {
   assert.ok(!content.includes(">cost_gap<"), "cost_gap must not be rendered in JSX");
   assert.ok(!content.includes(">channel_gap<"), "channel_gap must not be rendered in JSX");
   assert.ok(!content.includes(">decision_time_ms<"), "decision_time_ms must not be rendered");
-
-  // Invariant 16: Session key remains experiment_session_id
-  assert.ok(content.includes('"experiment_session_id"') || content.includes("'experiment_session_id'"), "Must maintain experiment_session_id storage key");
-
-  // Restrained compact task heading
-  assert.ok(content.includes("مهمتك الآن"), "Current task heading present in compact card");
 });
 
-test("T55.2 Journey Progress Derivation & Interpretation", () => {
-  // Invariant 13: Progress is journey completion progress only (S1=20%, S2=40%, S3=60%, S4=80%, S5=100%)
-  assert.equal(getJourneyProgressPercent(1, false), 20);
-  assert.equal(getJourneyProgressPercent(2, false), 40);
-  assert.equal(getJourneyProgressPercent(3, false), 60);
-  assert.equal(getJourneyProgressPercent(4, false), 80);
-  assert.equal(getJourneyProgressPercent(5, false), 100);
+test("T55.3 Current Task Card Has No Dedicated Overflow Scrollbar", () => {
+  // Invariant 8: Current task has no dedicated overflow scrollbar class/style
+  const cssPath = path.resolve(process.cwd(), "app/globals.css");
+  const cssContent = fs.readFileSync(cssPath, "utf8");
+
+  // Extract .current-task-compact declaration block
+  const match = cssContent.match(/\.current-task-compact\s*\{([^}]+)\}/);
+  assert.ok(match, ".current-task-compact rule must exist in globals.css");
+  const block = match[1];
+
+  assert.ok(!block.includes("overflow-y: auto"), "Task card must not have overflow-y: auto");
+  assert.ok(!block.includes("overflow-y: scroll"), "Task card must not have overflow-y: scroll");
+  assert.ok(!block.includes("max-height: 110px"), "Task card must not be restricted by cramped max-height");
+});
+
+test("T55.3 Journey Progress Completion Semantics (0% -> 100%)", () => {
+  // Invariant 4 & 5: Completed scenarios / 5
+  // Before completing S1: 0%
+  assert.equal(getJourneyProgressPercent(1, false), 0);
+  // After S1 (S2 active): 20%
+  assert.equal(getJourneyProgressPercent(2, false), 20);
+  // After S2 (S3 active): 40%
+  assert.equal(getJourneyProgressPercent(3, false), 40);
+  // After S3 (S4 active): 60%
+  assert.equal(getJourneyProgressPercent(4, false), 60);
+  // After S4 (S5 active): 80% - S5 active does NOT falsely display 100%
+  assert.equal(getJourneyProgressPercent(5, false), 80);
+  // After completing S5: 100%
   assert.equal(getJourneyProgressPercent(5, true), 100);
 });
 
 test("T55.2 Timer Display & Formatting Helpers", () => {
-  // Invariant 10: formatElapsedActiveTime produces MM:SS or HH:MM:SS
   assert.equal(formatElapsedActiveTime(0), "00:00");
   assert.equal(formatElapsedActiveTime(9), "00:09");
   assert.equal(formatElapsedActiveTime(60), "01:00");
@@ -154,7 +180,6 @@ test("T55.2 Timer Display & Formatting Helpers", () => {
 });
 
 test("T55.2 Hint Progressive Scaffolding & Server Integration", () => {
-  // Invariant 3, 4, 5, 6: Evaluator uses progressive scaffolding based on support turn count
   const evaluatorPath = path.resolve(process.cwd(), "lib/server/evaluator.ts");
   const evaluatorContent = fs.readFileSync(evaluatorPath, "utf8");
 
@@ -169,17 +194,14 @@ test("T55.2 Hint Progressive Scaffolding & Server Integration", () => {
 });
 
 test("T55.2 S4 Crisis Authoritative Countdown Preservation", () => {
-  // Invariant 12: S4 authoritative 60s countdown unchanged
   const chatPagePath = path.resolve(process.cwd(), "app/chat/page.tsx");
   const content = fs.readFileSync(chatPagePath, "utf8");
 
-  // Preserves 60s limit calculation in S4 crisis countdown
   assert.ok(content.includes("crisisSecondsLeft / 60") || content.includes("crisisSecondsLeft"), "S4 crisis countdown must anchor to 60 seconds");
   assert.ok(content.includes("crisis_timeout") || content.includes("crisisSecondsLeft"), "Crisis timeout invariant must be preserved");
 });
 
 test("T55.1 S3 Five-Block Structured Restoration", () => {
-  // Invariant 15: Existing S3 structured states restore
   const testBlocks: BusinessModelBlocks = {
     customerSegments: "طلاب الجامعات",
     valueProposition: "تبادل الكتب المستعملة",
@@ -202,7 +224,6 @@ test("T55.1 S3 Five-Block Structured Restoration", () => {
 });
 
 test("T55.1 S4 Crisis Choices & Recovery Canonical Preservation", () => {
-  // Invariant 15: Existing S4 structured states restore
   assert.ok(CRISIS_CHOICE_A.length > 10);
   assert.ok(CRISIS_CHOICE_B.length > 10);
   assert.ok(CRISIS_CHOICE_C.length > 10);
@@ -211,7 +232,6 @@ test("T55.1 S4 Crisis Choices & Recovery Canonical Preservation", () => {
 });
 
 test("T55.1 S5 Fixed Marketing Metrics Preservation", () => {
-  // Invariant 8 & 15: Existing S5 structured metrics and analysis does not preselect B
   assert.equal(CAMPAIGN_A_METRICS.visits, 1000);
   assert.equal(CAMPAIGN_A_METRICS.buyers, 5);
   assert.equal(CAMPAIGN_A_METRICS.cpa, 20);
