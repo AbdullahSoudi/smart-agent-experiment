@@ -187,13 +187,27 @@ export default function ChatPage() {
     }
   };
 
+  const prevMessagesCountRef = useRef(messages.length);
+  const prevNodeIdRef = useRef(currentNodeId);
+  const prevScenarioRef = useRef(currentScenario);
+
   const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
-    messagesEndRef.current?.scrollIntoView({ behavior });
+    messagesEndRef.current?.scrollIntoView({ behavior, block: "nearest" });
   };
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, isSubmitting]);
+    const messageCountIncreased = messages.length > prevMessagesCountRef.current;
+    const nodeChanged = currentNodeId !== prevNodeIdRef.current;
+    const scenarioChanged = currentScenario !== prevScenarioRef.current;
+
+    prevMessagesCountRef.current = messages.length;
+    prevNodeIdRef.current = currentNodeId;
+    prevScenarioRef.current = currentScenario;
+
+    if (messageCountIncreased || nodeChanged || scenarioChanged) {
+      scrollToBottom();
+    }
+  }, [messages.length, currentNodeId, currentScenario]);
   // Session restore & bootstrap
   useEffect(() => {
     const restoreSession = async () => {
@@ -1070,6 +1084,9 @@ export default function ChatPage() {
     ]);
     if (!textOverride) {
       setStudentAnswer("");
+      if (textareaRef.current) {
+        textareaRef.current.style.height = "52px";
+      }
     }
 
     if (currentScenario === 2) {
@@ -1298,7 +1315,8 @@ export default function ChatPage() {
   const handleTextareaInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setStudentAnswer(e.target.value);
     e.target.style.height = "auto";
-    e.target.style.height = `${Math.min(e.target.scrollHeight, 140)}px`;
+    const nextHeight = Math.max(52, Math.min(e.target.scrollHeight, 140));
+    e.target.style.height = `${nextHeight}px`;
   };
 
   const activeNodeDef = getScenarioNodeByContext(
@@ -2203,10 +2221,6 @@ export default function ChatPage() {
                     maxLength={MAX_STUDENT_ANSWER_LENGTH}
                     aria-label="إجابتك للمرشد الذكي"
                   />
-
-                  <span className="char-counter" aria-live="polite">
-                    {studentAnswer.length}/{MAX_STUDENT_ANSWER_LENGTH}
-                  </span>
                 </div>
 
                 <button
@@ -2225,8 +2239,13 @@ export default function ChatPage() {
                 </button>
               </div>
 
-              <div className="composer-helper-note" aria-hidden="true">
-                Enter للإرسال · Shift+Enter لسطر جديد
+              <div className="composer-metadata-row">
+                <span className="composer-helper-note" aria-hidden="true">
+                  Enter للإرسال · Shift+Enter لسطر جديد
+                </span>
+                <span className="composer-char-counter" aria-live="polite">
+                  {studentAnswer.length} / {MAX_STUDENT_ANSWER_LENGTH}
+                </span>
               </div>
             </div>
           )}

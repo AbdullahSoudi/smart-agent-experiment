@@ -254,3 +254,65 @@ test("T55.1 Scenario Completion Transition Order", () => {
   assert.equal(isLastScenario(4), false);
   assert.equal(isLastScenario(5), true);
 });
+
+test("T55.4 Document Primary Vertical Scroll Contract & Viewport Invariants", () => {
+  const cssPath = path.resolve(process.cwd(), "app/globals.css");
+  const css = fs.readFileSync(cssPath, "utf8");
+
+  // Viewport must NOT lock document scroll with height: 100dvh and overflow: hidden
+  const vpMatch = css.match(/\.mentor-chat-viewport\s*\{([^}]+)\}/);
+  assert.ok(vpMatch, ".mentor-chat-viewport rule must exist");
+  const vpBlock = vpMatch[1];
+  assert.ok(!vpBlock.includes("height: 100dvh"), "Viewport must not clamp to height: 100dvh");
+  assert.ok(!vpBlock.includes("overflow: hidden"), "Viewport must not hide overflow");
+  assert.ok(vpBlock.includes("min-height: 100vh"), "Viewport must have min-height: 100vh");
+  assert.ok(vpBlock.includes("overflow: visible"), "Viewport must have overflow: visible");
+
+  // Conversation main must not create a nested scroll container
+  const mainMatch = css.match(/\.mentor-chat-main\s*\{([^}]+)\}/);
+  assert.ok(mainMatch, ".mentor-chat-main rule must exist");
+  const mainBlock = mainMatch[1];
+  assert.ok(mainBlock.includes("overflow: visible"), ".mentor-chat-main must have overflow: visible");
+  assert.ok(!mainBlock.includes("overflow-y: auto"), ".mentor-chat-main must not have nested overflow-y: auto");
+
+  // Composer bar is sticky at bottom
+  assert.ok(css.includes(".mentor-chat-composer-bar"), "Composer bar rule must exist");
+  assert.ok(css.includes("position: sticky"), "Composer bar should be sticky");
+});
+
+test("T55.4 Composer Single Shell, 52px Aligned Heights & Metadata Row", () => {
+  const cssPath = path.resolve(process.cwd(), "app/globals.css");
+  const css = fs.readFileSync(cssPath, "utf8");
+  const chatPagePath = path.resolve(process.cwd(), "app/chat/page.tsx");
+  const chatPage = fs.readFileSync(chatPagePath, "utf8");
+
+  // 1. Textarea is single visible shell; input wrapper has no border/background/box-shadow
+  assert.ok(css.includes(".composer-input-wrapper"), ".composer-input-wrapper must exist");
+  assert.ok(css.includes(".mentor-composer-textarea"), ".mentor-composer-textarea must exist");
+  assert.ok(css.includes(".composer-metadata-row"), ".composer-metadata-row must exist");
+  assert.ok(css.includes(".composer-char-counter"), ".composer-char-counter must exist");
+
+  // Textarea initial height is 52px
+  assert.ok(css.includes("height: 52px"), "Composer controls must specify 52px height");
+  assert.ok(css.includes("min-height: 52px"), "Composer controls must specify min-height: 52px");
+
+  // 2. Character counter is in metadata row, NOT inside textarea writing surface
+  assert.ok(chatPage.includes("composer-metadata-row"), "Chat page must render composer-metadata-row");
+  assert.ok(chatPage.includes("composer-char-counter"), "Chat page must render composer-char-counter");
+  assert.ok(chatPage.includes("composer-helper-note"), "Chat page must render composer-helper-note");
+  assert.ok(chatPage.includes("Enter للإرسال · Shift+Enter لسطر جديد"), "Keyboard helper note must be present");
+
+  // 3. S4 Crisis timer subordination
+  assert.ok(css.includes(".crisis-mode-active .journey-rail-timer-section"), "Crisis mode must subordinate general timer");
+  assert.ok(css.includes("opacity: 0.35"), "General timer must be subdued during timed crisis");
+});
+
+test("T55.4 Auto-Scroll Decoupled from Submit State & Timer Ticks", () => {
+  const chatPagePath = path.resolve(process.cwd(), "app/chat/page.tsx");
+  const chatPage = fs.readFileSync(chatPagePath, "utf8");
+
+  // Auto-scroll effect must NOT depend on isSubmitting or activeElapsedSeconds
+  assert.ok(!chatPage.includes("[messages, isSubmitting]"), "Auto-scroll must not run on isSubmitting toggle");
+  assert.ok(chatPage.includes("prevMessagesCountRef"), "Auto-scroll must track previous message count");
+  assert.ok(chatPage.includes('block: "nearest"'), "Scroll behavior should use block: 'nearest'");
+});

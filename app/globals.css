@@ -642,20 +642,22 @@ button[aria-busy="true"] {
 .mentor-chat-viewport {
   display: flex;
   flex-direction: column;
-  height: 100dvh;
+  min-height: 100vh;
   background-color: #F8F7F4;
   color: #1C2428;
-  overflow: hidden;
+  overflow: visible;
   font-family: inherit;
 }
 
 .mentor-chat-header {
   flex-shrink: 0;
+  position: sticky;
+  top: 0;
   background-color: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid rgba(0, 0, 0, 0.07);
   padding: 0.75rem 1.25rem;
-  z-index: 20;
+  z-index: 30;
 }
 
 .mentor-chat-header-content {
@@ -718,10 +720,11 @@ button[aria-busy="true"] {
   color: #475569;
 }
 
-/* Conversation Stream */
+/* Conversation Stream (Document is primary vertical scroll context) */
 .mentor-chat-main {
   flex: 1;
-  overflow-y: auto;
+  overflow: visible;
+  width: 100%;
   padding: 1.5rem 1rem 2rem;
   scroll-behavior: smooth;
 }
@@ -919,70 +922,7 @@ button[aria-busy="true"] {
   font-weight: 500;
 }
 
-.composer-input-wrapper {
-  display: flex;
-  align-items: flex-end;
-  gap: 0.75rem;
-  background-color: #F8F7F4;
-  border: 1.5px solid #cbd5e1;
-  border-radius: 16px;
-  padding: 0.5rem 0.875rem 0.5rem 0.625rem;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.composer-input-wrapper:focus-within {
-  border-color: #0f766e;
-  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
-  background-color: #ffffff;
-}
-
-.mentor-composer-textarea {
-  flex: 1;
-  border: none;
-  background: transparent;
-  outline: none;
-  resize: none;
-  padding: 0.375rem 0.25rem;
-  font-family: inherit;
-  font-size: 1rem;
-  line-height: 1.6;
-  color: #1C2428;
-  max-height: 180px;
-  min-height: 28px;
-}
-
-.mentor-composer-textarea::placeholder {
-  color: #94a3b8;
-}
-
-.composer-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.625rem;
-  flex-shrink: 0;
-}
-
-.char-counter {
-  font-size: 0.75rem;
-  color: #94a3b8;
-  font-variant-numeric: tabular-nums;
-}
-
-.btn-mentor-send {
-  background-color: #0f766e;
-  color: #ffffff;
-  border: none;
-  border-radius: 10px;
-  padding: 0.5rem 0.875rem;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  font-family: inherit;
-  font-size: 0.925rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
+/* Legacy composer declarations removed in T55.4 hardening */
 
 .btn-mentor-send:hover:not(:disabled) {
   background-color: #115e59;
@@ -2255,137 +2195,7 @@ button[aria-busy="true"] {
   white-space: pre-line;
 }
 
-/* Single Line Composer with Single Hint Button */
-.composer-row {
-  display: flex;
-  align-items: flex-end;
-  gap: 0.5rem;
-  width: 100%;
-}
-
-.btn-hint {
-  height: 44px;
-  min-width: 92px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.35rem;
-  padding: 0 0.85rem;
-  background-color: var(--surface-paper);
-  color: var(--accent-brass);
-  border: 1.5px solid var(--border-brass);
-  border-radius: var(--radius-md);
-  font-family: inherit;
-  font-size: 0.925rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  flex-shrink: 0;
-  touch-action: manipulation;
-}
-
-.btn-hint:hover:not(:disabled) {
-  background-color: #FAF5EB;
-  border-color: #8C6F35;
-  color: #8C6F35;
-  transform: translateY(-1px);
-}
-
-.btn-hint:focus-visible {
-  outline: 2px solid var(--accent-brass);
-  outline-offset: 2px;
-}
-
-.btn-hint:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.composer-input-wrapper {
-  flex: 1;
-  position: relative;
-  display: flex;
-  align-items: center;
-  min-width: 0;
-}
-
-.mentor-composer-textarea {
-  width: 100%;
-  min-height: 44px;
-  max-height: 120px;
-  padding: 0.65rem 3.5rem 0.65rem 0.85rem;
-  font-family: inherit;
-  font-size: 1rem;
-  line-height: 1.5;
-  color: var(--text-primary);
-  background-color: #FFFFFF;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  resize: none;
-  direction: rtl;
-  text-align: right;
-  box-sizing: border-box;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.mentor-composer-textarea:focus,
-.mentor-composer-textarea:focus-visible {
-  outline: none;
-  border-color: var(--border-focus);
-  box-shadow: 0 0 0 3px rgba(27, 77, 62, 0.2);
-}
-
-.char-counter {
-  position: absolute;
-  left: 0.75rem;
-  bottom: 0.65rem;
-  font-size: 0.725rem;
-  color: var(--text-muted);
-  user-select: none;
-}
-
-.btn-mentor-send {
-  height: 44px;
-  min-width: 88px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-  padding: 0 1rem;
-  background-color: var(--accent-forest);
-  color: #FFFFFF;
-  border: 1px solid transparent;
-  border-radius: var(--radius-md);
-  font-family: inherit;
-  font-size: 0.95rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background-color 0.15s ease, transform 0.08s ease;
-  flex-shrink: 0;
-  touch-action: manipulation;
-}
-
-.btn-mentor-send:hover:not(:disabled) {
-  background-color: var(--accent-forest-hover);
-}
-
-.btn-mentor-send:active:not(:disabled) {
-  background-color: var(--accent-forest-active);
-  transform: translateY(1px);
-}
-
-.btn-mentor-send:focus-visible {
-  outline: 2px solid var(--accent-forest);
-  outline-offset: 2px;
-}
-
-.btn-mentor-send:disabled {
-  background-color: #5E7A71;
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-}
+/* Legacy duplicate composer rules removed in T55.4 hardening */
 
 
 /* ==========================================================================
@@ -2412,7 +2222,7 @@ button[aria-busy="true"] {
 .journey-rail {
   width: 100%;
   position: sticky;
-  top: 1rem;
+  top: 4.5rem;
   z-index: 10;
 }
 
@@ -2562,23 +2372,33 @@ button[aria-busy="true"] {
   gap: 1rem;
 }
 
-/* Aligned Single-Row Composer (min-height 48px) */
+/* ==========================================================================
+   T55.4 Final Hardened Composer (Unified 52px Heights, Single Shell, Metadata Row)
+   ========================================================================== */
+
+.composer-container-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+}
+
 .composer-row {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 0.625rem;
   width: 100%;
 }
 
 .btn-hint {
-  height: 48px;
-  min-height: 48px;
+  height: 52px;
+  min-height: 52px;
   min-width: 96px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
-  padding: 0 1rem;
+  padding: 0 1.15rem;
   background-color: var(--surface-paper);
   color: var(--accent-brass);
   border: 1.5px solid var(--border-brass);
@@ -2611,25 +2431,29 @@ button[aria-busy="true"] {
   transform: none;
 }
 
+/* Single visible shell: wrapper is transparent with NO border, NO background, NO shadow */
 .composer-input-wrapper {
   flex: 1;
   position: relative;
   display: flex;
   align-items: center;
   min-width: 0;
-  height: 48px;
-  min-height: 48px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
 }
 
+/* Textarea is the SOLE visible input shell */
 .mentor-composer-textarea {
   width: 100%;
-  height: 48px;
-  min-height: 48px;
-  max-height: 120px;
-  padding: 0.75rem 3.5rem 0.75rem 0.85rem;
+  height: 52px;
+  min-height: 52px;
+  max-height: 140px;
+  padding: 0.8rem 1rem;
   font-family: inherit;
   font-size: 0.975rem;
-  line-height: 1.4;
+  line-height: 1.5;
   color: var(--text-primary);
   background-color: #FFFFFF;
   border: 1.5px solid var(--border-strong);
@@ -2645,18 +2469,22 @@ button[aria-busy="true"] {
 .mentor-composer-textarea:focus-visible {
   outline: none;
   border-color: var(--border-focus);
-  box-shadow: 0 0 0 3px rgba(27, 77, 62, 0.2);
+  box-shadow: 0 0 0 3px rgba(27, 77, 62, 0.18);
+}
+
+.mentor-composer-textarea::placeholder {
+  color: #8C99A6;
 }
 
 .btn-mentor-send {
-  height: 48px;
-  min-height: 48px;
+  height: 52px;
+  min-height: 52px;
   min-width: 96px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
-  padding: 0 1.15rem;
+  padding: 0 1.25rem;
   background-color: var(--accent-forest);
   color: #FFFFFF;
   border: 1.5px solid var(--accent-forest);
@@ -2686,6 +2514,38 @@ button[aria-busy="true"] {
   opacity: 0.6;
   cursor: not-allowed;
   transform: none;
+}
+
+/* Metadata Row below composer */
+.composer-metadata-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 0.25rem 0.25rem 0;
+  font-size: 0.775rem;
+  color: var(--text-muted);
+}
+
+.composer-helper-note {
+  font-size: 0.775rem;
+  color: var(--text-muted);
+}
+
+.composer-char-counter {
+  font-size: 0.75rem;
+  font-family: monospace;
+  direction: ltr;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+/* S4 Timed Crisis: Subordinate General Elapsed Timer */
+.crisis-mode-active .journey-rail-timer-section {
+  opacity: 0.35;
+  filter: grayscale(0.8);
+  pointer-events: none;
+  transition: opacity 0.3s ease;
 }
 
 /* Responsive Media Queries */
@@ -2756,5 +2616,44 @@ button[aria-busy="true"] {
     color: var(--accent-forest);
     min-width: 32px;
     text-align: left;
+  }
+}
+
+@media (max-width: 480px) {
+  .mentor-workspace-container {
+    padding: 0.5rem 0.5rem 1.25rem;
+  }
+
+  .mentor-chat-main {
+    padding: 0.75rem 0.5rem 1rem;
+  }
+
+  .mentor-chat-composer-bar {
+    padding: 0.625rem 0.5rem 0.75rem;
+  }
+
+  .composer-row {
+    gap: 0.375rem;
+  }
+
+  .btn-hint {
+    min-width: 76px;
+    padding: 0 0.65rem;
+    font-size: 0.875rem;
+  }
+
+  .btn-mentor-send {
+    min-width: 80px;
+    padding: 0 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  .mentor-composer-textarea {
+    font-size: 0.925rem;
+    padding: 0.75rem 0.65rem;
+  }
+
+  .composer-metadata-row {
+    font-size: 0.725rem;
   }
 }
