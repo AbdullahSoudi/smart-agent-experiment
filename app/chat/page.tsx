@@ -16,6 +16,8 @@ import {
   ScenarioId,
   getJourneyProgress,
   getScenarioMeta,
+  getNextScenarioId,
+  getShortSkillTitle,
 } from "@/lib/journey";
 import {
   SCENARIO_2_CANONICAL_OPENING,
@@ -75,6 +77,8 @@ export default function ChatPage() {
   const [studentName, setStudentName] = useState<string | null>(null);
   const [studentCode, setStudentCode] = useState<string | null>(null);
   const [currentScenario, setCurrentScenario] = useState<ScenarioId>(1);
+  const [s2InitialIdea, setS2InitialIdea] = useState<string>("");
+  const [s2DevelopedIdea, setS2DevelopedIdea] = useState<string>("");
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [studentAnswer, setStudentAnswer] = useState("");
@@ -251,6 +255,7 @@ export default function ChatPage() {
                   const parsedBlocks = deserializeBusinessModel(item.studentAnswer);
                   if (parsedBlocks) {
                     studentDisplayText = formatBusinessModelDisplay(parsedBlocks);
+                    setS3Blocks(parsedBlocks);
                   }
                 } else {
                   const parsedCrisis = deserializeCrisisDecision(item.studentAnswer);
@@ -264,6 +269,8 @@ export default function ChatPage() {
                       const parsedHeadlines = deserializeHeadlines(item.studentAnswer);
                       if (parsedHeadlines) {
                         studentDisplayText = formatHeadlinesDisplay(parsedHeadlines);
+                        setHeadlineA(parsedHeadlines.headlineA);
+                        setHeadlineB(parsedHeadlines.headlineB);
                       } else {
                         const parsedDecision = deserializeCampaignDecision(item.studentAnswer);
                         if (parsedDecision) {
@@ -271,6 +278,14 @@ export default function ChatPage() {
                         }
                       }
                     }
+                  }
+                }
+
+                if (item.scenarioId === 2) {
+                  if (item.nodeId === "N1") {
+                    setS2InitialIdea(item.studentAnswer);
+                  } else if (item.nodeId === "N4") {
+                    setS2DevelopedIdea(item.studentAnswer);
                   }
                 }
 
@@ -429,7 +444,6 @@ export default function ChatPage() {
         setCurrentNodeId(nextNode);
 
         if (nextNode === "END") {
-          await advanceScenario(1);
           return;
         }
 
@@ -938,7 +952,6 @@ export default function ChatPage() {
       }
 
       if (nextNode === "END") {
-        await advanceScenario(1);
         return;
       }
 
@@ -962,8 +975,9 @@ export default function ChatPage() {
     }
   };
   // Conversational message sender (S1 / S2 / S3 conversational nodes)
-  const handleSendMessage = async () => {
-    const trimmed = studentAnswer.trim();
+  const handleSendMessage = async (textOverride?: string) => {
+    const textToSend = typeof textOverride === "string" ? textOverride : studentAnswer;
+    const trimmed = textToSend.trim();
     if (!trimmed || isSubmitting || isSubmittingRef.current || !sessionId) return;
 
     if (trimmed.length > MAX_STUDENT_ANSWER_LENGTH) {
@@ -983,7 +997,17 @@ export default function ChatPage() {
         text: trimmed,
       },
     ]);
-    setStudentAnswer("");
+    if (!textOverride) {
+      setStudentAnswer("");
+    }
+
+    if (currentScenario === 2) {
+      if (currentNodeId === "N1") {
+        setS2InitialIdea(trimmed);
+      } else if (currentNodeId === "N4") {
+        setS2DevelopedIdea(trimmed);
+      }
+    }
 
     try {
       let endpoint = "/api/chat";
@@ -1044,11 +1068,6 @@ export default function ChatPage() {
         setCurrentNodeId(nextNode);
 
         if (nextNode === "END") {
-          if (currentScenario === 1) {
-            await advanceScenario(1);
-          } else if (currentScenario === 2) {
-            await advanceScenario(2);
-          }
           return;
         }
 
@@ -1105,6 +1124,7 @@ export default function ChatPage() {
         text: displayCard,
       },
     ]);
+    setS3Blocks(s3Blocks);
 
     try {
       const res = await fetch("/api/s3/submit", {
@@ -1238,7 +1258,47 @@ export default function ChatPage() {
 
   const journeyProgress = getJourneyProgress(currentScenario);
   const activeSkillMeta = getScenarioMeta(currentScenario);
+  const nextScenarioId = getNextScenarioId(currentScenario);
+  const nextSkillMeta = nextScenarioId ? getScenarioMeta(nextScenarioId) : null;
 
+  const currentTaskText =
+    currentNodeId !== "END"
+      ? (activeNodeDef?.prompt || ("message" in (activeNodeDef || {}) ? (activeNodeDef as any).message : ""))
+      : "";
+
+  const QUICK_SUPPORT_CHIPS = [
+    "مش فاهم",
+    "وضحلي",
+    "اديني مثال",
+    "كلمني بالمصري",
+  ] as const;
+
+  const isConversationalSupportAvailable =
+    !isSubmitting &&
+    currentNodeId !== "END" &&
+    (currentScenario === 1 ||
+      currentScenario === 2 ||
+      (currentScenario === 3 && currentNodeId !== "N1")) &&
+    !isN1F &&
+    !isN2H &&
+    !isS4CrisisActive &&
+    !isS4Recovery &&
+    !isS5N1 &&
+    !isS5N2 &&
+    !isS5N3 &&
+    !isS5N4;
+
+  const hasCompletedS3Model =
+    Boolean(s3Blocks.customerSegments?.trim()) &&
+    Boolean(s3Blocks.valueProposition?.trim()) &&
+    Boolean(s3Blocks.channels?.trim()) &&
+    Boolean(s3Blocks.revenueStreams?.trim()) &&
+    Boolean(s3Blocks.costStructure?.trim());
+
+  const s1StudentAnswers = messages.filter(
+    (m) => m.sender === "student" && currentScenario === 1
+  );
+  const s1LatestAnswer = s1StudentAnswers.length > 0 ? s1StudentAnswers[s1StudentAnswers.length - 1].text : null;
   return (
     <div className={`mentor-chat-viewport ${isS4CrisisActive ? "crisis-mode-active" : ""}`} dir="rtl">
       {/* Mentor Header with Identity */}
@@ -1277,7 +1337,7 @@ export default function ChatPage() {
       <nav className="journey-progress-strip" aria-label="مسار المهارات الريادية">
         <div className="journey-progress-container">
           <div className="journey-active-badge">
-            <span className="journey-kicker">المهارة الحالية:</span>
+            <span className="journey-kicker">المرحلة {currentScenario} من 5</span>
             <span className="journey-active-title">
               {activeSkillMeta?.skillTitle || "اكتشاف الفرص الرقمية"}
             </span>
@@ -1297,7 +1357,7 @@ export default function ChatPage() {
                     ? "●"
                     : "○"}
                 </span>
-                <span className="step-title-text">{item.skillTitle}</span>
+                <span className="step-title-text">{item.shortTitle}</span>
               </div>
             ))}
           </div>
@@ -1321,6 +1381,9 @@ export default function ChatPage() {
                 </div>
               )}
               <div className="chat-bubble">
+                <div className={`chat-message-role-label role-label-${msg.sender}`}>
+                  {msg.sender === "student" ? "إجابتك" : "المساعد"}
+                </div>
                 <p className="bubble-text" style={{ whiteSpace: "pre-line" }}>{msg.text}</p>
               </div>
             </div>
@@ -1338,7 +1401,7 @@ export default function ChatPage() {
                 <span className="thinking-dot" />
                 <span className="thinking-dot" />
                 <span className="thinking-dot" />
-                <span className="thinking-label">المرشد يفكر...</span>
+                <span className="thinking-label">المرشد يُفكر...</span>
               </div>
             </div>
           )}
@@ -1375,52 +1438,41 @@ export default function ChatPage() {
             </div>
           )}
 
-          {/* S3 Completion -> Transition to S4 Banner */}
-          {currentScenario === 3 && currentNodeId === "END" && (
-            <div className="scenario-advance-banner" role="status">
-              <div className="scenario-advance-text">
-                <h3>✓ أحسنت! لقد أتممت بنجاح السيناريو الثالث: بناء وتخطيط نموذج العمل التجاري.</h3>
-                <p>أنت جاهز الآن للانتقال إلى السيناريو الرابع ومواجهة تحدي إدارة الأزمات والمخاطر.</p>
+          {/* Standardized Scenario Completion Transition (S1, S2, S3, S4) */}
+          {currentNodeId === "END" && currentScenario < 5 && (
+            <div className="scenario-transition-card" role="status" aria-label="اكتمال المهارة">
+              <div className="transition-completed-line">
+                <span>✓</span>
+                <span>أكملت مهارة: {activeSkillMeta?.skillTitle}</span>
+              </div>
+              <div className="transition-next-line">
+                <span>التالي: </span>
+                <strong>{nextSkillMeta?.skillTitle}</strong>
               </div>
               <button
                 type="button"
-                className="btn-scenario-advance"
-                onClick={() => advanceScenario(3)}
+                className="btn-transition-advance"
+                onClick={() => advanceScenario(currentScenario)}
                 disabled={isSubmitting}
               >
-                الانتقال إلى السيناريو الرابع: اتخاذ القرار وإدارة المخاطر ←
+                متابعة ←
               </button>
             </div>
           )}
 
-          {/* S4 Completion -> Transition to S5 Banner */}
-          {isS4End && (
-            <div className="scenario-advance-banner" role="status">
-              <div className="scenario-advance-text">
-                <h3>✓ أحسنت! لقد أتممت بنجاح السيناريو الرابع: اتخاذ القرار وإدارة المخاطر.</h3>
-                <p>لقد أثبتت قدرتك على إدارة الأزمات والتعافي. تنتقل الآن إلى السيناريو الأخير: التسويق الرقمي واختبار A/B.</p>
-              </div>
-              <button
-                type="button"
-                className="btn-scenario-advance"
-                onClick={() => advanceScenario(4)}
-                disabled={isSubmitting}
-              >
-                الانتقال إلى السيناريو الخامس: التسويق الرقمي ←
-              </button>
-            </div>
-          )}
-
-          {/* S5 Completion -> Final Experiment Completion Banner */}
+          {/* S5 Completion -> Final Experiment Completion Card */}
           {isS5End && (
-            <div className="scenario-advance-banner" role="status">
-              <div className="scenario-advance-text">
-                <h3>🎉 تهانينا الحارة! لقد أتممت جميع سيناريوهات التجربة الخمسة بنجاح.</h3>
-                <p>شكراً لجهودك ومشاركتك القيّمة. اضغط على الزر أدناه لحفظ إنجازك والانتقال إلى الصفحة الختامية.</p>
+            <div className="scenario-transition-card" role="status" aria-label="اكتمال مسار التجربة">
+              <div className="transition-completed-line">
+                <span>🎉</span>
+                <span>تهانينا! لقد أتممت جميع المهارات الريادية الخمس بنجاح.</span>
+              </div>
+              <div className="transition-next-line">
+                <span>شكراً لجهودك ومشاركتك القيّمة. اضغط أدناه لحفظ إنجازك والانتقال إلى الصفحة الختامية.</span>
               </div>
               <button
                 type="button"
-                className="btn-scenario-advance"
+                className="btn-transition-advance"
                 onClick={handleOverallComplete}
                 disabled={isSubmitting}
               >
@@ -1432,12 +1484,113 @@ export default function ChatPage() {
           <div ref={messagesEndRef} />
         </div>
       </main>
+
       {/* Sticky Bottom Composer & Specialized Interventions */}
       <footer className="mentor-chat-composer-bar">
         <div className="composer-inner">
           {errorMessage && (
             <div className="composer-error-banner" role="alert">
               <span>{errorMessage}</span>
+            </div>
+          )}
+
+          {/* S1: Deterministic Thinking Panel */}
+          {currentScenario === 1 && currentNodeId !== "END" && s1LatestAnswer && (
+            <div className="s1-thinking-panel" role="region" aria-label="ما سجلته حتى الآن">
+              <div className="s1-thinking-title">
+                <span>💡</span>
+                <span>ما سجلته حتى الآن:</span>
+              </div>
+              <div className="s1-thinking-content">
+                {s1LatestAnswer}
+              </div>
+            </div>
+          )}
+
+          {/* S2: Idea Evolution Panel */}
+          {currentScenario === 2 && currentNodeId !== "END" && (s2InitialIdea || s2DevelopedIdea) && (
+            <div className="s2-idea-evolution" role="region" aria-label="تطور الفكرة">
+              {s2InitialIdea && (
+                <div className="s2-idea-card">
+                  <div className="s2-idea-card-header">🌱 الفكرة الأولى:</div>
+                  <div className="s2-idea-card-body">{s2InitialIdea}</div>
+                </div>
+              )}
+              {s2DevelopedIdea && (
+                <div className="s2-idea-card">
+                  <div className="s2-idea-card-header">🚀 الفكرة بعد التطوير:</div>
+                  <div className="s2-idea-card-body">{s2DevelopedIdea}</div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* S3: Persistent Read-Only Model Summary */}
+          {currentScenario === 3 && currentNodeId !== "N1" && currentNodeId !== "END" && hasCompletedS3Model && (
+            <div className="s3-model-summary" role="region" aria-label="نموذجك الحالي">
+              <div className="s3-summary-header">
+                <span>📋</span>
+                <span>نموذجك الحالي:</span>
+              </div>
+              <div className="s3-summary-grid">
+                <div className="s3-summary-item">
+                  <span className="s3-summary-label">1. شرائح العملاء</span>
+                  <span className="s3-summary-val">{s3Blocks.customerSegments}</span>
+                </div>
+                <div className="s3-summary-item">
+                  <span className="s3-summary-label">2. عرض القيمة</span>
+                  <span className="s3-summary-val">{s3Blocks.valueProposition}</span>
+                </div>
+                <div className="s3-summary-item">
+                  <span className="s3-summary-label">3. القنوات</span>
+                  <span className="s3-summary-val">{s3Blocks.channels}</span>
+                </div>
+                <div className="s3-summary-item">
+                  <span className="s3-summary-label">4. مصادر الإيرادات</span>
+                  <span className="s3-summary-val">{s3Blocks.revenueStreams}</span>
+                </div>
+                <div className="s3-summary-item">
+                  <span className="s3-summary-label">5. هيكل التكاليف</span>
+                  <span className="s3-summary-val">{s3Blocks.costStructure}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* S3: Gap Review Card (Cross-field review) */}
+          {currentScenario === 3 && currentNodeId.includes("GAP") && (
+            <div className="s3-review-card" role="region" aria-label="مراجعة الترابط">
+              <div className="s3-review-header">⚠️ راجع الترابط</div>
+              <div className="s3-review-body">
+                يرجى مراجعة التوافق المنطقي بين مكونات نموذج العمل كما بيّن المرشد في الملاحظات السابقة.
+              </div>
+            </div>
+          )}
+
+          {/* Current Task Card ("مهمتك الآن") */}
+          {currentTaskText && currentNodeId !== "END" && (
+            <div
+              className={`current-task-card ${
+                currentScenario === 2 && (currentNodeId === "N2" || currentNodeId === "N3")
+                  ? "s2-challenge-callout"
+                  : ""
+              }`}
+              role="region"
+              aria-label="مهمتك الآن"
+            >
+              <div className="current-task-kicker">
+                <span>📌</span>
+                <span>
+                  {currentScenario === 2 && currentNodeId === "N2"
+                    ? "تحدي الميزانية (مهمتك الآن):"
+                    : currentScenario === 2 && currentNodeId === "N3"
+                    ? "تحدي المنافسة (مهمتك الآن):"
+                    : "مهمتك الآن:"}
+                </span>
+              </div>
+              <div className="current-task-body">
+                {currentTaskText}
+              </div>
             </div>
           )}
 
@@ -1449,7 +1602,7 @@ export default function ChatPage() {
               </p>
               <button
                 type="button"
-                className="btn-scenario-advance"
+                className="btn-transition-advance"
                 style={{ alignSelf: "stretch", textAlign: "center" }}
                 onClick={handleStartCrisisShock}
                 disabled={isSubmitting}
@@ -1501,14 +1654,15 @@ export default function ChatPage() {
             </div>
           ) : isS4Consequence ? (
             /* S4 N3: Consequence -> Continue to Recovery */
-            <div className="s5-decision-composer">
-              <p style={{ margin: 0, fontWeight: 600, color: "#1e293b" }}>
-                بعد استيعاب تداعيات الأزمة، حان الوقت للتفكير في الخطوة التالية لإدارة السمعة واستعادة ثقة العملاء:
+            <div className="s4-consequence-card" role="region" aria-label="تداعيات القرار">
+              <div className="s4-consequence-header">تداعيات القرار المتخذ:</div>
+              <p className="s4-consequence-body">
+                {activeNodeDef?.message || "تم تسجيل قرارك وملاحظة تبعاته التشغيلية."}
               </p>
               <button
                 type="button"
-                className="btn-scenario-advance"
-                style={{ alignSelf: "stretch", textAlign: "center" }}
+                className="btn-transition-advance"
+                style={{ alignSelf: "stretch", textAlign: "center", marginTop: "0.75rem" }}
                 onClick={handleContinueToRecovery}
                 disabled={isSubmitting}
               >
@@ -1518,7 +1672,7 @@ export default function ChatPage() {
           ) : isS4Recovery ? (
             /* S4 N4: Recovery Choices */
             <div className="recovery-options-container" role="region" aria-label="خيارات التعافي">
-              <p style={{ margin: "0 0 0.5rem 0", fontWeight: 700, color: "#1e293b" }}>
+              <p style={{ margin: "0 0 0.5rem 0", fontWeight: 700, color: "var(--text-primary)" }}>
                 ما هي استراتيجيتك للتعافي وامتصاص غضب العملاء؟
               </p>
               <button
@@ -1541,7 +1695,7 @@ export default function ChatPage() {
           ) : isS5N1 ? (
             /* S5 N1: Two Headlines Input Composer */
             <div className="s5-headlines-composer" role="region" aria-label="إعداد تجربة A/B">
-              <h2 style={{ fontSize: "1rem", fontWeight: 700, margin: 0, color: "#0f172a" }}>
+              <h2 style={{ fontSize: "1rem", fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>
                 إعداد عنواني الحملتين الإعلانيتين (A/B Test)
               </h2>
               <div className="s3-blocks-grid">
@@ -1568,63 +1722,83 @@ export default function ChatPage() {
                   />
                 </div>
               </div>
-              <button
-                type="button"
-                className="btn-mentor-action btn-s3-submit"
-                onClick={handleHeadlinesSubmit}
-                disabled={isSubmitting || !headlineA.trim() || !headlineB.trim()}
-              >
-                إطلاق حملة الـ A/B Testing ومحاكاة نتائج 3 أيام ←
-              </button>
+
+              <div className="s3-submit-actions">
+                <button
+                  type="button"
+                  className="btn-mentor-action btn-s3-submit"
+                  onClick={handleHeadlinesSubmit}
+                  disabled={isSubmitting || !headlineA.trim() || !headlineB.trim()}
+                >
+                  إطلاق اختبار A/B ورؤية النتائج ←
+                </button>
+              </div>
             </div>
           ) : isS5N2 ? (
-            /* S5 N2: 3-Day Dashboard & Campaign Decision */
-            <div className="s5-decision-composer" role="region" aria-label="قرار الحملة التسويقية">
-              {/* Comparative Dashboard Card */}
+            /* S5 N2: Results Dashboard & Decision */
+            <div className="s5-decision-composer" role="region" aria-label="لوحة نتائج A/B">
+              {/* Canonical Experiment Setup Summary */}
+              <div className="s5-budget-setup-strip">
+                <span>الميزانية الكلية: 1000$</span>
+                <span>اختبار الحملة (A): 100$</span>
+                <span>اختبار الحملة (B): 100$</span>
+                <span>الميزانية المتبقية للاستثمار: {REMAINING_BUDGET}$</span>
+              </div>
+
               <div className="s5-dashboard-card">
                 <div className="s5-dashboard-title">
-                  <span>📊 نتائج الحملتين بعد إنفاق 100$ على كل منهما (مرور 3 أيام):</span>
+                  <span>📊</span>
+                  <span>نتائج اختبار A/B بعد إنفاق 100$ على كل حملة:</span>
                 </div>
+
                 <div className="s5-campaigns-grid">
                   <div className="s5-campaign-box">
                     <div className="s5-campaign-header">
-                      <span className="s5-campaign-badge s5-badge-a">الحملة (A) - السعر</span>
-                      <span style={{ fontSize: "0.85rem", color: "#64748b" }}>إنفاق: 100$</span>
+                      <span className="s5-campaign-badge s5-badge-a">الحملة (A) - الخصم</span>
+                      <span style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>إنفاق: 100$</span>
                     </div>
                     <div className="s5-metric-row">
-                      <span>النقرات (الزيارات):</span>
+                      <span>الزيارات (النقرات):</span>
                       <span className="s5-metric-val">{CAMPAIGN_A_METRICS.visits}</span>
                     </div>
                     <div className="s5-metric-bar-track">
                       <div className="s5-metric-bar-fill-a" style={{ width: "100%" }} />
                     </div>
                     <div className="s5-metric-row" style={{ marginTop: "0.25rem" }}>
-                      <span>المشترون الفعليون:</span>
+                      <span>العملاء الفعليون:</span>
                       <span className="s5-metric-val">{CAMPAIGN_A_METRICS.buyers} عملاء</span>
                     </div>
                     <div className="s5-metric-bar-track">
                       <div className="s5-metric-bar-fill-a" style={{ width: "25%" }} />
+                    </div>
+                    <div className="s5-metric-row" style={{ marginTop: "0.25rem" }}>
+                      <span>تكلفة اكتساب العميل (CPA):</span>
+                      <span className="s5-metric-val">{CAMPAIGN_A_METRICS.cpa}$</span>
                     </div>
                   </div>
 
                   <div className="s5-campaign-box">
                     <div className="s5-campaign-header">
                       <span className="s5-campaign-badge s5-badge-b">الحملة (B) - الجودة</span>
-                      <span style={{ fontSize: "0.85rem", color: "#64748b" }}>إنفاق: 100$</span>
+                      <span style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>إنفاق: 100$</span>
                     </div>
                     <div className="s5-metric-row">
-                      <span>النقرات (الزيارات):</span>
+                      <span>الزيارات (النقرات):</span>
                       <span className="s5-metric-val">{CAMPAIGN_B_METRICS.visits}</span>
                     </div>
                     <div className="s5-metric-bar-track">
                       <div className="s5-metric-bar-fill-b" style={{ width: "20%" }} />
                     </div>
                     <div className="s5-metric-row" style={{ marginTop: "0.25rem" }}>
-                      <span>المشترون الفعليون:</span>
+                      <span>العملاء الفعليون:</span>
                       <span className="s5-metric-val">{CAMPAIGN_B_METRICS.buyers} عميلاً</span>
                     </div>
                     <div className="s5-metric-bar-track">
                       <div className="s5-metric-bar-fill-b" style={{ width: "100%" }} />
+                    </div>
+                    <div className="s5-metric-row" style={{ marginTop: "0.25rem" }}>
+                      <span>تكلفة اكتساب العميل (CPA):</span>
+                      <span className="s5-metric-val">{CAMPAIGN_B_METRICS.cpa}$</span>
                     </div>
                   </div>
                 </div>
@@ -1695,13 +1869,15 @@ export default function ChatPage() {
             <div className="s5-decision-composer">
               {currentNodeId === "N3_A" ? (
                 <div>
-                  <p style={{ margin: "0 0 0.75rem 0", fontWeight: 600, color: "#991b1b" }}>
-                    لقد بين المرشد أن تكلفة العميل في A هي 20$ بينما في B هي 5$ فقط. هل تريد تغيير قرارك؟
-                  </p>
+                  <div className="s5-correction-card" role="alert">
+                    <p style={{ margin: 0, fontWeight: 600 }}>
+                      لقد بين المرشد أن تكلفة اكتساب العميل في الحملة (A) هي 20$ بينما في (B) هي 5$ فقط. هل تريد تغيير قرارك؟
+                    </p>
+                  </div>
                   <button
                     type="button"
-                    className="btn-scenario-advance"
-                    style={{ alignSelf: "stretch", textAlign: "center" }}
+                    className="btn-transition-advance"
+                    style={{ alignSelf: "stretch", textAlign: "center", marginTop: "0.75rem" }}
                     onClick={() => handleContinueToBudget(true)}
                     disabled={isSubmitting}
                   >
@@ -1711,7 +1887,7 @@ export default function ChatPage() {
               ) : (
                 <button
                   type="button"
-                  className="btn-scenario-advance"
+                  className="btn-transition-advance"
                   style={{ alignSelf: "stretch", textAlign: "center" }}
                   onClick={() => handleContinueToBudget(false)}
                   disabled={isSubmitting}
@@ -1723,12 +1899,12 @@ export default function ChatPage() {
           ) : isS5N4 ? (
             /* S5 N4: Allocate Remaining Budget to B */
             <div className="s5-decision-composer">
-              <p style={{ margin: "0 0 0.75rem 0", fontWeight: 600, color: "#166534" }}>
+              <p style={{ margin: "0 0 0.75rem 0", fontWeight: 600, color: "var(--accent-forest)" }}>
                 جاهز لتوجيه باقي الميزانية (800 دولار) للحملة (B) لتعظيم العائد المالي (ROI)؟
               </p>
               <button
                 type="button"
-                className="btn-scenario-advance"
+                className="btn-transition-advance"
                 style={{ alignSelf: "stretch", textAlign: "center" }}
                 onClick={handleFinalizeScenario5}
                 disabled={isSubmitting}
@@ -1773,7 +1949,10 @@ export default function ChatPage() {
 
               <div className="s3-blocks-grid">
                 <div className="s3-field-group">
-                  <label className="s3-field-label">1. {BUSINESS_MODEL_LABELS.customerSegments}</label>
+                  <label className="s3-field-label">
+                    1. {BUSINESS_MODEL_LABELS.customerSegments}{" "}
+                    {s3Blocks.customerSegments.trim() && <span style={{ color: "var(--accent-forest)" }}>✓</span>}
+                  </label>
                   <input
                     type="text"
                     className="s3-field-input"
@@ -1787,7 +1966,10 @@ export default function ChatPage() {
                 </div>
 
                 <div className="s3-field-group">
-                  <label className="s3-field-label">2. {BUSINESS_MODEL_LABELS.valueProposition}</label>
+                  <label className="s3-field-label">
+                    2. {BUSINESS_MODEL_LABELS.valueProposition}{" "}
+                    {s3Blocks.valueProposition.trim() && <span style={{ color: "var(--accent-forest)" }}>✓</span>}
+                  </label>
                   <input
                     type="text"
                     className="s3-field-input"
@@ -1801,7 +1983,10 @@ export default function ChatPage() {
                 </div>
 
                 <div className="s3-field-group">
-                  <label className="s3-field-label">3. {BUSINESS_MODEL_LABELS.channels}</label>
+                  <label className="s3-field-label">
+                    3. {BUSINESS_MODEL_LABELS.channels}{" "}
+                    {s3Blocks.channels.trim() && <span style={{ color: "var(--accent-forest)" }}>✓</span>}
+                  </label>
                   <input
                     type="text"
                     className="s3-field-input"
@@ -1815,7 +2000,10 @@ export default function ChatPage() {
                 </div>
 
                 <div className="s3-field-group">
-                  <label className="s3-field-label">4. {BUSINESS_MODEL_LABELS.revenueStreams}</label>
+                  <label className="s3-field-label">
+                    4. {BUSINESS_MODEL_LABELS.revenueStreams}{" "}
+                    {s3Blocks.revenueStreams.trim() && <span style={{ color: "var(--accent-forest)" }}>✓</span>}
+                  </label>
                   <input
                     type="text"
                     className="s3-field-input"
@@ -1829,7 +2017,10 @@ export default function ChatPage() {
                 </div>
 
                 <div className="s3-field-group s3-field-full">
-                  <label className="s3-field-label">5. {BUSINESS_MODEL_LABELS.costStructure}</label>
+                  <label className="s3-field-label">
+                    5. {BUSINESS_MODEL_LABELS.costStructure}{" "}
+                    {s3Blocks.costStructure.trim() && <span style={{ color: "var(--accent-forest)" }}>✓</span>}
+                  </label>
                   <input
                     type="text"
                     className="s3-field-input"
@@ -1861,39 +2052,63 @@ export default function ChatPage() {
                 </button>
               </div>
             </div>
-          ) : !isN1F && !isN2H && !isS4End && !isS5End && (
-            <div className="composer-input-wrapper">
-              <textarea
-                ref={textareaRef}
-                id="mentor-answer-input"
-                className="mentor-composer-textarea"
-                placeholder="اكتب إجابتك أو سؤالك أو اطلب توضيح..."
-                rows={1}
-                value={studentAnswer}
-                onChange={handleTextareaInput}
-                onKeyDown={handleKeyDown}
-                disabled={isSubmitting}
-                maxLength={MAX_STUDENT_ANSWER_LENGTH}
-                aria-label="رسالتك للمرشد الذكي"
-              />
+          ) : !isN1F && !isN2H && currentNodeId !== "END" && (
+            <div className="composer-container-group">
+              {/* Quick Support Chips */}
+              {isConversationalSupportAvailable && (
+                <div className="quick-support-chips" role="group" aria-label="مساعدة سريعة">
+                  <span className="quick-support-label">طلب مساعدة:</span>
+                  {QUICK_SUPPORT_CHIPS.map((chip, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      className="support-chip"
+                      onClick={() => handleSendMessage(chip)}
+                      disabled={isSubmitting}
+                    >
+                      {chip}
+                    </button>
+                  ))}
+                </div>
+              )}
 
-              <div className="composer-actions">
-                <span className="char-counter" aria-live="polite">
-                  {studentAnswer.length}/{MAX_STUDENT_ANSWER_LENGTH}
-                </span>
-                <button
-                  type="button"
-                  id="send-message-button"
-                  className="btn-mentor-send"
-                  onClick={handleSendMessage}
-                  disabled={isSubmitting || !studentAnswer.trim()}
-                  aria-label="إرسال الرسالة"
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" style={{ transform: "rotate(180deg)" }}>
-                    <line x1="22" y1="2" x2="11" y2="13" />
-                    <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                  </svg>
-                </button>
+              <div className="composer-input-wrapper">
+                <textarea
+                  ref={textareaRef}
+                  id="mentor-answer-input"
+                  className="mentor-composer-textarea"
+                  placeholder="اكتب إجابتك أو سؤالك أو اطلب توضيح..."
+                  rows={1}
+                  value={studentAnswer}
+                  onChange={handleTextareaInput}
+                  onKeyDown={handleKeyDown}
+                  disabled={isSubmitting}
+                  maxLength={MAX_STUDENT_ANSWER_LENGTH}
+                  aria-label="رسالتك للمرشد الذكي"
+                />
+
+                <div className="composer-actions">
+                  <span className="char-counter" aria-live="polite">
+                    {studentAnswer.length}/{MAX_STUDENT_ANSWER_LENGTH}
+                  </span>
+                  <button
+                    type="button"
+                    id="send-message-button"
+                    className="btn-mentor-send"
+                    onClick={() => handleSendMessage()}
+                    disabled={isSubmitting || !studentAnswer.trim()}
+                    aria-label="إرسال الرسالة"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" style={{ transform: "rotate(180deg)" }}>
+                      <line x1="22" y1="2" x2="11" y2="13" />
+                      <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <div className="composer-helper-note" aria-hidden="true">
+                Enter للإرسال · Shift+Enter لسطر جديد
               </div>
             </div>
           )}

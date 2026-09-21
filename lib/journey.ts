@@ -16,33 +16,47 @@ export type ScenarioId = 1 | 2 | 3 | 4 | 5;
 export interface ScenarioMeta {
   id: ScenarioId;
   skillTitle: string;
+  shortTitle: string;
   description: string;
 }
+
+export const SHORT_SKILL_TITLES: Record<ScenarioId, string> = {
+  1: "الفرص",
+  2: "الأفكار",
+  3: "نموذج العمل",
+  4: "المخاطر",
+  5: "التسويق",
+} as const;
 
 export const SCENARIOS_JOURNEY: readonly ScenarioMeta[] = [
   {
     id: 1,
     skillTitle: "اكتشاف الفرص الرقمية",
+    shortTitle: "الفرص",
     description: "تحليل مشكلة حقيقية وتحويلها إلى فرصة مشروع رقمي",
   },
   {
     id: 2,
     skillTitle: "توليد الأفكار الابتكارية",
+    shortTitle: "الأفكار",
     description: "توليد أفكار رقمية جديدة وتطويرها استجابة للقيود",
   },
   {
     id: 3,
     skillTitle: "بناء وتخطيط نموذج العمل التجاري",
+    shortTitle: "نموذج العمل",
     description: "تصميم كتل نموذج العمل والتحقق من التوافق المنطقي",
   },
   {
     id: 4,
     skillTitle: "اتخاذ القرار وإدارة المخاطر",
+    shortTitle: "المخاطر",
     description: "محاكاة إدارة الأزمات والمقايضات تحت ضغط الوقت",
   },
   {
     id: 5,
     skillTitle: "التسويق الرقمي واتخاذ القرارات المبنية على البيانات",
+    shortTitle: "التسويق",
     description: "اختبار الأداء A/B وقراءة لوحات البيانات والمؤشرات الاقتصادية",
   },
 ] as const;
@@ -52,7 +66,15 @@ export type ScenarioProgressState = "completed" | "active" | "upcoming";
 export interface ScenarioProgressItem {
   id: ScenarioId;
   skillTitle: string;
+  shortTitle: string;
   state: ScenarioProgressState;
+}
+
+/**
+ * Returns the compact short title for a skill (e.g., "الفرص", "الأفكار").
+ */
+export function getShortSkillTitle(id: ScenarioId): string {
+  return SHORT_SKILL_TITLES[id] || "";
 }
 
 /**
@@ -69,6 +91,7 @@ export function getJourneyProgress(
     return SCENARIOS_JOURNEY.map((s) => ({
       id: s.id,
       skillTitle: s.skillTitle,
+      shortTitle: s.shortTitle,
       state: "completed" as const,
     }));
   }
@@ -90,6 +113,7 @@ export function getJourneyProgress(
     return {
       id: s.id,
       skillTitle: s.skillTitle,
+      shortTitle: s.shortTitle,
       state,
     };
   });
