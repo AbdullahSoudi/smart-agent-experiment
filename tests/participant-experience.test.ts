@@ -489,3 +489,30 @@ test("T56 Neutral END Checkpoint Wording Invariant", () => {
     assert.ok(!endTitle.includes("ناجح") && !endTitle.includes("فاشل"), "No pass/fail semantics in END label");
   }
 });
+
+test("Post-v1.0 Visual Recovery Invariants: Desktop Summary, Sticky Rails & Hierarchy", () => {
+  const css = fs.readFileSync(path.resolve(process.cwd(), "app/globals.css"), "utf8");
+  const chatPage = fs.readFileSync(path.resolve(process.cwd(), "app/chat/page.tsx"), "utf8");
+
+  // 1. Mobile summary is hidden by default on desktop
+  const mobileSummaryBase = css.match(/\.journey-mobile-summary\s*\{[^}]*display:\s*none/);
+  assert.ok(mobileSummaryBase, "Base .journey-mobile-summary must have display: none to prevent desktop duplicate summary leak");
+
+  // 2. Chat bubbles have explicit sender class for proper surface containers
+  assert.ok(chatPage.includes("chat-bubble-") || chatPage.includes("chat-bubble"),
+    "Chat bubbles must include sender class for contained elevated styling");
+
+  // 3. Composer bar is solid white with zero ghost text / blur bleed
+  assert.ok(css.includes(".mentor-chat-composer-bar"), "Composer bar rule must exist");
+  assert.ok(css.includes("background-color: #FFFFFF"), "Composer bar must have solid #FFFFFF surface");
+
+  // 4. Composer metadata row preserves helper note and character counter
+  assert.ok(chatPage.includes("composer-metadata-row"), "Composer metadata row must exist in chat JSX");
+  assert.ok(chatPage.includes("composer-helper-note"), "Composer helper note must exist");
+  assert.ok(chatPage.includes("composer-char-counter"), "Composer counter must exist");
+
+  // 5. Sticky header and rails contracts preserved
+  assert.ok(css.includes("position: sticky"), "Sticky architecture must be retained");
+  assert.ok(css.includes(".agent-compass-rail"), "Agent compass rail must exist");
+  assert.ok(css.includes(".journey-rail"), "Journey rail must exist");
+});

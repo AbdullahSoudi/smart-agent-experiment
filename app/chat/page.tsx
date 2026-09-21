@@ -1612,7 +1612,7 @@ export default function ChatPage() {
                   </svg>
                 </div>
               )}
-              <div className="chat-bubble">
+              <div className={`chat-bubble chat-bubble-${msg.sender} ${msg.sender}`}>
                 <div className={`chat-message-role-label role-label-${msg.sender}`}>
                   {msg.sender === "student" ? "إجابتك" : "المساعد"}
                 </div>

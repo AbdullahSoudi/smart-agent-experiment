@@ -171,7 +171,7 @@ export default function ResearcherReportPage() {
         >
           <header style={{ marginBottom: "1.75rem", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "1rem" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: "0.5rem" }}>
-              <span style={{ fontWeight: 600, color: "var(--accent-forest, #1B4D3E)" }}>بوابة الباحث</span>
+              <span style={{ fontWeight: 600, color: "var(--color-primary, #5B5FEF)" }}>بوابة الباحث</span>
               <span>·</span>
               <span>دراسة التجربة التتابعية</span>
             </div>
@@ -241,7 +241,7 @@ export default function ResearcherReportPage() {
                 padding: "0 1.5rem",
                 borderRadius: "10px",
                 border: "none",
-                backgroundColor: "var(--accent-forest, #1B4D3E)",
+                backgroundColor: "var(--color-primary, #5B5FEF)",
                 color: "var(--text-inverse, #FAF7F0)",
                 fontWeight: 700,
                 fontSize: "0.95rem",
@@ -321,8 +321,8 @@ export default function ResearcherReportPage() {
             transition: all 0.15s ease;
           }
           .res-btn-primary:hover:not(:disabled) {
-            background-color: var(--accent-forest-hover, #143D31);
-            border-color: var(--accent-forest-hover, #143D31);
+            background-color: var(--color-primary-hover, #4A4DE6);
+            border-color: var(--color-primary-hover, #4A4DE6);
           }
           .res-btn-secondary {
             height: 42px;
@@ -330,7 +330,7 @@ export default function ResearcherReportPage() {
             border-radius: 10px;
             border: 1px solid var(--border-strong, #CDC6B8);
             background-color: var(--surface-paper, #FAF8F4);
-            color: var(--accent-forest, #1B4D3E);
+            color: var(--color-primary, #5B5FEF);
             font-size: 0.9rem;
             font-weight: 600;
             cursor: pointer;
@@ -341,7 +341,7 @@ export default function ResearcherReportPage() {
           }
           .res-btn-secondary:hover {
             background-color: var(--surface-quiet, #EBE5DB);
-            border-color: var(--accent-forest, #1B4D3E);
+            border-color: var(--color-primary, #5B5FEF);
           }
           .res-btn-danger {
             height: 42px;
@@ -379,7 +379,7 @@ export default function ResearcherReportPage() {
             color: var(--text-primary, #151D21);
           }
           .res-nav-tab.active {
-            background-color: var(--accent-forest, #1B4D3E);
+            background-color: var(--color-primary, #5B5FEF);
             color: var(--text-inverse, #FAF7F0);
             box-shadow: 0 2px 6px rgba(27, 77, 62, 0.25);
           }
@@ -423,7 +423,7 @@ export default function ResearcherReportPage() {
         >
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: "0.25rem" }}>
-              <span style={{ fontWeight: 700, color: "var(--accent-forest, #1B4D3E)" }}>دراسة تجريبية موضوعية</span>
+              <span style={{ fontWeight: 700, color: "var(--color-primary, #5B5FEF)" }}>دراسة تجريبية موضوعية</span>
               <span>·</span>
               <span>لوحة التحليل والمتابعة الأكاديمية</span>
             </div>
@@ -918,7 +918,7 @@ export default function ResearcherReportPage() {
                       <>
                         {selectedParticipant.scenario1.finalOpportunity && (
                           <div style={{ backgroundColor: "var(--surface-workspace, #F4F1EA)", border: "1px solid var(--border-subtle)", padding: "1rem", borderRadius: "8px" }}>
-                            <h4 style={{ margin: "0 0 0.4rem 0", color: "var(--accent-forest, #1B4D3E)", fontSize: "0.95rem" }}>
+                            <h4 style={{ margin: "0 0 0.4rem 0", color: "var(--color-primary, #5B5FEF)", fontSize: "0.95rem" }}>
                               الفرصة والقيمة الاقتصادية النهائية (العقدة N5):
                             </h4>
                             <p style={{ margin: 0, fontSize: "0.92rem", lineHeight: "1.7", color: "var(--text-primary)" }}>
@@ -1046,7 +1046,7 @@ export default function ResearcherReportPage() {
                         <div style={{ backgroundColor: "var(--surface-workspace, #F4F1EA)", border: "1px solid var(--border-subtle)", padding: "0.9rem 1rem", borderRadius: "8px" }}>
                           <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: "0.25rem" }}>المسار التشخيصي المكتشف:</div>
                           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
-                            <strong style={{ fontSize: "1rem", color: "var(--accent-forest, #1B4D3E)" }}>
+                            <strong style={{ fontSize: "1rem", color: "var(--color-primary, #5B5FEF)" }}>
                               {S3_GAP_LABELS[selectedParticipant.scenario3.detectedGapPath] || selectedParticipant.scenario3.detectedGapPath}
                             </strong>
                             <code style={{ fontSize: "0.78rem", backgroundColor: "var(--surface-quiet)", padding: "2px 6px", borderRadius: "4px" }}>
@@ -1187,7 +1187,7 @@ export default function ResearcherReportPage() {
                         <div style={{ backgroundColor: "var(--surface-workspace, #F4F1EA)", border: "1px solid var(--border-subtle)", padding: "0.9rem 1rem", borderRadius: "8px" }}>
                           <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: "0.25rem" }}>المسار التحليلي لقرار الميزانية:</div>
                           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
-                            <strong style={{ fontSize: "1rem", color: "var(--accent-forest, #1B4D3E)" }}>
+                            <strong style={{ fontSize: "1rem", color: "var(--color-primary, #5B5FEF)" }}>
                               {S5_BRANCH_LABELS[selectedParticipant.scenario5.analyticalBranch] || selectedParticipant.scenario5.analyticalBranch}
                             </strong>
                             <code style={{ fontSize: "0.78rem", backgroundColor: "var(--surface-quiet)", padding: "2px 6px", borderRadius: "4px" }}>

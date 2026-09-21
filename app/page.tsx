@@ -122,9 +122,8 @@ export default function HomePage() {
             </div>
 
             {/* 5-Stage Visual Preview */}
-            <div style={{
+            <div className="start-stages-grid" style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
               gap: "0.75rem",
               margin: "0.5rem 0"
             }}>
