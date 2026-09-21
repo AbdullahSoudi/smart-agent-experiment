@@ -1500,7 +1500,7 @@ export default function ChatPage() {
                   return (
                     <div
                       key={item.id}
-                      className={`journey-step-item ${isCurrent ? "journey-step-active" : isCompleted ? "journey-step-completed" : "journey-step-upcoming"}`}
+                      className={`journey-step-item stage-${item.id} ${isCurrent ? "journey-step-active" : isCompleted ? "journey-step-completed" : "journey-step-upcoming"}`}
                       aria-current={isCurrent ? "step" : undefined}
                     >
                       <span className="journey-step-icon" aria-hidden="true">{icon}</span>

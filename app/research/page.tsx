@@ -38,6 +38,16 @@ export default function ResearcherReportPage() {
   const [activeTab, setActiveTab] = useState<
     "overview" | "s1" | "s2" | "s3" | "s4" | "s5" | "log"
   >("overview");
+
+  const TAB_CONFIG = [
+    { id: "overview", label: "نظرة عامة", color: "#5B5FEF" },
+    { id: "s1", label: "السيناريو 1 (الفرص)", color: "#1AA7EC" },
+    { id: "s2", label: "السيناريو 2 (الأفكار)", color: "#7C4DFF" },
+    { id: "s3", label: "السيناريو 3 (نموذج العمل)", color: "#F4B942" },
+    { id: "s4", label: "السيناريو 4 (المخاطر)", color: "#FF6B6B" },
+    { id: "s5", label: "السيناريو 5 (التسويق)", color: "#00A99D" },
+    { id: "log", label: "السجل الكامل", color: "#182033" },
+  ];
   const [searchQuery, setSearchQuery] = useState("");
 
   const fetchData = useCallback(async (showRefreshingSpinner = false) => {
@@ -150,11 +160,13 @@ export default function ResearcherReportPage() {
           style={{
             maxWidth: "480px",
             margin: "4rem auto",
-            backgroundColor: "var(--surface-paper, #FAF8F4)",
-            border: "1px solid var(--border-strong, #CDC6B8)",
-            borderRadius: "14px",
-            padding: "2rem",
+            backgroundColor: "#FFFFFF",
+            border: "1px solid var(--border-subtle)",
+            borderRadius: "20px",
+            padding: "2.25rem 2rem",
             boxShadow: "var(--shadow-workspace)",
+            position: "relative",
+            overflow: "hidden",
           }}
         >
           <header style={{ marginBottom: "1.75rem", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "1rem" }}>
@@ -274,7 +286,7 @@ export default function ResearcherReportPage() {
       style={{
         minHeight: "100vh",
         padding: "1.5rem 1rem",
-        backgroundColor: "var(--surface-outer, #1C2428)",
+        backgroundColor: "var(--surface-workspace, #F7F8FC)",
         overflowX: "hidden",
       }}
     >
@@ -284,9 +296,9 @@ export default function ResearcherReportPage() {
           maxWidth: "1400px",
           width: "100%",
           margin: "0 auto",
-          backgroundColor: "var(--surface-workspace, #F4F1EA)",
-          borderRadius: "14px",
-          padding: "1.5rem",
+          backgroundColor: "transparent",
+          borderRadius: "18px",
+          padding: "0",
           boxShadow: "var(--shadow-workspace)",
         }}
       >
@@ -296,9 +308,10 @@ export default function ResearcherReportPage() {
             height: 42px;
             padding: 0 1.25rem;
             border-radius: 10px;
-            border: 1px solid var(--accent-forest, #1B4D3E);
-            background-color: var(--accent-forest, #1B4D3E);
-            color: var(--text-inverse, #FAF7F0);
+            border: none;
+            background: var(--gradient-brand, linear-gradient(135deg, #5B5FEF 0%, #7C4DFF 100%));
+            color: #FFFFFF;
+            box-shadow: 0 3px 10px rgba(91, 95, 239, 0.25);
             font-size: 0.9rem;
             font-weight: 600;
             cursor: pointer;
@@ -377,11 +390,11 @@ export default function ResearcherReportPage() {
             transition: background-color 0.12s ease;
           }
           .participant-card-item:hover {
-            background-color: rgba(27, 77, 62, 0.04);
+            background-color: rgba(91, 95, 239, 0.03);
           }
           .participant-card-item.selected {
-            background-color: rgba(168, 135, 70, 0.12);
-            border-right: 4px solid var(--accent-brass, #A88746);
+            background-color: rgba(91, 95, 239, 0.07);
+            border-right: 4px solid var(--color-primary, #5B5FEF);
           }
           @media (max-width: 960px) {
             .research-split-layout {
@@ -462,9 +475,10 @@ export default function ResearcherReportPage() {
           {/* Card 1: Total */}
           <div
             style={{
-              backgroundColor: "var(--surface-paper, #FAF8F4)",
-              border: "1px solid var(--border-subtle, #E0DACF)",
-              borderRadius: "12px",
+              backgroundColor: "#FFFFFF",
+              border: "1px solid var(--border-subtle)",
+              borderRadius: "16px",
+              boxShadow: "var(--shadow-panel)",
               padding: "1.15rem 1.25rem",
               display: "flex",
               flexDirection: "column",
@@ -486,9 +500,10 @@ export default function ResearcherReportPage() {
           {/* Card 2: Completed */}
           <div
             style={{
-              backgroundColor: "var(--surface-paper, #FAF8F4)",
-              border: "1px solid var(--border-subtle, #E0DACF)",
-              borderRadius: "12px",
+              backgroundColor: "#FFFFFF",
+              border: "1px solid var(--border-subtle)",
+              borderRadius: "16px",
+              boxShadow: "var(--shadow-panel)",
               padding: "1.15rem 1.25rem",
               display: "flex",
               flexDirection: "column",
@@ -510,9 +525,10 @@ export default function ResearcherReportPage() {
           {/* Card 3: In Progress */}
           <div
             style={{
-              backgroundColor: "var(--surface-paper, #FAF8F4)",
-              border: "1px solid var(--border-subtle, #E0DACF)",
-              borderRadius: "12px",
+              backgroundColor: "#FFFFFF",
+              border: "1px solid var(--border-subtle)",
+              borderRadius: "16px",
+              boxShadow: "var(--shadow-panel)",
               padding: "1.15rem 1.25rem",
               display: "flex",
               flexDirection: "column",
@@ -534,9 +550,10 @@ export default function ResearcherReportPage() {
           {/* Card 4: Total Interactions */}
           <div
             style={{
-              backgroundColor: "var(--surface-paper, #FAF8F4)",
-              border: "1px solid var(--border-subtle, #E0DACF)",
-              borderRadius: "12px",
+              backgroundColor: "#FFFFFF",
+              border: "1px solid var(--border-subtle)",
+              borderRadius: "16px",
+              boxShadow: "var(--shadow-panel)",
               padding: "1.15rem 1.25rem",
               display: "flex",
               flexDirection: "column",
@@ -569,13 +586,14 @@ export default function ResearcherReportPage() {
           {/* Left Panel: Participants List */}
           <section
             style={{
-              backgroundColor: "var(--surface-paper, #FAF8F4)",
-              border: "1px solid var(--border-strong, #CDC6B8)",
-              borderRadius: "12px",
+              backgroundColor: "#FFFFFF",
+              border: "1px solid var(--border-subtle)",
+              borderRadius: "18px",
               display: "flex",
               flexDirection: "column",
               maxHeight: "82vh",
               overflow: "hidden",
+              boxShadow: "var(--shadow-panel)",
             }}
           >
             {/* Search Input */}
@@ -709,11 +727,12 @@ export default function ResearcherReportPage() {
           {/* Right Panel: Selected Participant Detail */}
           <section
             style={{
-              backgroundColor: "var(--surface-paper, #FAF8F4)",
-              border: "1px solid var(--border-strong, #CDC6B8)",
-              borderRadius: "12px",
-              padding: "1.5rem",
+              backgroundColor: "#FFFFFF",
+              border: "1px solid var(--border-subtle)",
+              borderRadius: "18px",
+              padding: "1.75rem",
               minHeight: "82vh",
+              boxShadow: "var(--shadow-panel)",
             }}
           >
             {!selectedParticipant ? (

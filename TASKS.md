@@ -121,6 +121,11 @@
 > Participant UI design is frozen pending final owner release approval. No further UI redesigns allowed.
 - [x] T56 — Tag experiment release v1.0
 
+## Post-v1.0 — Visual Identity Redesign
+
+- [x] Post-v1.0 — Unified vibrant visual identity redesign (Participant Experience + Researcher Dashboard)
+
+
 ---
 
 ## Definition of Done — لكل Coding Task
