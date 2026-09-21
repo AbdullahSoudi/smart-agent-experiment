@@ -143,3 +143,36 @@ export function getNextScenarioId(current: ScenarioId): ScenarioId | null {
 export function isLastScenario(id: ScenarioId): boolean {
   return id === 5;
 }
+
+/**
+ * Calculates overall horizontal journey progress percentage (20%, 40%, 60%, 80%, 100%).
+ * Strictly based on scenario sequence position (1..5), NEVER on scores or performance.
+ */
+export function getJourneyProgressPercent(
+  currentScenario: number | null | undefined,
+  isOverallCompleted: boolean = false
+): number {
+  if (isOverallCompleted) return 100;
+  const safeCurrent =
+    typeof currentScenario === "number" && currentScenario >= 1 && currentScenario <= 5
+      ? currentScenario
+      : 1;
+  return safeCurrent * 20;
+}
+
+/**
+ * Formats elapsed active session time into MM:SS or HH:MM:SS.
+ * UI-only helper; not written to DB.
+ */
+export function formatElapsedActiveTime(totalSeconds: number): string {
+  if (typeof totalSeconds !== "number" || isNaN(totalSeconds) || totalSeconds < 0) {
+    return "00:00";
+  }
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = Math.floor(totalSeconds % 60);
+  if (hours > 0) {
+    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  }
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}

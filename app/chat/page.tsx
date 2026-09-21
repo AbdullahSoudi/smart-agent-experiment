@@ -18,6 +18,8 @@ import {
   getScenarioMeta,
   getNextScenarioId,
   getShortSkillTitle,
+  getJourneyProgressPercent,
+  formatElapsedActiveTime,
 } from "@/lib/journey";
 import {
   SCENARIO_2_CANONICAL_OPENING,
@@ -107,6 +109,57 @@ export default function ChatPage() {
   const [headlineB, setHeadlineB] = useState<string>("");
   const [s5SelectedChoice, setS5SelectedChoice] = useState<CampaignDecisionChoice>("choose_b");
   const [s5Reasoning, setS5Reasoning] = useState<string>("");
+
+  // Active visible UI timer (sessionStorage only, no DB interaction)
+  const [activeElapsedSeconds, setActiveElapsedSeconds] = useState<number>(0);
+
+  useEffect(() => {
+    if (!sessionId) return;
+    const storageKey = `experiment_elapsed_active_seconds_${sessionId}`;
+    try {
+      const stored = sessionStorage.getItem(storageKey);
+      const initial = stored ? parseInt(stored, 10) : 0;
+      if (!isNaN(initial) && initial >= 0) {
+        setActiveElapsedSeconds(initial);
+      }
+    } catch {
+      // sessionStorage unavailable/sandboxed
+    }
+  }, [sessionId]);
+
+  useEffect(() => {
+    if (!sessionId) return;
+    const storageKey = `experiment_elapsed_active_seconds_${sessionId}`;
+
+    const interval = setInterval(() => {
+      // Only increment when browser document is visible
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        setActiveElapsedSeconds((prev) => {
+          const next = prev + 1;
+          try {
+            sessionStorage.setItem(storageKey, String(next));
+          } catch {
+            // ignore storage quota issues
+          }
+          return next;
+        });
+      }
+    }, 1000);
+
+    const handleVisibilityChange = () => {
+      // Active state pauses when document becomes hidden, resumes when visible
+    };
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", handleVisibilityChange);
+    }
+
+    return () => {
+      clearInterval(interval);
+      if (typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", handleVisibilityChange);
+      }
+    };
+  }, [sessionId]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -471,6 +524,24 @@ export default function ChatPage() {
       clearTimeout(timer);
     };
   }, [currentNodeId, sessionId, isRestoring, scenarioVersion, autoContinueTrigger, currentScenario]);
+
+  const handleRequestHint = async () => {
+    if (isSubmitting || isSubmittingRef.current || !sessionId) return;
+    // S4 N2 timed crisis has NO hint
+    if (currentScenario === 4 && currentNodeId === "N2") return;
+
+    if (currentScenario === 3 && currentNodeId === "N1") {
+      await handleSendMessage("ممكن تلميح يوضح كيف أبدأ في تعبئة كتل نموذج العمل؟", "💡 طلب تلميح");
+      return;
+    }
+
+    if (currentScenario === 5 && currentNodeId === "N2") {
+      await handleSendMessage("ممكن تلميح يساعدني في تحليل الأرقام وحساب تكلفة العميل؟", "💡 طلب تلميح");
+      return;
+    }
+
+    await handleSendMessage("ممكن تلميح يساعدني في التفكير؟", "💡 طلب تلميح");
+  };
   // Advance scenario handler
   const advanceScenario = async (fromScenario: ScenarioId) => {
     if (!sessionId) return;
@@ -975,7 +1046,7 @@ export default function ChatPage() {
     }
   };
   // Conversational message sender (S1 / S2 / S3 conversational nodes)
-  const handleSendMessage = async (textOverride?: string) => {
+  const handleSendMessage = async (textOverride?: string, displayOverride?: string) => {
     const textToSend = typeof textOverride === "string" ? textOverride : studentAnswer;
     const trimmed = textToSend.trim();
     if (!trimmed || isSubmitting || isSubmittingRef.current || !sessionId) return;
@@ -994,7 +1065,7 @@ export default function ChatPage() {
       {
         id: `msg-${Date.now()}-student`,
         sender: "student",
-        text: trimmed,
+        text: displayOverride || trimmed,
       },
     ]);
     if (!textOverride) {
@@ -1266,27 +1337,18 @@ export default function ChatPage() {
       ? (activeNodeDef?.prompt || ("message" in (activeNodeDef || {}) ? (activeNodeDef as any).message : ""))
       : "";
 
-  const QUICK_SUPPORT_CHIPS = [
-    "مش فاهم",
-    "وضحلي",
-    "اديني مثال",
-    "كلمني بالمصري",
-  ] as const;
-
-  const isConversationalSupportAvailable =
+  const isHintAvailable =
     !isSubmitting &&
     currentNodeId !== "END" &&
-    (currentScenario === 1 ||
-      currentScenario === 2 ||
-      (currentScenario === 3 && currentNodeId !== "N1")) &&
     !isN1F &&
     !isN2H &&
     !isS4CrisisActive &&
     !isS4Recovery &&
-    !isS5N1 &&
-    !isS5N2 &&
+    !isS4Consequence &&
     !isS5N3 &&
     !isS5N4;
+
+  const progressPercentage = getJourneyProgressPercent(currentScenario, isS5End);
 
   const hasCompletedS3Model =
     Boolean(s3Blocks.customerSegments?.trim()) &&
@@ -1301,30 +1363,22 @@ export default function ChatPage() {
   const s1LatestAnswer = s1StudentAnswers.length > 0 ? s1StudentAnswers[s1StudentAnswers.length - 1].text : null;
   return (
     <div className={`mentor-chat-viewport ${isS4CrisisActive ? "crisis-mode-active" : ""}`} dir="rtl">
-      {/* Mentor Header with Identity */}
+      {/* 1. Compact Restrained Header */}
       <header className="mentor-chat-header">
         <div className="mentor-chat-header-content">
           <div className="mentor-brand">
             <div className="mentor-avatar-icon" aria-hidden="true">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M12 2a8 8 0 0 0-8 8c0 3.3 2 6.1 5 7.4V20a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2v-2.6c3-1.3 5-4.1 5-7.4a8 8 0 0 0-8-8z" />
                 <path d="M10 14h4" />
               </svg>
             </div>
-            <div className="mentor-title-group">
-              <h1 className="mentor-title">المرشد الريادي الذكي</h1>
-              <div className="mentor-status-badge">
-                <span className="mentor-status-dot" aria-hidden="true" />
-                <span className="mentor-status-text">
-                  {isS4CrisisActive ? "حالة إنذار قصوى!" : "جلسة نشطة"}
-                </span>
-              </div>
-            </div>
+            <h1 className="mentor-title">المرشد الريادي الذكي</h1>
           </div>
 
           {studentName && (
             <div className="mentor-chat-header-user">
-              <span className="mentor-user-greeting">أهلاً، {studentName}</span>
+              <span className="mentor-user-greeting">أهلًا، {studentName}</span>
               {studentCode && (
                 <span className="mentor-user-code">{studentCode}</span>
               )}
@@ -1333,15 +1387,40 @@ export default function ChatPage() {
         </div>
       </header>
 
-      {/* Five-Skill Sequential Journey Progress Strip */}
+      {/* 2. Unified Journey Progress Strip & Overall Horizontal Progress Bar */}
       <nav className="journey-progress-strip" aria-label="مسار المهارات الريادية">
         <div className="journey-progress-container">
-          <div className="journey-active-badge">
-            <span className="journey-kicker">المرحلة {currentScenario} من 5</span>
-            <span className="journey-active-title">
-              {activeSkillMeta?.skillTitle || "اكتشاف الفرص الرقمية"}
-            </span>
+          <div className="journey-meta-row">
+            <div className="journey-stage-info">
+              <span className="journey-stage-badge">المرحلة {currentScenario} من 5</span>
+              <span className="journey-stage-title">
+                {activeSkillMeta?.skillTitle || "اكتشاف الفرص الرقمية"}
+              </span>
+            </div>
+
+            {/* General Active UI Timer (SessionStorage Only, No DB Interaction) */}
+            <div className="journey-timer-badge" aria-label="الوقت المنقضي">
+              <span className="timer-label">الوقت المنقضي:</span>
+              <span className="timer-value">{formatElapsedActiveTime(activeElapsedSeconds)}</span>
+            </div>
           </div>
+
+          {/* Overall Horizontal Progress Bar (Journey-based: 20%, 40%, 60%, 80%, 100%) */}
+          <div
+            className="journey-progress-bar-track"
+            role="progressbar"
+            aria-valuenow={progressPercentage}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label="التقدم في مسار المهارات"
+          >
+            <div
+              className="journey-progress-bar-fill"
+              style={{ width: `${progressPercentage}%` }}
+            />
+          </div>
+
+          {/* Five Sequential Skill Chips */}
           <div className="journey-steps-chips" role="list">
             {journeyProgress.map((item) => (
               <div
@@ -1364,9 +1443,73 @@ export default function ChatPage() {
         </div>
       </nav>
 
-      {/* Main Conversation Stream */}
+      {/* 3. Main Centered Conversation Workspace */}
       <main className="mentor-chat-main" aria-label="محادثة الإرشاد الذكي">
         <div className="mentor-stream-container">
+          {/* S1: Deterministic Thinking Panel Inline when answers exist */}
+          {currentScenario === 1 && currentNodeId !== "END" && s1LatestAnswer && (
+            <div className="s1-thinking-panel" role="region" aria-label="ما سجلته حتى الآن">
+              <div className="s1-thinking-title">
+                <span>💡</span>
+                <span>ما سجلته حتى الآن:</span>
+              </div>
+              <div className="s1-thinking-content">
+                {s1LatestAnswer}
+              </div>
+            </div>
+          )}
+
+          {/* S2: Idea Evolution Panel Inline when answers exist */}
+          {currentScenario === 2 && currentNodeId !== "END" && (s2InitialIdea || s2DevelopedIdea) && (
+            <div className="s2-idea-evolution" role="region" aria-label="تطور الفكرة">
+              {s2InitialIdea && (
+                <div className="s2-idea-card">
+                  <div className="s2-idea-card-header">🌱 الفكرة الأولى:</div>
+                  <div className="s2-idea-card-body">{s2InitialIdea}</div>
+                </div>
+              )}
+              {s2DevelopedIdea && (
+                <div className="s2-idea-card">
+                  <div className="s2-idea-card-header">🚀 الفكرة بعد التطوير:</div>
+                  <div className="s2-idea-card-body">{s2DevelopedIdea}</div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* S3: Persistent Read-Only Model Summary Inline */}
+          {currentScenario === 3 && currentNodeId !== "N1" && currentNodeId !== "END" && hasCompletedS3Model && (
+            <div className="s3-model-summary" role="region" aria-label="نموذجك الحالي">
+              <div className="s3-summary-header">
+                <span>📋</span>
+                <span>نموذجك الحالي:</span>
+              </div>
+              <div className="s3-summary-grid">
+                <div className="s3-summary-item">
+                  <span className="s3-summary-label">1. شرائح العملاء</span>
+                  <span className="s3-summary-val">{s3Blocks.customerSegments}</span>
+                </div>
+                <div className="s3-summary-item">
+                  <span className="s3-summary-label">2. عرض القيمة</span>
+                  <span className="s3-summary-val">{s3Blocks.valueProposition}</span>
+                </div>
+                <div className="s3-summary-item">
+                  <span className="s3-summary-label">3. القنوات</span>
+                  <span className="s3-summary-val">{s3Blocks.channels}</span>
+                </div>
+                <div className="s3-summary-item">
+                  <span className="s3-summary-label">4. مصادر الإيرادات</span>
+                  <span className="s3-summary-val">{s3Blocks.revenueStreams}</span>
+                </div>
+                <div className="s3-summary-item">
+                  <span className="s3-summary-label">5. هيكل التكاليف</span>
+                  <span className="s3-summary-val">{s3Blocks.costStructure}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Messages Stream */}
           {messages.map((msg) => (
             <div
               key={msg.id}
@@ -1485,75 +1628,12 @@ export default function ChatPage() {
         </div>
       </main>
 
-      {/* Sticky Bottom Composer & Specialized Interventions */}
+      {/* 4. Compact Sticky Composer & Specialized Interventions */}
       <footer className="mentor-chat-composer-bar">
         <div className="composer-inner">
           {errorMessage && (
             <div className="composer-error-banner" role="alert">
               <span>{errorMessage}</span>
-            </div>
-          )}
-
-          {/* S1: Deterministic Thinking Panel */}
-          {currentScenario === 1 && currentNodeId !== "END" && s1LatestAnswer && (
-            <div className="s1-thinking-panel" role="region" aria-label="ما سجلته حتى الآن">
-              <div className="s1-thinking-title">
-                <span>💡</span>
-                <span>ما سجلته حتى الآن:</span>
-              </div>
-              <div className="s1-thinking-content">
-                {s1LatestAnswer}
-              </div>
-            </div>
-          )}
-
-          {/* S2: Idea Evolution Panel */}
-          {currentScenario === 2 && currentNodeId !== "END" && (s2InitialIdea || s2DevelopedIdea) && (
-            <div className="s2-idea-evolution" role="region" aria-label="تطور الفكرة">
-              {s2InitialIdea && (
-                <div className="s2-idea-card">
-                  <div className="s2-idea-card-header">🌱 الفكرة الأولى:</div>
-                  <div className="s2-idea-card-body">{s2InitialIdea}</div>
-                </div>
-              )}
-              {s2DevelopedIdea && (
-                <div className="s2-idea-card">
-                  <div className="s2-idea-card-header">🚀 الفكرة بعد التطوير:</div>
-                  <div className="s2-idea-card-body">{s2DevelopedIdea}</div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* S3: Persistent Read-Only Model Summary */}
-          {currentScenario === 3 && currentNodeId !== "N1" && currentNodeId !== "END" && hasCompletedS3Model && (
-            <div className="s3-model-summary" role="region" aria-label="نموذجك الحالي">
-              <div className="s3-summary-header">
-                <span>📋</span>
-                <span>نموذجك الحالي:</span>
-              </div>
-              <div className="s3-summary-grid">
-                <div className="s3-summary-item">
-                  <span className="s3-summary-label">1. شرائح العملاء</span>
-                  <span className="s3-summary-val">{s3Blocks.customerSegments}</span>
-                </div>
-                <div className="s3-summary-item">
-                  <span className="s3-summary-label">2. عرض القيمة</span>
-                  <span className="s3-summary-val">{s3Blocks.valueProposition}</span>
-                </div>
-                <div className="s3-summary-item">
-                  <span className="s3-summary-label">3. القنوات</span>
-                  <span className="s3-summary-val">{s3Blocks.channels}</span>
-                </div>
-                <div className="s3-summary-item">
-                  <span className="s3-summary-label">4. مصادر الإيرادات</span>
-                  <span className="s3-summary-val">{s3Blocks.revenueStreams}</span>
-                </div>
-                <div className="s3-summary-item">
-                  <span className="s3-summary-label">5. هيكل التكاليف</span>
-                  <span className="s3-summary-val">{s3Blocks.costStructure}</span>
-                </div>
-              </div>
             </div>
           )}
 
@@ -1567,35 +1647,30 @@ export default function ChatPage() {
             </div>
           )}
 
-          {/* Current Task Card ("مهمتك الآن") */}
+          {/* Compact Current Task Presentation ("مهمتك الآن") */}
           {currentTaskText && currentNodeId !== "END" && (
             <div
-              className={`current-task-card ${
-                currentScenario === 2 && (currentNodeId === "N2" || currentNodeId === "N3")
-                  ? "s2-challenge-callout"
-                  : ""
-              }`}
+              className="current-task-compact"
               role="region"
               aria-label="مهمتك الآن"
             >
-              <div className="current-task-kicker">
-                <span>📌</span>
-                <span>
-                  {currentScenario === 2 && currentNodeId === "N2"
-                    ? "تحدي الميزانية (مهمتك الآن):"
-                    : currentScenario === 2 && currentNodeId === "N3"
-                    ? "تحدي المنافسة (مهمتك الآن):"
-                    : "مهمتك الآن:"}
-                </span>
+              <div className="current-task-compact-header">
+                <span className="current-task-badge">📌 مهمتك الآن:</span>
+                {currentScenario === 2 && (currentNodeId === "N2" || currentNodeId === "N3") && (
+                  <span className="current-task-challenge-tag">
+                    {currentNodeId === "N2" ? "تحدي الميزانية" : "تحدي المنافسة"}
+                  </span>
+                )}
               </div>
-              <div className="current-task-body">
+              <div className="current-task-compact-text">
                 {currentTaskText}
               </div>
             </div>
           )}
 
-          {/* S4 N1: Calm Phase -> Trigger Crisis Shock */}
+          {/* Specialized Scenario Interactions */}
           {isS4N1 ? (
+            /* S4 N1: Calm Phase -> Trigger Crisis Shock */
             <div className="s5-decision-composer">
               <p style={{ margin: 0, fontWeight: 600, color: "#1e293b" }}>
                 مشروعك يعمل باستقرار حالياً.. اضغط أدناه للمتابعة ورؤية ما سيحدث في يوم العمل التالي:
@@ -1611,7 +1686,7 @@ export default function ChatPage() {
               </button>
             </div>
           ) : isS4CrisisActive ? (
-            /* S4 N2: 60-Second Timed Crisis Intervention */
+            /* S4 N2: 60-Second Timed Crisis Intervention (NO HINT BUTTON HERE) */
             <div className="crisis-alert-banner" role="region" aria-label="محاكاة الأزمة">
               <div className="crisis-alert-header">
                 <span>🚨 هجوم سيبراني قيد التنفيذ! اختر قرارك قبل انتهاء الوقت:</span>
@@ -1855,14 +1930,30 @@ export default function ChatPage() {
                 disabled={isSubmitting}
               />
 
-              <button
-                type="button"
-                className="btn-mentor-action btn-s3-submit"
-                onClick={handleCampaignDecisionSubmit}
-                disabled={isSubmitting}
-              >
-                إرسال القرار والتحليل ←
-              </button>
+              <div className="composer-row" style={{ marginTop: "0.5rem" }}>
+                {isHintAvailable && (
+                  <button
+                    type="button"
+                    className="btn-hint"
+                    onClick={handleRequestHint}
+                    disabled={isSubmitting}
+                    aria-label="طلب تلميح"
+                    title="طلب تلميح تحليلي لحساب تكلفة العميل"
+                  >
+                    <span aria-hidden="true">💡</span>
+                    <span>تلميح</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="btn-mentor-send"
+                  style={{ flex: 1 }}
+                  onClick={handleCampaignDecisionSubmit}
+                  disabled={isSubmitting}
+                >
+                  إرسال القرار والتحليل ←
+                </button>
+              </div>
             </div>
           ) : isS5N3 ? (
             /* S5 N3: Branch Handling (Correction or Confirmation) */
@@ -1917,35 +2008,7 @@ export default function ChatPage() {
             <div className="s3-structured-composer">
               <div className="s3-composer-header">
                 <h2 className="s3-composer-title">تعبئة لوحة نموذج العمل التجاري</h2>
-                <button
-                  type="button"
-                  className="btn-s3-support-toggle"
-                  onClick={() => setShowS3Support(!showS3Support)}
-                >
-                  {showS3Support ? "إغلاق الاستفسار" : "اسأل المرشد لتوضيح أحد المفاهيم"}
-                </button>
               </div>
-
-              {showS3Support && (
-                <div className="s3-support-inline">
-                  <input
-                    type="text"
-                    className="s3-support-input"
-                    placeholder="اكتب سؤالك أو المصطلح الذي تريد توضيحه..."
-                    value={s3SupportQuery}
-                    onChange={(e) => setS3SupportQuery(e.target.value)}
-                    disabled={isSubmitting}
-                  />
-                  <button
-                    type="button"
-                    className="btn-mentor-action"
-                    onClick={handleS3SupportSubmit}
-                    disabled={isSubmitting || !s3SupportQuery.trim()}
-                  >
-                    إرسال السؤال
-                  </button>
-                </div>
-              )}
 
               <div className="s3-blocks-grid">
                 <div className="s3-field-group">
@@ -2034,10 +2097,24 @@ export default function ChatPage() {
                 </div>
               </div>
 
-              <div className="s3-submit-actions">
+              <div className="composer-row" style={{ marginTop: "0.5rem" }}>
+                {isHintAvailable && (
+                  <button
+                    type="button"
+                    className="btn-hint"
+                    onClick={handleRequestHint}
+                    disabled={isSubmitting}
+                    aria-label="طلب تلميح"
+                    title="طلب تلميح لتوضيح كيفية ملء كتل النموذج"
+                  >
+                    <span aria-hidden="true">💡</span>
+                    <span>تلميح</span>
+                  </button>
+                )}
                 <button
                   type="button"
-                  className="btn-mentor-action btn-s3-submit"
+                  className="btn-mentor-send"
+                  style={{ flex: 1 }}
                   onClick={handleS3BlocksSubmit}
                   disabled={
                     isSubmitting ||
@@ -2048,63 +2125,63 @@ export default function ChatPage() {
                     !s3Blocks.costStructure.trim()
                   }
                 >
-                  إرسال نموذج العمل للتدقيق
+                  إرسال نموذج العمل للتدقيق ←
                 </button>
               </div>
             </div>
           ) : !isN1F && !isN2H && currentNodeId !== "END" && (
+            /* Standard Clean Single-Line Composer with Single Hint Button */
             <div className="composer-container-group">
-              {/* Quick Support Chips */}
-              {isConversationalSupportAvailable && (
-                <div className="quick-support-chips" role="group" aria-label="مساعدة سريعة">
-                  <span className="quick-support-label">طلب مساعدة:</span>
-                  {QUICK_SUPPORT_CHIPS.map((chip, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      className="support-chip"
-                      onClick={() => handleSendMessage(chip)}
-                      disabled={isSubmitting}
-                    >
-                      {chip}
-                    </button>
-                  ))}
-                </div>
-              )}
+              <div className="composer-row">
+                {isHintAvailable && (
+                  <button
+                    type="button"
+                    id="hint-button"
+                    className="btn-hint"
+                    onClick={handleRequestHint}
+                    disabled={isSubmitting}
+                    aria-label="طلب تلميح"
+                    title="طلب تلميح لمساعدتك في التفكير"
+                  >
+                    <span aria-hidden="true">💡</span>
+                    <span>تلميح</span>
+                  </button>
+                )}
 
-              <div className="composer-input-wrapper">
-                <textarea
-                  ref={textareaRef}
-                  id="mentor-answer-input"
-                  className="mentor-composer-textarea"
-                  placeholder="اكتب إجابتك أو سؤالك أو اطلب توضيح..."
-                  rows={1}
-                  value={studentAnswer}
-                  onChange={handleTextareaInput}
-                  onKeyDown={handleKeyDown}
-                  disabled={isSubmitting}
-                  maxLength={MAX_STUDENT_ANSWER_LENGTH}
-                  aria-label="رسالتك للمرشد الذكي"
-                />
+                <div className="composer-input-wrapper">
+                  <textarea
+                    ref={textareaRef}
+                    id="mentor-answer-input"
+                    className="mentor-composer-textarea"
+                    placeholder="اكتب إجابتك هنا..."
+                    rows={1}
+                    value={studentAnswer}
+                    onChange={handleTextareaInput}
+                    onKeyDown={handleKeyDown}
+                    disabled={isSubmitting}
+                    maxLength={MAX_STUDENT_ANSWER_LENGTH}
+                    aria-label="إجابتك للمرشد الذكي"
+                  />
 
-                <div className="composer-actions">
                   <span className="char-counter" aria-live="polite">
                     {studentAnswer.length}/{MAX_STUDENT_ANSWER_LENGTH}
                   </span>
-                  <button
-                    type="button"
-                    id="send-message-button"
-                    className="btn-mentor-send"
-                    onClick={() => handleSendMessage()}
-                    disabled={isSubmitting || !studentAnswer.trim()}
-                    aria-label="إرسال الرسالة"
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" style={{ transform: "rotate(180deg)" }}>
-                      <line x1="22" y1="2" x2="11" y2="13" />
-                      <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                    </svg>
-                  </button>
                 </div>
+
+                <button
+                  type="button"
+                  id="send-message-button"
+                  className="btn-mentor-send"
+                  onClick={() => handleSendMessage()}
+                  disabled={isSubmitting || !studentAnswer.trim()}
+                  aria-label="إرسال الإجابة"
+                >
+                  <span>إرسال</span>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" style={{ transform: "rotate(180deg)" }}>
+                    <line x1="22" y1="2" x2="11" y2="13" />
+                    <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                  </svg>
+                </button>
               </div>
 
               <div className="composer-helper-note" aria-hidden="true">

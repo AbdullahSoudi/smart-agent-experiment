@@ -111,6 +111,7 @@
 - [x] T54.5 — Add researcher report and verify full journey
 - [x] T55 — Freeze App / Scenario / Prompt / Model versions
 - [x] T55.1 — Final Participant Experience Polish
+- [x] T55.2 — Participant layout and adaptive hint UX
 - [ ] T56 — Tag experiment release v1.0
 
 ---

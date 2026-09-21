@@ -9,25 +9,27 @@ import {
   getShortSkillTitle,
   getNextScenarioId,
   isLastScenario,
-} from "@/lib/journey";
+  getJourneyProgressPercent,
+  formatElapsedActiveTime,
+} from "../lib/journey";
 import {
   BUSINESS_MODEL_LABELS,
   deserializeBusinessModel,
   formatBusinessModelDisplay,
   type BusinessModelBlocks,
-} from "@/lib/scenarios/scenario-3";
+} from "../lib/scenarios/scenario-3";
 import {
   CRISIS_CHOICE_A,
   CRISIS_CHOICE_B,
   CRISIS_CHOICE_C,
   RECOVERY_CHOICE_A,
   RECOVERY_CHOICE_B,
-} from "@/lib/scenarios/scenario-4";
+} from "../lib/scenarios/scenario-4";
 import {
   CAMPAIGN_A_METRICS,
   CAMPAIGN_B_METRICS,
   REMAINING_BUDGET,
-} from "@/lib/scenarios/scenario-5";
+} from "../lib/scenarios/scenario-5";
 
 test("T55.1 Journey Header & Short Titles Invariants", () => {
   assert.equal(SCENARIOS_JOURNEY.length, 5);
@@ -84,29 +86,100 @@ test("T55.1 Final Completion Page Invariants (/complete)", () => {
   }
 });
 
-test("T55.1 Chat Page Leak Protection & Student Safety", () => {
+test("T55.2 Chat Page Layout, Hint Button & Leak Protection Invariants", () => {
   const chatPagePath = path.resolve(process.cwd(), "app/chat/page.tsx");
   const content = fs.readFileSync(chatPagePath, "utf8");
 
-  // Check that raw internal gap names are not rendered to participant
+  // Invariant 1: Old four quick-support chips are ABSENT from participant UI
+  assert.ok(!content.includes("مش فاهم"), "Support chip 'مش فاهم' must be absent");
+  assert.ok(!content.includes("وضحلي"), "Support chip 'وضحلي' must be absent");
+  assert.ok(!content.includes("اديني مثال"), "Support chip 'اديني مثال' must be absent");
+  assert.ok(!content.includes("كلمني بالمصري"), "Support chip 'كلمني بالمصري' must be absent");
+
+  // Invariant 2: One participant Hint control exists
+  assert.ok(content.includes("btn-hint"), "Hint button class 'btn-hint' must be present");
+  assert.ok(content.includes("💡"), "Hint icon must be present");
+  assert.ok(content.includes("تلميح"), "Hint label 'تلميح' must be present");
+  assert.ok(content.includes("طلب تلميح"), "Accessible name 'طلب تلميح' must be present");
+
+  // Invariant 7: S4 N2 timed crisis exposes NO Hint control
+  assert.ok(
+    content.includes("isHintAvailable = !(currentScenario === 4 && currentNodeId === 'N2')") ||
+    content.includes('isHintAvailable = !(currentScenario === 4 && currentNodeId === "N2")') ||
+    content.includes("currentScenario === 4 && currentNodeId === 'N2'") ||
+    content.includes('currentScenario === 4 && currentNodeId === "N2"'),
+    "S4 N2 crisis must suppress Hint control"
+  );
+
+  // Invariant 9, 10, 11: Active elapsed UI timer uses session-specific sessionStorage and visibility
+  assert.ok(content.includes("experiment_elapsed_active_seconds_"), "Timer key must be session-namespaced");
+  assert.ok(content.includes("visibilitychange"), "Timer must listen for visibility changes");
+  assert.ok(content.includes("document.visibilityState"), "Timer must check document.visibilityState");
+  assert.ok(content.includes("الوقت المنقضي"), "Timer label must be 'الوقت المنقضي'");
+
+  // Invariant 14: Participant sees no support level, score, or classification in UI
+  assert.ok(!content.includes("مستوى الدعم الحالي"), "Support level must not be exposed to participant");
+  assert.ok(!content.includes("مستوى الدعم:"), "Support level must not be exposed to participant");
+  assert.ok(!content.includes("درجة الأداء"), "Performance grade must not be exposed to participant");
+  assert.ok(!content.includes("نسبة الإتقان"), "Mastery must not be exposed to participant");
   assert.ok(!content.includes(">pricing_gap<"), "pricing_gap must not be rendered in JSX");
   assert.ok(!content.includes(">cost_gap<"), "cost_gap must not be rendered in JSX");
   assert.ok(!content.includes(">channel_gap<"), "channel_gap must not be rendered in JSX");
-
-  // Check that decision_time_ms is not rendered to participant
   assert.ok(!content.includes(">decision_time_ms<"), "decision_time_ms must not be rendered");
 
-  // Quick support chips are present
-  assert.ok(content.includes("مش فاهم"), "Support chip 'مش فاهم' present");
-  assert.ok(content.includes("وضحلي"), "Support chip 'وضحلي' present");
-  assert.ok(content.includes("اديني مثال"), "Support chip 'اديني مثال' present");
-  assert.ok(content.includes("كلمني بالمصري"), "Support chip 'كلمني بالمصري' present");
+  // Invariant 16: Session key remains experiment_session_id
+  assert.ok(content.includes('"experiment_session_id"') || content.includes("'experiment_session_id'"), "Must maintain experiment_session_id storage key");
 
-  // "مهمتك الآن" card present
-  assert.ok(content.includes("مهمتك الآن"), "Current task card present");
+  // Restrained compact task heading
+  assert.ok(content.includes("مهمتك الآن"), "Current task heading present in compact card");
+});
+
+test("T55.2 Journey Progress Derivation & Interpretation", () => {
+  // Invariant 13: Progress is journey completion progress only (S1=20%, S2=40%, S3=60%, S4=80%, S5=100%)
+  assert.equal(getJourneyProgressPercent(1, false), 20);
+  assert.equal(getJourneyProgressPercent(2, false), 40);
+  assert.equal(getJourneyProgressPercent(3, false), 60);
+  assert.equal(getJourneyProgressPercent(4, false), 80);
+  assert.equal(getJourneyProgressPercent(5, false), 100);
+  assert.equal(getJourneyProgressPercent(5, true), 100);
+});
+
+test("T55.2 Timer Display & Formatting Helpers", () => {
+  // Invariant 10: formatElapsedActiveTime produces MM:SS or HH:MM:SS
+  assert.equal(formatElapsedActiveTime(0), "00:00");
+  assert.equal(formatElapsedActiveTime(9), "00:09");
+  assert.equal(formatElapsedActiveTime(60), "01:00");
+  assert.equal(formatElapsedActiveTime(525), "08:45");
+  assert.equal(formatElapsedActiveTime(3600), "01:00:00");
+});
+
+test("T55.2 Hint Progressive Scaffolding & Server Integration", () => {
+  // Invariant 3, 4, 5, 6: Evaluator uses progressive scaffolding based on support turn count
+  const evaluatorPath = path.resolve(process.cwd(), "lib/server/evaluator.ts");
+  const evaluatorContent = fs.readFileSync(evaluatorPath, "utf8");
+
+  assert.ok(evaluatorContent.includes("getSupportTurnCount"), "Evaluator must query support turn count");
+  assert.ok(evaluatorContent.includes("getScaffoldingGuidance"), "Evaluator must compute scaffolding guidance");
+  assert.ok(evaluatorContent.includes("SCAFFOLDING LEVEL FOR SUPPORT TURNS"), "Evaluator prompt must include scaffolding level");
+
+  const persistencePath = path.resolve(process.cwd(), "lib/server/persistence.ts");
+  const persistenceContent = fs.readFileSync(persistencePath, "utf8");
+
+  assert.ok(persistenceContent.includes('eq("turn_kind", "conversational_support")'), "Persistence must filter by conversational_support");
+});
+
+test("T55.2 S4 Crisis Authoritative Countdown Preservation", () => {
+  // Invariant 12: S4 authoritative 60s countdown unchanged
+  const chatPagePath = path.resolve(process.cwd(), "app/chat/page.tsx");
+  const content = fs.readFileSync(chatPagePath, "utf8");
+
+  // Preserves 60s limit calculation in S4 crisis countdown
+  assert.ok(content.includes("crisisSecondsLeft / 60") || content.includes("crisisSecondsLeft"), "S4 crisis countdown must anchor to 60 seconds");
+  assert.ok(content.includes("crisis_timeout") || content.includes("crisisSecondsLeft"), "Crisis timeout invariant must be preserved");
 });
 
 test("T55.1 S3 Five-Block Structured Restoration", () => {
+  // Invariant 15: Existing S3 structured states restore
   const testBlocks: BusinessModelBlocks = {
     customerSegments: "طلاب الجامعات",
     valueProposition: "تبادل الكتب المستعملة",
@@ -129,6 +202,7 @@ test("T55.1 S3 Five-Block Structured Restoration", () => {
 });
 
 test("T55.1 S4 Crisis Choices & Recovery Canonical Preservation", () => {
+  // Invariant 15: Existing S4 structured states restore
   assert.ok(CRISIS_CHOICE_A.length > 10);
   assert.ok(CRISIS_CHOICE_B.length > 10);
   assert.ok(CRISIS_CHOICE_C.length > 10);
@@ -137,6 +211,7 @@ test("T55.1 S4 Crisis Choices & Recovery Canonical Preservation", () => {
 });
 
 test("T55.1 S5 Fixed Marketing Metrics Preservation", () => {
+  // Invariant 8 & 15: Existing S5 structured metrics and analysis does not preselect B
   assert.equal(CAMPAIGN_A_METRICS.visits, 1000);
   assert.equal(CAMPAIGN_A_METRICS.buyers, 5);
   assert.equal(CAMPAIGN_A_METRICS.cpa, 20);

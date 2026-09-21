@@ -659,7 +659,7 @@ button[aria-busy="true"] {
 }
 
 .mentor-chat-header-content {
-  max-width: 840px;
+  max-width: 960px;
   margin: 0 auto;
   display: flex;
   align-items: center;
@@ -676,7 +676,7 @@ button[aria-busy="true"] {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #0f766e 0%, #115e59 100%);
+  background-color: var(--accent-forest);
   color: #ffffff;
   display: flex;
   align-items: center;
@@ -727,7 +727,7 @@ button[aria-busy="true"] {
 }
 
 .mentor-stream-container {
-  max-width: 840px;
+  max-width: 960px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -781,10 +781,11 @@ button[aria-busy="true"] {
 }
 
 .chat-message-student .chat-bubble {
-  background: linear-gradient(135deg, #0f766e 0%, #0d5f58 100%);
-  color: #ffffff;
+  background-color: var(--surface-quiet);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
   border-bottom-left-radius: 4px;
-  box-shadow: 0 2px 6px rgba(15, 118, 110, 0.2);
+  box-shadow: var(--shadow-panel);
 }
 
 .bubble-text {
@@ -891,7 +892,7 @@ button[aria-busy="true"] {
 }
 
 .composer-inner {
-  max-width: 840px;
+  max-width: 960px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -2137,4 +2138,253 @@ button[aria-busy="true"] {
   .btn-transition-advance {
     width: 100%;
   }
+}
+
+
+/* ==========================================================================
+   T55.2 Central Layout & Adaptive Hint UX
+   ========================================================================== */
+
+/* Progress Meta & Bar */
+.journey-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.journey-stage-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.journey-stage-badge {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--accent-brass);
+  background-color: var(--surface-workspace);
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+}
+
+.journey-stage-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.journey-timer-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.825rem;
+  color: var(--text-secondary);
+  background-color: var(--surface-workspace);
+  padding: 0.25rem 0.65rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+}
+
+.journey-timer-badge .timer-label {
+  font-weight: 600;
+}
+
+.journey-timer-badge .timer-value {
+  font-family: monospace;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 0.05em;
+}
+
+.journey-progress-bar-track {
+  width: 100%;
+  height: 6px;
+  background-color: var(--border-subtle);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.journey-progress-bar-fill {
+  height: 100%;
+  background-color: var(--accent-forest);
+  border-radius: 9999px;
+  transition: width 0.3s ease;
+}
+
+/* Restrained Compact Task Presentation */
+.current-task-compact {
+  background-color: var(--surface-paper);
+  border: 1px solid var(--border-subtle);
+  border-inline-start: 3px solid var(--accent-brass);
+  border-radius: var(--radius-md);
+  padding: 0.6rem 0.85rem;
+  margin-bottom: 0.45rem;
+  box-shadow: var(--shadow-panel);
+  max-height: 110px;
+  overflow-y: auto;
+}
+
+.current-task-compact-header {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.2rem;
+}
+
+.current-task-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--accent-brass);
+}
+
+.current-task-challenge-tag {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #92400E;
+  background-color: #FEF3C7;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+}
+
+.current-task-compact-text {
+  font-size: 0.925rem;
+  line-height: 1.55;
+  color: var(--text-primary);
+  white-space: pre-line;
+}
+
+/* Single Line Composer with Single Hint Button */
+.composer-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.btn-hint {
+  height: 44px;
+  min-width: 92px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0 0.85rem;
+  background-color: var(--surface-paper);
+  color: var(--accent-brass);
+  border: 1.5px solid var(--border-brass);
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  font-size: 0.925rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  touch-action: manipulation;
+}
+
+.btn-hint:hover:not(:disabled) {
+  background-color: #FAF5EB;
+  border-color: #8C6F35;
+  color: #8C6F35;
+  transform: translateY(-1px);
+}
+
+.btn-hint:focus-visible {
+  outline: 2px solid var(--accent-brass);
+  outline-offset: 2px;
+}
+
+.btn-hint:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.composer-input-wrapper {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.mentor-composer-textarea {
+  width: 100%;
+  min-height: 44px;
+  max-height: 120px;
+  padding: 0.65rem 3.5rem 0.65rem 0.85rem;
+  font-family: inherit;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--text-primary);
+  background-color: #FFFFFF;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  resize: none;
+  direction: rtl;
+  text-align: right;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.mentor-composer-textarea:focus,
+.mentor-composer-textarea:focus-visible {
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(27, 77, 62, 0.2);
+}
+
+.char-counter {
+  position: absolute;
+  left: 0.75rem;
+  bottom: 0.65rem;
+  font-size: 0.725rem;
+  color: var(--text-muted);
+  user-select: none;
+}
+
+.btn-mentor-send {
+  height: 44px;
+  min-width: 88px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0 1rem;
+  background-color: var(--accent-forest);
+  color: #FFFFFF;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.08s ease;
+  flex-shrink: 0;
+  touch-action: manipulation;
+}
+
+.btn-mentor-send:hover:not(:disabled) {
+  background-color: var(--accent-forest-hover);
+}
+
+.btn-mentor-send:active:not(:disabled) {
+  background-color: var(--accent-forest-active);
+  transform: translateY(1px);
+}
+
+.btn-mentor-send:focus-visible {
+  outline: 2px solid var(--accent-forest);
+  outline-offset: 2px;
+}
+
+.btn-mentor-send:disabled {
+  background-color: #5E7A71;
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
 }
