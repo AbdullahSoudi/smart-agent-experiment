@@ -2332,7 +2332,7 @@ export default function ChatPage() {
                       : isHintAvailable
                       ? "التلميح متاح عند الحاجة"
                       : currentNodeId === "END"
-                      ? "اكتملت هذه المرحلة بنجاح"
+                      ? "اكتملت هذه المرحلة"
                       : "ركز على إتمام الخطوة الحالية"}
                   </span>
                 </div>

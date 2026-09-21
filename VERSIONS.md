@@ -16,6 +16,7 @@ Do not modify these values after the experiment begins.
 | Framework          | Next.js 16.x                       |
 | Runtime            | Node.js / TypeScript               |
 | Pre-freeze commit  | `5996253` (feat: add protected researcher reporting) |
+| Release tag        | v1.0                               |
 
 ---
 
@@ -62,7 +63,8 @@ Values written into the `sessions` table for experiment participants:
 | T07A    | 1.0             | 0.2            | Historical pilot baseline          |
 | T54     | 1.1             | 0.3            | Conversational evaluator upgrade   |
 | T54.2   | 2.0-dev         | 0.3            | Sequential 5-scenario foundation   |
-| **T55** | **2.0**         | **0.3**        | **Experiment release freeze**      |
+| T55     | 2.0             | 0.3            | Experiment release freeze          |
+| **T56** | **2.0**         | **0.3**        | **Final experiment release tag v1.0** |
 
 ---
 

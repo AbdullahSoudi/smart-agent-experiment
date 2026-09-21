@@ -119,7 +119,7 @@
 
 > **PARTICIPANT_UI_STATUS=FROZEN_PENDING_RELEASE**
 > Participant UI design is frozen pending final owner release approval. No further UI redesigns allowed.
-- [ ] T56 — Tag experiment release v1.0
+- [x] T56 — Tag experiment release v1.0
 
 ---
 

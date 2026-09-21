@@ -408,7 +408,7 @@ test("T55.5 Agent Compass (بوصلة المرحلة) Architecture & Research Sa
   assert.equal(getSafeCheckpointTitle(5, "N1"), "إعداد اختبار A/B");
   assert.equal(getSafeCheckpointTitle(5, "N2"), "قراءة النتائج");
   assert.equal(getSafeCheckpointTitle(5, "N3_A"), "تحليل النتائج");
-  assert.equal(getSafeCheckpointTitle(1, "END"), "اكتمال المرحلة بنجاح");
+  assert.equal(getSafeCheckpointTitle(1, "END"), "اكتملت المرحلة");
   // Checkpoint safe fallback for unmapped nodes (PART U)
   assert.equal(getSafeCheckpointTitle(1, "UNMAPPED_NODE" as any), "المهمة الحالية");
 });
@@ -477,4 +477,15 @@ test("T55.6 Checkpoint Fidelity Audit, Progress Label & Visual Invariants", () =
   // Check 8: Student message minimum body width
   assert.ok(css.includes("min-width: 120px"),
     "Student message bubble must have minimum body width");
+});
+
+test("T56 Neutral END Checkpoint Wording Invariant", () => {
+  // Verify across all scenarios S1..S5 that END checkpoint is purely completion-oriented without evaluative judgment
+  const scenarios: ScenarioId[] = [1, 2, 3, 4, 5];
+  for (const sId of scenarios) {
+    const endTitle = getSafeCheckpointTitle(sId, "END");
+    assert.equal(endTitle, "اكتملت المرحلة", `Scenario ${sId} END title must be neutral 'اكتملت المرحلة'`);
+    assert.ok(!endTitle.includes("بنجاح"), `Scenario ${sId} END title must not contain 'بنجاح'`);
+    assert.ok(!endTitle.includes("ناجح") && !endTitle.includes("فاشل"), "No pass/fail semantics in END label");
+  }
 });

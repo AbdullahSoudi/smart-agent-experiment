@@ -199,7 +199,7 @@ export function formatElapsedActiveTime(totalSeconds: number): string {
  */
 export function getSafeCheckpointTitle(scenarioId: ScenarioId, nodeId: string): string {
   if (nodeId === "END") {
-    return "اكتمال المرحلة بنجاح";
+    return "اكتملت المرحلة";
   }
 
   switch (scenarioId) {
