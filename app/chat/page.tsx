@@ -1464,7 +1464,7 @@ export default function ChatPage() {
 
               <div className="journey-rail-progress-section">
                 <div className="journey-rail-progress-header">
-                  <span className="journey-rail-progress-label">التقدم في الرحلة</span>
+                  <span className="journey-rail-progress-label">المراحل المكتملة</span>
                   <span className="journey-rail-progress-value">{progressPercentage}%</span>
                 </div>
                 <div
@@ -1473,7 +1473,7 @@ export default function ChatPage() {
                   aria-valuenow={progressPercentage}
                   aria-valuemin={0}
                   aria-valuemax={100}
-                  aria-label="التقدم في الرحلة"
+                  aria-label="المراحل المكتملة في الرحلة"
                 >
                   <div
                     className="journey-progress-bar-fill"
@@ -2310,13 +2310,13 @@ export default function ChatPage() {
                 <span className="agent-compass-label">إرشادات التفاعل</span>
                 {isS4CrisisActive ? (
                   <p className="agent-compass-guidance-text text-urgent">
-                    • اتخذ قرارك المسؤول قبل انتهاء العداد.
+                    • اتخذ قرارك قبل انتهاء العداد.
                   </p>
                 ) : (
                   <ul className="agent-compass-guidance-list">
-                    <li>فكّر بتمعن في معطيات الموقف</li>
-                    <li>استعن بالتلميح لاستيضاح الفكرة</li>
-                    <li>القرار النهائي وصياغة الحل بيدك</li>
+                    <li>فكّر أولًا</li>
+                    <li>استعن بالتلميح عند الحاجة</li>
+                    <li>القرار لك</li>
                   </ul>
                 )}
               </div>

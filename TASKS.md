@@ -115,6 +115,10 @@
 - [x] T55.3 — Final participant composition pass
 - [x] T55.4 — Final participant UI/UX hardening
 - [x] T55.5 — Persistent learning workspace and research-aligned Agent Compass
+- [x] T55.6 — Final visual refinement and checkpoint fidelity audit
+
+> **PARTICIPANT_UI_STATUS=FROZEN_PENDING_RELEASE**
+> Participant UI design is frozen pending final owner release approval. No further UI redesigns allowed.
 - [ ] T56 — Tag experiment release v1.0
 
 ---

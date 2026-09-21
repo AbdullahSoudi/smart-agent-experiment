@@ -12,6 +12,7 @@ import {
   getJourneyProgressPercent,
   formatElapsedActiveTime,
   getSafeCheckpointTitle,
+  type ScenarioId,
 } from "../lib/journey";
 import {
   BUSINESS_MODEL_LABELS,
@@ -396,13 +397,20 @@ test("T55.5 Agent Compass (بوصلة المرحلة) Architecture & Research Sa
   assert.ok(!chatPage.includes("مستوى الدعم:"), "Compass must not expose support levels");
   assert.ok(!chatPage.includes("نسبة النجاح"), "Compass must not expose success percentages");
 
-  // Checkpoint label derivation helper
-  assert.equal(getSafeCheckpointTitle(1, "N1"), "استكشاف الفرصة وتحديد الفكرة");
-  assert.equal(getSafeCheckpointTitle(2, "N2"), "تحدي الميزانية (التسويق بصفر تكلفة)");
-  assert.equal(getSafeCheckpointTitle(3, "N1"), "إعداد لوحة نموذج العمل");
-  assert.equal(getSafeCheckpointTitle(4, "N2"), "إدارة الأزمة السيبرانية (قرار زمني)");
-  assert.equal(getSafeCheckpointTitle(5, "N1"), "إعداد عناوين اختبار A/B");
-  assert.equal(getSafeCheckpointTitle(1, "END"), "اكتمال المحطة الحالية بنجاح");
+  // Checkpoint label derivation helper (T55.6 Audited Research Fidelity)
+  assert.equal(getSafeCheckpointTitle(1, "N1"), "تحديد نقطة البداية");
+  assert.equal(getSafeCheckpointTitle(1, "N1_H"), "تحديد نقطة البداية");
+  assert.equal(getSafeCheckpointTitle(2, "N2"), "تحدي التسويق");
+  assert.equal(getSafeCheckpointTitle(3, "N1"), "بناء نموذج العمل");
+  assert.equal(getSafeCheckpointTitle(3, "N2_A"), "مراجعة ترابط النموذج");
+  assert.equal(getSafeCheckpointTitle(4, "N2"), "قرار الأزمة");
+  assert.equal(getSafeCheckpointTitle(4, "N3_B"), "تحليل تداعيات القرار");
+  assert.equal(getSafeCheckpointTitle(5, "N1"), "إعداد اختبار A/B");
+  assert.equal(getSafeCheckpointTitle(5, "N2"), "قراءة النتائج");
+  assert.equal(getSafeCheckpointTitle(5, "N3_A"), "تحليل النتائج");
+  assert.equal(getSafeCheckpointTitle(1, "END"), "اكتمال المرحلة بنجاح");
+  // Checkpoint safe fallback for unmapped nodes (PART U)
+  assert.equal(getSafeCheckpointTitle(1, "UNMAPPED_NODE" as any), "المهمة الحالية");
 });
 
 test("T55.5 Auto-Scroll Margin Top Contract (Sticky Header Clearance)", () => {
@@ -410,4 +418,63 @@ test("T55.5 Auto-Scroll Margin Top Contract (Sticky Header Clearance)", () => {
   const css = fs.readFileSync(cssPath, "utf8");
 
   assert.ok(css.includes("scroll-margin-top: calc(var(--participant-header-height) + 1.25rem)"), "Target elements must specify scroll-margin-top clearance for sticky header");
+});
+
+test("T55.6 Checkpoint Fidelity Audit, Progress Label & Visual Invariants", () => {
+  const chatPagePath = path.resolve(process.cwd(), "app/chat/page.tsx");
+  const chatPage = fs.readFileSync(chatPagePath, "utf8");
+  const cssPath = path.resolve(process.cwd(), "app/globals.css");
+  const css = fs.readFileSync(cssPath, "utf8");
+
+  // Check 1: Journey progress label communicates completed stages, not performance
+  assert.ok(chatPage.includes("المراحل المكتملة"), "Progress label must be 'المراحل المكتملة'");
+  assert.ok(!chatPage.includes("journey-rail-progress-label\">التقدم في الرحلة"), "Old progress label must be absent");
+
+  // Check 2: Compass interaction guidance contains the 3 exact approved principles
+  assert.ok(chatPage.includes("فكّر أولًا"), "Compass guidance principle 1");
+  assert.ok(chatPage.includes("استعن بالتلميح عند الحاجة"), "Compass guidance principle 2");
+  assert.ok(chatPage.includes("القرار لك"), "Compass guidance principle 3");
+
+  // Check 3: Checkpoint titles contain NO node IDs and NO classifications
+  const reachableNodes: Array<[ScenarioId, string]> = [
+    [1, "N1"], [1, "N1_H"], [1, "N1_F"], [1, "N2"], [1, "N2_H"], [1, "N3"], [1, "N3_H"], [1, "N4"], [1, "N4_REV"], [1, "N4_H"], [1, "N5"], [1, "N5_H"], [1, "END"],
+    [2, "N1"], [2, "N1_H"], [2, "N1_F"], [2, "N2"], [2, "N2_H"], [2, "N3"], [2, "N3_H"], [2, "N4"], [2, "N4_H"], [2, "N5"], [2, "N5_H"], [2, "END"],
+    [3, "N1"], [3, "N2_A"], [3, "N2_B"], [3, "N2_C"], [3, "N3"], [3, "N4"], [3, "END"],
+    [4, "N1"], [4, "N2"], [4, "N3_A"], [4, "N3_B"], [4, "N3_C"], [4, "N4"], [4, "END"],
+    [5, "N1"], [5, "N2"], [5, "N3_A"], [5, "N3_B"], [5, "N3_C"], [5, "N4"], [5, "END"],
+  ];
+
+  for (const [sId, nId] of reachableNodes) {
+    const title = getSafeCheckpointTitle(sId, nId);
+    assert.ok(title.length > 0, `Title for S${sId}-${nId} must not be empty`);
+    assert.ok(!title.includes("N1") && !title.includes("N2") && !title.includes("N3") && !title.includes("N4") && !title.includes("N5"),
+      `Title ${title} must not contain node IDs`);
+    assert.ok(!title.includes("advanced") && !title.includes("medium") && !title.includes("weak"),
+      `Title ${title} must not contain classification strings`);
+    assert.ok(!title.includes("ضعيف") && !title.includes("متقدم") && !title.includes("متوسط"),
+      `Title ${title} must not contain Arabic classification strings`);
+  }
+
+  // Check 4: S4 timed checkpoint contains no coaching tips or answers
+  const s4Title = getSafeCheckpointTitle(4, "N2");
+  assert.equal(s4Title, "قرار الأزمة");
+  assert.ok(!s4Title.includes("تجنب") && !s4Title.includes("أفضل") && !s4Title.includes("خيار"), "S4 title must contain no coaching");
+
+  // Check 5: S5 analysis checkpoint contains no campaign winner hint
+  const s5Title = getSafeCheckpointTitle(5, "N3_A");
+  assert.equal(s5Title, "تحليل النتائج");
+  assert.ok(!s5Title.includes("B") && !s5Title.includes("CPA") && !s5Title.includes("أفضل"), "S5 title must not bias campaign");
+
+  // Check 6: Rails vertical baseline alignment
+  assert.ok(css.includes(".journey-rail"), "CSS must define .journey-rail");
+  assert.ok(css.includes(".agent-compass-rail"), "CSS must define .agent-compass-rail");
+  assert.ok(css.includes("top: calc(var(--participant-header-height) + 1rem)"), "Rails must share identical sticky top offset");
+
+  // Check 7: Assistant message max-width readable Arabic boundary
+  assert.ok(css.includes("max-width: min(85%, 820px)"),
+    "Assistant message max-width must be constrained to comfortable Arabic line length");
+
+  // Check 8: Student message minimum body width
+  assert.ok(css.includes("min-width: 120px"),
+    "Student message bubble must have minimum body width");
 });

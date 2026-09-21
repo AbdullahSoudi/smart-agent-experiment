@@ -199,58 +199,92 @@ export function formatElapsedActiveTime(totalSeconds: number): string {
  */
 export function getSafeCheckpointTitle(scenarioId: ScenarioId, nodeId: string): string {
   if (nodeId === "END") {
-    return "اكتمال المحطة الحالية بنجاح";
+    return "اكتمال المرحلة بنجاح";
   }
 
   switch (scenarioId) {
     case 1:
-      if (nodeId === "N1") return "استكشاف الفرصة وتحديد الفكرة";
-      if (nodeId === "N1_H") return "طلب التلميح والتوجيه";
-      if (nodeId === "N1_F") return "خيارات المتابعة والحلول";
-      if (nodeId === "N2") return "تحديد المشكلة والتحقق";
-      if (nodeId === "N2_H") return "توجيه التحقق من المشكلة";
-      if (nodeId === "N3") return "صياغة القيمة والحل المقترح";
-      if (nodeId === "N3_H") return "إعادة التفكير في صياغة الحل";
-      if (nodeId === "N4") return "التحقق الميداني مع العملاء";
-      if (nodeId === "N4_H") return "توجيه التحقق الميداني";
-      if (nodeId === "N4_REV") return "مراجعة نموذج التحقق";
-      if (nodeId === "N5") return "النموذج الأولي والجدوى";
-      if (nodeId === "N5_H") return "توجيه النموذج الأولي";
-      return "استكشاف الفرص الرقمية";
+      if (nodeId === "N1" || nodeId === "N1_H" || nodeId === "N1_F") {
+        return "تحديد نقطة البداية";
+      }
+      if (nodeId === "N2" || nodeId === "N2_H") {
+        return "فهم العملاء والمشكلة";
+      }
+      if (nodeId === "N3" || nodeId === "N3_H") {
+        return "اكتشاف الفجوة الرقمية";
+      }
+      if (nodeId === "N4" || nodeId === "N4_H" || nodeId === "N4_REV") {
+        return "صياغة الفرصة الرقمية";
+      }
+      if (nodeId === "N5" || nodeId === "N5_H") {
+        return "تبرير اختيار الفرصة";
+      }
+      return "المهمة الحالية";
 
     case 2:
-      if (nodeId === "N1") return "اقتراح الفكرة الأولية";
-      if (nodeId === "N2") return "تحدي الميزانية (التسويق بصفر تكلفة)";
-      if (nodeId === "N3") return "تحدي المنافسة والتمايز";
-      if (nodeId === "N4") return "إعادة بناء وتطوير الفكرة";
-      if (nodeId === "N4_H") return "توجيه تطوير الفكرة";
-      if (nodeId === "N5") return "اختبار قابلية التوسع والنمو";
-      if (nodeId === "N5_H") return "توجيه قابلية التوسع";
-      return "توليد الأفكار الابتكارية";
+      if (nodeId === "N1" || nodeId === "N1_H" || nodeId === "N1_F") {
+        return "توليد الفكرة الأولية";
+      }
+      if (nodeId === "N2" || nodeId === "N2_H") {
+        return "تحدي التسويق";
+      }
+      if (nodeId === "N3" || nodeId === "N3_H") {
+        return "تحدي المنافسة";
+      }
+      if (nodeId === "N4" || nodeId === "N4_H") {
+        return "إعادة بناء الفكرة";
+      }
+      if (nodeId === "N5" || nodeId === "N5_H") {
+        return "اختبار قابلية التطوير";
+      }
+      return "المهمة الحالية";
 
     case 3:
-      if (nodeId === "N1") return "إعداد لوحة نموذج العمل";
-      if (nodeId.includes("A") || nodeId.includes("PRICE")) return "مراجعة تسعير القيمة والعملاء";
-      if (nodeId.includes("B") || nodeId.includes("COST")) return "مراجعة هيكل التكاليف والقيمة";
-      if (nodeId.includes("C") || nodeId.includes("CHANNEL")) return "مراجعة القنوات والشرائح";
-      if (nodeId === "N4") return "اعتماد نموذج العمل التجاري";
-      return "تخطيط نموذج العمل التجاري";
+      if (nodeId === "N1") {
+        return "بناء نموذج العمل";
+      }
+      if (nodeId.startsWith("N2")) {
+        return "مراجعة ترابط النموذج";
+      }
+      if (nodeId === "N3") {
+        return "إعادة ضبط النموذج";
+      }
+      if (nodeId === "N4") {
+        return "اعتماد نموذج العمل";
+      }
+      return "المهمة الحالية";
 
     case 4:
-      if (nodeId === "N1") return "مرحلة الاستقرار والتشغيل";
-      if (nodeId === "N2") return "إدارة الأزمة السيبرانية (قرار زمني)";
-      if (nodeId.startsWith("N3")) return "تقييم تداعيات القرار المتخذ";
-      if (nodeId === "N4") return "استراتيجية التعافي وإدارة السمعة";
-      return "إدارة الأزمات والمخاطر";
+      if (nodeId === "N1") {
+        return "مرحلة الاستقرار والتشغيل";
+      }
+      if (nodeId === "N2") {
+        return "قرار الأزمة";
+      }
+      if (nodeId.startsWith("N3")) {
+        return "تحليل تداعيات القرار";
+      }
+      if (nodeId === "N4") {
+        return "التعافي وإدارة السمعة";
+      }
+      return "المهمة الحالية";
 
     case 5:
-      if (nodeId === "N1") return "إعداد عناوين اختبار A/B";
-      if (nodeId === "N2") return "تحليل نتائج اختبار الحملات";
-      if (nodeId.startsWith("N3")) return "توجيه القرار التسويقي";
-      if (nodeId === "N4") return "تخصيص الميزانية المتبقية";
-      return "التحليل التسويقي المبني على البيانات";
+      if (nodeId === "N1") {
+        return "إعداد اختبار A/B";
+      }
+      if (nodeId === "N2") {
+        return "قراءة النتائج";
+      }
+      if (nodeId.startsWith("N3")) {
+        return "تحليل النتائج";
+      }
+      if (nodeId === "N4") {
+        return "قرار الميزانية";
+      }
+      return "المهمة الحالية";
 
     default:
-      return "المحطة الحالية";
+      return "المهمة الحالية";
   }
 }
