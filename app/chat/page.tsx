@@ -20,6 +20,8 @@ import {
   getShortSkillTitle,
   getJourneyProgressPercent,
   formatElapsedActiveTime,
+  getSafeCheckpointTitle,
+  SCENARIOS_JOURNEY,
 } from "@/lib/journey";
 import {
   SCENARIO_2_CANONICAL_OPENING,
@@ -1375,15 +1377,13 @@ export default function ChatPage() {
     Boolean(s3Blocks.revenueStreams?.trim()) &&
     Boolean(s3Blocks.costStructure?.trim());
 
-  const s1StudentAnswers = messages.filter(
-    (m) => m.sender === "student" && currentScenario === 1
-  );
-  const s1LatestAnswer = s1StudentAnswers.length > 0 ? s1StudentAnswers[s1StudentAnswers.length - 1].text : null;
+  const safeCheckpointTitle = getSafeCheckpointTitle(currentScenario, currentNodeId);
   return (
     <div className={`mentor-chat-viewport ${isS4CrisisActive ? "crisis-mode-active" : ""}`} dir="rtl">
-      {/* 1. Compact Restrained Header */}
+      {/* 1. Persistent Restrained Header (3 Calm Zones) */}
       <header className="mentor-chat-header">
         <div className="mentor-chat-header-content">
+          {/* RTL Right: Brand Identity */}
           <div className="mentor-brand">
             <div className="mentor-avatar-icon" aria-hidden="true">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1394,6 +1394,28 @@ export default function ChatPage() {
             <h1 className="mentor-title">المرشد الريادي الذكي</h1>
           </div>
 
+          {/* RTL Center: Subtle Journey Orientation Anchor */}
+          <div className="mentor-header-center" role="region" aria-label="موقعك في مسار الرحلة">
+            <span className="mentor-header-journey-title">رحلة ريادة الأعمال الرقمية</span>
+            <div className="mentor-header-stepper-dots" aria-label={`المرحلة ${currentScenario} من 5`}>
+              {[1, 2, 3, 4, 5].map((stageNum) => {
+                const isCurrent = stageNum === currentScenario && !isS5End;
+                const isCompleted = stageNum < currentScenario || (stageNum === 5 && isS5End);
+                const stageMeta = SCENARIOS_JOURNEY[stageNum - 1];
+                return (
+                  <span
+                    key={stageNum}
+                    className={`mentor-header-dot ${isCurrent ? "dot-active" : isCompleted ? "dot-completed" : "dot-upcoming"}`}
+                    title={`المرحلة ${stageNum}: ${stageMeta?.skillTitle || ""}`}
+                  >
+                    {isCompleted ? "✓" : isCurrent ? "●" : "○"}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* RTL Left: Participant Identity */}
           {studentName && (
             <div className="mentor-chat-header-user">
               <span className="mentor-user-greeting">أهلًا، {studentName}</span>
@@ -1503,20 +1525,28 @@ export default function ChatPage() {
 
           {/* Main Workspace Column (72–76%) */}
           <div className="mentor-workspace-main">
-            <main className="mentor-chat-main" aria-label="محادثة الإرشاد الذكي">
-        <div className="mentor-stream-container">
-          {/* S1: Deterministic Thinking Panel Inline when answers exist */}
-          {currentScenario === 1 && currentNodeId !== "END" && s1LatestAnswer && (
-            <div className="s1-thinking-panel" role="region" aria-label="ما سجلته حتى الآن">
-              <div className="s1-thinking-title">
-                <span>💡</span>
-                <span>ما سجلته حتى الآن:</span>
+            {/* Compact Context Strip (Visible on Screens <1360px) */}
+            <div className="compass-compact-strip" role="region" aria-label="بوصلة المرحلة">
+              <div className="compass-compact-title-group">
+                <span className="compass-compact-badge">🧭 بوصلة المرحلة:</span>
+                <span>{activeSkillMeta?.skillTitle} · {safeCheckpointTitle}</span>
               </div>
-              <div className="s1-thinking-content">
-                {s1LatestAnswer}
+              <div className="compass-compact-status-group">
+                <span>
+                  {isS4CrisisActive
+                    ? "⏱️ التلميح غير متاح أثناء هذا القرار"
+                    : isHintAvailable
+                    ? "💡 التلميح متاح عند الحاجة"
+                    : "ℹ️ خطوة تتطلب اتخاذ قرار"}
+                </span>
+                <span>•</span>
+                <span>✓ يُحفظ تقدمك تلقائيًا</span>
               </div>
             </div>
-          )}
+
+            <main className="mentor-chat-main" aria-label="محادثة الإرشاد الذكي">
+        <div className="mentor-stream-container">
+
 
           {/* S2: Idea Evolution Panel Inline when answers exist */}
           {currentScenario === 2 && currentNodeId !== "END" && (s2InitialIdea || s2DevelopedIdea) && (
@@ -2252,6 +2282,68 @@ export default function ChatPage() {
         </div>
       </footer>
           </div>
+
+          {/* Left Column: Agent Compass (Visible on Screens >=1360px) */}
+          <aside className="agent-compass-rail" aria-label="بوصلة المرحلة التعليمية">
+            <div className="agent-compass-card">
+              <div className="agent-compass-header">
+                <div className="agent-compass-icon" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+                  </svg>
+                </div>
+                <h2 className="agent-compass-title">بوصلة المرحلة</h2>
+              </div>
+
+              <div className="agent-compass-section">
+                <span className="agent-compass-label">المهارة المستهدفة</span>
+                <p className="agent-compass-value">{activeSkillMeta?.skillTitle}</p>
+              </div>
+
+              <div className="agent-compass-section">
+                <span className="agent-compass-label">المحطة الحالية</span>
+                <p className="agent-compass-value agent-compass-checkpoint">{safeCheckpointTitle}</p>
+              </div>
+
+              <div className="agent-compass-section">
+                <span className="agent-compass-label">إرشادات التفاعل</span>
+                {isS4CrisisActive ? (
+                  <p className="agent-compass-guidance-text text-urgent">
+                    • اتخذ قرارك المسؤول قبل انتهاء العداد.
+                  </p>
+                ) : (
+                  <ul className="agent-compass-guidance-list">
+                    <li>فكّر بتمعن في معطيات الموقف</li>
+                    <li>استعن بالتلميح لاستيضاح الفكرة</li>
+                    <li>القرار النهائي وصياغة الحل بيدك</li>
+                  </ul>
+                )}
+              </div>
+
+              <div className="agent-compass-status-footer">
+                <div className="agent-compass-status-item">
+                  <span aria-hidden="true">
+                    {isS4CrisisActive ? "⏱️" : isHintAvailable ? "💡" : "ℹ️"}
+                  </span>
+                  <span>
+                    {isS4CrisisActive
+                      ? "التلميح غير متاح أثناء هذا القرار"
+                      : isHintAvailable
+                      ? "التلميح متاح عند الحاجة"
+                      : currentNodeId === "END"
+                      ? "اكتملت هذه المرحلة بنجاح"
+                      : "ركز على إتمام الخطوة الحالية"}
+                  </span>
+                </div>
+
+                <div className="agent-compass-save-reassurance">
+                  <span className="agent-compass-save-icon" aria-hidden="true">✓</span>
+                  <span>يُحفظ تقدمك أثناء الرحلة</span>
+                </div>
+              </div>
+            </div>
+          </aside>
         </div>
       </div>
     </div>

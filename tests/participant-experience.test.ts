@@ -11,6 +11,7 @@ import {
   isLastScenario,
   getJourneyProgressPercent,
   formatElapsedActiveTime,
+  getSafeCheckpointTitle,
 } from "../lib/journey";
 import {
   BUSINESS_MODEL_LABELS,
@@ -315,4 +316,98 @@ test("T55.4 Auto-Scroll Decoupled from Submit State & Timer Ticks", () => {
   assert.ok(!chatPage.includes("[messages, isSubmitting]"), "Auto-scroll must not run on isSubmitting toggle");
   assert.ok(chatPage.includes("prevMessagesCountRef"), "Auto-scroll must track previous message count");
   assert.ok(chatPage.includes('block: "nearest"'), "Scroll behavior should use block: 'nearest'");
+});
+
+test("T55.5 'ما سجلته حتى الآن' Is Completely Absent From Participant UI", () => {
+  const chatPagePath = path.resolve(process.cwd(), "app/chat/page.tsx");
+  const chatPage = fs.readFileSync(chatPagePath, "utf8");
+  const cssPath = path.resolve(process.cwd(), "app/globals.css");
+  const css = fs.readFileSync(cssPath, "utf8");
+
+  assert.ok(!chatPage.includes("ما سجلته حتى الآن"), "'ما سجلته حتى الآن' must be absent from participant UI");
+  assert.ok(!chatPage.includes("s1-thinking-panel"), "'s1-thinking-panel' must be absent from chat page");
+  assert.ok(!chatPage.includes("s1LatestAnswer"), "'s1LatestAnswer' helper must be absent from chat page");
+  assert.ok(!css.includes(".s1-thinking-panel {"), ".s1-thinking-panel class rule must be removed from globals.css");
+});
+
+test("T55.5 Persistent Header With Three Calm Zones & Sticky Contract", () => {
+  const cssPath = path.resolve(process.cwd(), "app/globals.css");
+  const css = fs.readFileSync(cssPath, "utf8");
+  const chatPagePath = path.resolve(process.cwd(), "app/chat/page.tsx");
+  const chatPage = fs.readFileSync(chatPagePath, "utf8");
+
+  // CSS Contract: sticky at top: 0 with z-index: 50
+  const headerMatch = css.match(/\.mentor-chat-header\s*\{([^}]+)\}/);
+  assert.ok(headerMatch, ".mentor-chat-header rule must exist");
+  const headerBlock = headerMatch[1];
+  assert.ok(headerBlock.includes("position: sticky"), "Header must be position: sticky");
+  assert.ok(headerBlock.includes("top: 0"), "Header must stick at top: 0");
+  assert.ok(headerBlock.includes("z-index: 50"), "Header must have z-index: 50");
+  assert.ok(headerBlock.includes("var(--participant-header-height)"), "Header height must reference --participant-header-height");
+
+  // JSX: Three calm zones
+  // 1. Right: Brand
+  assert.ok(chatPage.includes("mentor-brand"), "Header must render mentor-brand zone");
+  assert.ok(chatPage.includes("المرشد الريادي الذكي"), "Header must display title 'المرشد الريادي الذكي'");
+  // 2. Center: Journey orientation anchor
+  assert.ok(chatPage.includes("mentor-header-center"), "Header must render mentor-header-center zone");
+  assert.ok(chatPage.includes("رحلة ريادة الأعمال الرقمية"), "Header center must display 'رحلة ريادة الأعمال الرقمية'");
+  assert.ok(chatPage.includes("mentor-header-stepper-dots"), "Header center must display stepper dots");
+  // 3. Left: Participant identity
+  assert.ok(chatPage.includes("mentor-chat-header-user"), "Header must render participant identity zone");
+});
+
+test("T55.5 Persistent Right Journey Rail Sticky Contract", () => {
+  const cssPath = path.resolve(process.cwd(), "app/globals.css");
+  const css = fs.readFileSync(cssPath, "utf8");
+
+  // Journey rail rule
+  const railMatch = css.match(/\.journey-rail\s*\{([^}]+)\}/);
+  assert.ok(railMatch, ".journey-rail rule must exist");
+  const railBlock = railMatch[1];
+  assert.ok(railBlock.includes("position: sticky"), "Journey rail must be sticky");
+  assert.ok(railBlock.includes("calc(var(--participant-header-height) + 1rem)"), "Journey rail must stick below header");
+  assert.ok(railBlock.includes("align-self: start"), "Journey rail must have align-self: start");
+  assert.ok(railBlock.includes("height: fit-content"), "Journey rail must have height: fit-content");
+});
+
+test("T55.5 Agent Compass (بوصلة المرحلة) Architecture & Research Safety", () => {
+  const cssPath = path.resolve(process.cwd(), "app/globals.css");
+  const css = fs.readFileSync(cssPath, "utf8");
+  const chatPagePath = path.resolve(process.cwd(), "app/chat/page.tsx");
+  const chatPage = fs.readFileSync(chatPagePath, "utf8");
+
+  // Rail & card presence
+  assert.ok(css.includes(".agent-compass-rail"), "CSS must style .agent-compass-rail");
+  assert.ok(css.includes(".agent-compass-card"), "CSS must style .agent-compass-card");
+  assert.ok(css.includes(".compass-compact-strip"), "CSS must style .compass-compact-strip");
+  assert.ok(chatPage.includes("agent-compass-rail"), "Chat page must render agent-compass-rail");
+  assert.ok(chatPage.includes("بوصلة المرحلة"), "Chat page must display title 'بوصلة المرحلة'");
+
+  // Orientation sections
+  assert.ok(chatPage.includes("المهارة المستهدفة"), "Compass must show target skill label");
+  assert.ok(chatPage.includes("المحطة الحالية"), "Compass must show current checkpoint label");
+  assert.ok(chatPage.includes("إرشادات التفاعل"), "Compass must show interaction guidance");
+  assert.ok(chatPage.includes("يُحفظ تقدمك أثناء الرحلة"), "Compass must reassure with auto-save message");
+
+  // Research Safety: Compass must NOT expose internal IDs, classifications, or scores
+  assert.ok(!chatPage.includes(">N1<"), "Compass must not expose raw node IDs");
+  assert.ok(!chatPage.includes(">N2<"), "Compass must not expose raw node IDs");
+  assert.ok(!chatPage.includes("مستوى الدعم:"), "Compass must not expose support levels");
+  assert.ok(!chatPage.includes("نسبة النجاح"), "Compass must not expose success percentages");
+
+  // Checkpoint label derivation helper
+  assert.equal(getSafeCheckpointTitle(1, "N1"), "استكشاف الفرصة وتحديد الفكرة");
+  assert.equal(getSafeCheckpointTitle(2, "N2"), "تحدي الميزانية (التسويق بصفر تكلفة)");
+  assert.equal(getSafeCheckpointTitle(3, "N1"), "إعداد لوحة نموذج العمل");
+  assert.equal(getSafeCheckpointTitle(4, "N2"), "إدارة الأزمة السيبرانية (قرار زمني)");
+  assert.equal(getSafeCheckpointTitle(5, "N1"), "إعداد عناوين اختبار A/B");
+  assert.equal(getSafeCheckpointTitle(1, "END"), "اكتمال المحطة الحالية بنجاح");
+});
+
+test("T55.5 Auto-Scroll Margin Top Contract (Sticky Header Clearance)", () => {
+  const cssPath = path.resolve(process.cwd(), "app/globals.css");
+  const css = fs.readFileSync(cssPath, "utf8");
+
+  assert.ok(css.includes("scroll-margin-top: calc(var(--participant-header-height) + 1.25rem)"), "Target elements must specify scroll-margin-top clearance for sticky header");
 });

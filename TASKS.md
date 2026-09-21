@@ -114,6 +114,7 @@
 - [x] T55.2 — Participant layout and adaptive hint UX
 - [x] T55.3 — Final participant composition pass
 - [x] T55.4 — Final participant UI/UX hardening
+- [x] T55.5 — Persistent learning workspace and research-aligned Agent Compass
 - [ ] T56 — Tag experiment release v1.0
 
 ---
