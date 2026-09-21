@@ -83,9 +83,9 @@ export default function HomePage() {
 
   return (
     <main className="viewport-canvas">
-      <div className="workspace-frame" style={{ maxWidth: "1160px", padding: "2.5rem 1.5rem 4rem" }}>
+      <div className="workspace-frame" style={{ maxWidth: "1120px", padding: "2rem 1.5rem 3.5rem" }}>
         {/* Workspace Masthead */}
-        <header className="workspace-masthead" style={{ marginBottom: "2.5rem" }}>
+        <header className="workspace-masthead" style={{ marginBottom: "1.75rem" }}>
           <div className="masthead-meta">
             <span className="masthead-badge">المرشد الريادي الذكي</span>
             <span className="masthead-divider" aria-hidden="true">·</span>
@@ -113,10 +113,10 @@ export default function HomePage() {
                 <span>✨</span>
                 <span>مختبر ريادة الأعمال الرقمية</span>
               </div>
-              <h1 className="start-main-title" style={{ fontSize: "2.5rem", fontWeight: 800, color: "var(--text-primary)", marginBottom: "1rem", lineHeight: 1.25 }}>
+              <h1 className="start-main-title" style={{ fontSize: "2.15rem", fontWeight: 800, color: "var(--text-primary)", marginBottom: "0.85rem", lineHeight: 1.25 }}>
                 ابدأ رحلتك الريادية
               </h1>
-              <p className="start-lead" style={{ fontSize: "1.05rem", lineHeight: 1.85, color: "var(--text-secondary)", margin: 0 }}>
+              <p className="start-lead" style={{ fontSize: "0.975rem", lineHeight: 1.7, color: "var(--text-secondary)", margin: 0 }}>
                 أدخل اسمك وكود المشارك المخصص لك للمتابعة عبر سيناريوهات التجربة الخمسة المتتالية لتطوير مهارات ريادة الأعمال الرقمية.
               </p>
             </div>

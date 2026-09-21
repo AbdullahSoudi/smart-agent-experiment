@@ -305,8 +305,8 @@ export default function ResearcherReportPage() {
         {/* Style block for scoped hover/active transitions and responsive layouts */}
         <style dangerouslySetInnerHTML={{ __html: `
           .res-btn-primary {
-            height: 42px;
-            padding: 0 1.25rem;
+            height: 38px;
+            padding: 0 1rem;
             border-radius: 10px;
             border: none;
             background: var(--gradient-brand, linear-gradient(135deg, #5B5FEF 0%, #7C4DFF 100%));
@@ -325,8 +325,8 @@ export default function ResearcherReportPage() {
             border-color: var(--color-primary-hover, #4A4DE6);
           }
           .res-btn-secondary {
-            height: 42px;
-            padding: 0 1.25rem;
+            height: 38px;
+            padding: 0 1rem;
             border-radius: 10px;
             border: 1px solid var(--border-strong, #CDC6B8);
             background-color: var(--surface-paper, #FAF8F4);
@@ -344,8 +344,8 @@ export default function ResearcherReportPage() {
             border-color: var(--color-primary, #5B5FEF);
           }
           .res-btn-danger {
-            height: 42px;
-            padding: 0 1.1rem;
+            height: 38px;
+            padding: 0 0.9rem;
             border-radius: 10px;
             border: 1px solid rgba(185, 28, 28, 0.3);
             background-color: transparent;
@@ -363,12 +363,12 @@ export default function ResearcherReportPage() {
             border-color: #B91C1C;
           }
           .res-nav-tab {
-            padding: 0.55rem 0.95rem;
+            padding: 0.4rem 0.8rem;
             border-radius: 8px;
             border: none;
             background: transparent;
             color: var(--text-secondary, #3D4854);
-            font-size: 0.88rem;
+            font-size: 0.825rem;
             font-weight: 600;
             cursor: pointer;
             white-space: nowrap;
@@ -479,17 +479,17 @@ export default function ResearcherReportPage() {
               border: "1px solid var(--border-subtle)",
               borderRadius: "16px",
               boxShadow: "var(--shadow-panel)",
-              padding: "1.15rem 1.25rem",
+              padding: "0.9rem 1rem",
               display: "flex",
               flexDirection: "column",
               justifyContent: "space-between",
-              minHeight: "115px",
+              minHeight: "96px",
             }}
           >
             <div style={{ color: "var(--text-secondary, #3D4854)", fontSize: "0.85rem", fontWeight: 600 }}>
               إجمالي المشاركين
             </div>
-            <div style={{ fontSize: "2.2rem", fontWeight: 800, color: "var(--text-primary, #151D21)", lineHeight: 1.1, margin: "0.4rem 0" }}>
+            <div style={{ fontSize: "1.85rem", fontWeight: 800, color: "var(--text-primary, #151D21)", lineHeight: 1.1, margin: "0.4rem 0" }}>
               {totalCount}
             </div>
             <div style={{ fontSize: "0.78rem", color: "var(--text-muted, #546270)" }}>
@@ -504,17 +504,17 @@ export default function ResearcherReportPage() {
               border: "1px solid var(--border-subtle)",
               borderRadius: "16px",
               boxShadow: "var(--shadow-panel)",
-              padding: "1.15rem 1.25rem",
+              padding: "0.9rem 1rem",
               display: "flex",
               flexDirection: "column",
               justifyContent: "space-between",
-              minHeight: "115px",
+              minHeight: "96px",
             }}
           >
             <div style={{ color: "var(--text-secondary, #3D4854)", fontSize: "0.85rem", fontWeight: 600 }}>
               مكتملون
             </div>
-            <div style={{ fontSize: "2.2rem", fontWeight: 800, color: "#0D7A58", lineHeight: 1.1, margin: "0.4rem 0" }}>
+            <div style={{ fontSize: "1.85rem", fontWeight: 800, color: "#0D7A58", lineHeight: 1.1, margin: "0.4rem 0" }}>
               {completedCount}
             </div>
             <div style={{ fontSize: "0.78rem", color: "var(--text-muted, #546270)" }}>
@@ -529,17 +529,17 @@ export default function ResearcherReportPage() {
               border: "1px solid var(--border-subtle)",
               borderRadius: "16px",
               boxShadow: "var(--shadow-panel)",
-              padding: "1.15rem 1.25rem",
+              padding: "0.9rem 1rem",
               display: "flex",
               flexDirection: "column",
               justifyContent: "space-between",
-              minHeight: "115px",
+              minHeight: "96px",
             }}
           >
             <div style={{ color: "var(--text-secondary, #3D4854)", fontSize: "0.85rem", fontWeight: 600 }}>
               قيد التنفيذ
             </div>
-            <div style={{ fontSize: "2.2rem", fontWeight: 800, color: "#0369A1", lineHeight: 1.1, margin: "0.4rem 0" }}>
+            <div style={{ fontSize: "1.85rem", fontWeight: 800, color: "#0369A1", lineHeight: 1.1, margin: "0.4rem 0" }}>
               {activeCount}
             </div>
             <div style={{ fontSize: "0.78rem", color: "var(--text-muted, #546270)" }}>
@@ -554,17 +554,17 @@ export default function ResearcherReportPage() {
               border: "1px solid var(--border-subtle)",
               borderRadius: "16px",
               boxShadow: "var(--shadow-panel)",
-              padding: "1.15rem 1.25rem",
+              padding: "0.9rem 1rem",
               display: "flex",
               flexDirection: "column",
               justifyContent: "space-between",
-              minHeight: "115px",
+              minHeight: "96px",
             }}
           >
             <div style={{ color: "var(--text-secondary, #3D4854)", fontSize: "0.85rem", fontWeight: 600 }}>
               إجمالي التفاعلات
             </div>
-            <div style={{ fontSize: "2.2rem", fontWeight: 800, color: "var(--accent-brass, #A88746)", lineHeight: 1.1, margin: "0.4rem 0" }}>
+            <div style={{ fontSize: "1.85rem", fontWeight: 800, color: "var(--accent-brass, #A88746)", lineHeight: 1.1, margin: "0.4rem 0" }}>
               {totalInteractionsCount}
             </div>
             <div style={{ fontSize: "0.78rem", color: "var(--text-muted, #546270)" }}>
@@ -577,7 +577,7 @@ export default function ResearcherReportPage() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "360px 1fr",
+            gridTemplateColumns: "320px 1fr",
             gap: "1.5rem",
             alignItems: "start",
           }}

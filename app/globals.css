@@ -95,24 +95,24 @@
   --accent-brass: #F4B942;
 
   /* Contemporary Radii */
-  --radius-xs: 6px;
-  --radius-sm: 10px;                 /* Small controls / buttons */
-  --radius-md: 14px;                 /* Inputs / chips */
-  --radius-lg: 18px;                 /* Cards / panels */
-  --radius-xl: 24px;                 /* Hero / major surfaces */
+  --radius-xs: 5px;
+  --radius-sm: 8px;                 /* Small controls / buttons */
+  --radius-md: 12px;                 /* Inputs / chips */
+  --radius-lg: 15px;                 /* Cards / panels */
+  --radius-xl: 18px;                 /* Hero / major surfaces */
   --radius-pill: 9999px;
 
   /* Soft Layered Shadows */
-  --shadow-sm: 0 1px 3px rgba(24, 32, 51, 0.05), 0 1px 2px rgba(24, 32, 51, 0.03);
-  --shadow-panel: 0 4px 20px -2px rgba(24, 32, 51, 0.06), 0 2px 6px -1px rgba(24, 32, 51, 0.03);
-  --shadow-workspace: 0 16px 40px -8px rgba(24, 32, 51, 0.08), 0 4px 16px -2px rgba(24, 32, 51, 0.04);
-  --shadow-glow: 0 0 20px rgba(91, 95, 239, 0.22);
-  --shadow-glow-active: 0 8px 24px -4px rgba(91, 95, 239, 0.2), 0 2px 8px -2px rgba(91, 95, 239, 0.12);
+  --shadow-sm: 0 1px 2px rgba(24, 32, 51, 0.03), 0 1px 1px rgba(24, 32, 51, 0.02);
+  --shadow-panel: 0 2px 8px -1px rgba(24, 32, 51, 0.04), 0 1px 3px -1px rgba(24, 32, 51, 0.02);
+  --shadow-workspace: 0 6px 20px -4px rgba(24, 32, 51, 0.05), 0 2px 6px -1px rgba(24, 32, 51, 0.02);
+  --shadow-glow: 0 0 12px rgba(91, 95, 239, 0.16);
+  --shadow-glow-active: 0 4px 14px -3px rgba(91, 95, 239, 0.16), 0 1px 4px -1px rgba(91, 95, 239, 0.08);
 
   /* Typography: Alexandria Primary */
   --font-family-base: var(--font-alexandria), 'Alexandria', 'Tajawal', 'Noto Sans Arabic', system-ui, -apple-system, sans-serif;
-  --line-height-body: 1.8;
-  --line-height-prompt: 1.85;
+  --line-height-body: 1.62;
+  --line-height-prompt: 1.58;
 }
 
 *, *::before, *::after {
@@ -255,7 +255,7 @@ html, body {
   background-color: #FFFFFF;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-xl);
-  padding: 2.25rem 2rem;
+  padding: 1.75rem 1.6rem;
   box-shadow: var(--shadow-workspace);
   position: relative;
   overflow: hidden;
@@ -408,15 +408,15 @@ html, body {
   max-width: 1480px;
   width: 100%;
   margin: 0 auto;
-  padding: 1.25rem 1.5rem 2.5rem;
+  padding: 1rem 1.25rem 2rem;
   box-sizing: border-box;
 }
 
 .mentor-workspace-layout {
   display: grid;
-  grid-template-columns: 240px minmax(0, 1fr) 250px;
+  grid-template-columns: 224px minmax(0, 1fr) 232px;
   grid-template-areas: "compass main journey";
-  gap: 1.5rem;
+  gap: 1.25rem;
   align-items: start;
   width: 100%;
 }
@@ -429,7 +429,7 @@ html, body {
   height: fit-content;
   display: flex;
   flex-direction: column;
-  width: 240px;
+  width: 224px;
 }
 
 .mentor-workspace-main {
@@ -447,7 +447,7 @@ html, body {
   height: fit-content;
   display: flex;
   flex-direction: column;
-  width: 250px;
+  width: 232px;
 }
 
 /* ==========================================================================
@@ -499,7 +499,7 @@ html, body {
 }
 
 .mentor-title {
-  font-size: 1.05rem;
+  font-size: 1.15rem; /* ~18.4px */
   font-weight: 800;
   color: var(--text-primary);
   letter-spacing: -0.01em;
@@ -517,7 +517,7 @@ html, body {
 }
 
 .mentor-header-journey-title {
-  font-size: 0.85rem;
+  font-size: 0.825rem; /* ~13.2px */
   font-weight: 700;
   color: var(--text-secondary);
 }
@@ -561,11 +561,11 @@ html, body {
   background-color: #FFFFFF;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
-  padding: 1.1rem 1.15rem;
+  padding: 0.9rem 1rem;
   box-shadow: var(--shadow-panel);
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
+  gap: 0.65rem;
   position: relative;
   overflow: hidden;
   box-sizing: border-box;
@@ -585,16 +585,16 @@ html, body {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding-bottom: 0.75rem;
+  padding-bottom: 0.55rem;
   border-bottom: 1px solid var(--border-subtle);
 }
 
 .agent-compass-icon {
-  font-size: 1.1rem;
+  font-size: 1rem;
 }
 
 .agent-compass-title {
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 800;
   color: var(--text-primary);
 }
@@ -614,7 +614,7 @@ html, body {
 }
 
 .agent-compass-value {
-  font-size: 0.875rem;
+  font-size: 0.86rem; /* ~13.76px */
   font-weight: 700;
   color: var(--color-primary);
   line-height: 1.4;
@@ -625,7 +625,7 @@ html, body {
   font-weight: 700;
   color: var(--color-primary);
   background-color: var(--color-primary-subtle);
-  padding: 0.35rem 0.65rem;
+  padding: 0.25rem 0.55rem;
   border-radius: var(--radius-xs);
   border: 1px solid rgba(91, 95, 239, 0.2);
   line-height: 1.4;
@@ -641,9 +641,9 @@ html, body {
 }
 
 .agent-compass-guidance-text {
-  font-size: 0.825rem;
+  font-size: 0.785rem; /* ~12.56px */
   color: var(--text-secondary);
-  line-height: 1.5;
+  line-height: 1.4;
   display: flex;
   align-items: center;
   gap: 0.35rem;
@@ -656,15 +656,15 @@ html, body {
 }
 
 .agent-compass-status-footer {
-  padding-top: 0.75rem;
+  padding-top: 0.55rem;
   border-top: 1px solid var(--border-subtle);
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.4rem;
 }
 
 .agent-compass-status-item {
-  font-size: 0.8rem;
+  font-size: 0.775rem; /* ~12.4px */
   color: var(--text-muted);
   display: flex;
   align-items: center;
@@ -677,7 +677,7 @@ html, body {
   background-color: #ECFDF5;
   border: 1px solid #A7F3D0;
   border-radius: var(--radius-xs);
-  padding: 0.3rem 0.55rem;
+  padding: 0.25rem 0.5rem;
   display: flex;
   align-items: center;
   gap: 0.35rem;
@@ -733,11 +733,11 @@ html, body {
   background-color: #FFFFFF;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
-  padding: 1.15rem 1.15rem;
+  padding: 0.9rem 1rem;
   box-shadow: var(--shadow-panel);
   display: flex;
   flex-direction: column;
-  gap: 0.95rem;
+  gap: 0.7rem;
   box-sizing: border-box;
 }
 
@@ -745,7 +745,7 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
-  padding-bottom: 0.85rem;
+  padding-bottom: 0.6rem;
   border-bottom: 1px solid var(--border-subtle);
 }
 
@@ -756,13 +756,13 @@ html, body {
 }
 
 .journey-rail-progress-label {
-  font-size: 0.8rem;
+  font-size: 0.775rem; /* ~12.4px */
   font-weight: 700;
   color: var(--text-secondary);
 }
 
 .journey-rail-progress-value {
-  font-size: 0.85rem;
+  font-size: 0.825rem;
   font-weight: 800;
   color: var(--color-primary);
   direction: ltr;
@@ -795,27 +795,30 @@ html, body {
   display: flex;
   align-items: center;
   gap: 0.65rem;
-  padding: 0.38rem 0.6rem;
+  padding: 0.25rem 0.5rem;
+  min-height: 32px;
+  height: 33px;
+  box-sizing: border-box;
   border-radius: var(--radius-sm);
   transition: all 0.15s ease;
   position: relative;
 }
 
 .journey-step-icon {
-  width: 28px;
-  height: 28px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-weight: 700;
   flex-shrink: 0;
   transition: all 0.2s ease;
 }
 
 .journey-step-title {
-  font-size: 0.875rem;
+  font-size: 0.85rem; /* ~13.6px */
   font-weight: 600;
   line-height: 1.4;
   color: var(--text-secondary);
@@ -883,12 +886,12 @@ html, body {
 
 /* Journey Rail Timer */
 .journey-rail-timer-section {
-  padding-top: 0.75rem;
+  padding-top: 0.55rem;
   border-top: 1px solid var(--border-subtle);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 0.8rem;
+  font-size: 0.775rem; /* ~12.4px */
 }
 
 .journey-rail-timer-label {
@@ -927,8 +930,8 @@ html, body {
 .mentor-stream-container {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
-  margin-bottom: 1.5rem;
+  gap: 0.9rem;
+  margin-bottom: 1rem;
 }
 
 /* Assistant Message: Controlled Elevated White Surface (Defect 4 fix) */
@@ -943,9 +946,9 @@ html, body {
   background-color: #FFFFFF;
   border: 1px solid rgba(226, 232, 240, 0.95);
   border-radius: var(--radius-lg);
-  padding: 1.35rem 1.6rem;
-  box-shadow: 0 4px 16px -2px rgba(24, 32, 51, 0.05), 0 2px 6px -1px rgba(24, 32, 51, 0.03);
-  max-width: min(85%, 820px);
+  padding: 0.875rem 1rem;
+  box-shadow: 0 2px 8px -1px rgba(24, 32, 51, 0.03), 0 1px 3px -1px rgba(24, 32, 51, 0.02);
+  max-width: min(85%, 780px);
   position: relative;
   box-sizing: border-box;
 }
@@ -953,8 +956,8 @@ html, body {
 .chat-bubble.assistant .bubble-text,
 .chat-bubble-assistant .bubble-text,
 .chat-message-assistant .bubble-text {
-  font-size: 1.1rem; /* 17.6px desktop */
-  line-height: 1.75;
+  font-size: 1rem; /* 16px */
+  line-height: 1.62;
   color: var(--text-primary);
   white-space: pre-wrap;
   word-break: break-word;
@@ -998,9 +1001,10 @@ html, body {
   background-color: #EEF2FF;
   border: 1.5px solid #C7D2FE;
   border-radius: var(--radius-lg);
-  padding: 1rem 1.35rem;
-  min-width: 120px;
-  max-width: min(85%, 680px);
+  padding: 0.7rem 0.875rem;
+  min-width: 92px;
+  width: fit-content;
+  max-width: min(85%, 580px);
   box-shadow: var(--shadow-sm);
   box-sizing: border-box;
 }
@@ -1008,8 +1012,8 @@ html, body {
 .chat-bubble.student .bubble-text,
 .chat-bubble-student .bubble-text,
 .chat-message-student .bubble-text {
-  font-size: 1.05rem; /* ~16.8px */
-  line-height: 1.7;
+  font-size: 0.975rem; /* ~15.6px */
+  line-height: 1.58;
   color: #1E1B4B;
   font-weight: 500;
   white-space: pre-wrap;
@@ -1022,11 +1026,11 @@ html, body {
   background-color: #FFFFFF;
   border: 1.5px solid rgba(91, 95, 239, 0.25);
   border-radius: var(--radius-lg);
-  padding: 1.15rem 1.35rem;
+  padding: 0.9rem 1rem;
   box-shadow: var(--shadow-panel);
   position: relative;
   overflow: hidden;
-  margin-bottom: 0.85rem;
+  margin-bottom: 0.75rem;
 }
 
 .mentor-current-task-card {
@@ -1034,7 +1038,7 @@ html, body {
   background-color: #FFFFFF;
   border: 1.5px solid rgba(91, 95, 239, 0.3);
   border-radius: var(--radius-lg);
-  padding: 1.35rem 1.5rem;
+  padding: 0.9rem 1rem;
   box-shadow: var(--shadow-panel);
   position: relative;
   overflow: hidden;
@@ -1055,7 +1059,7 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.45rem;
 }
 
 .current-task-badge {
@@ -1071,8 +1075,8 @@ html, body {
 }
 
 .current-task-compact-text {
-  font-size: 1.025rem;
-  line-height: var(--line-height-prompt);
+  font-size: 0.975rem; /* ~15.6px */
+  line-height: 1.58;
   color: var(--text-primary);
   font-weight: 500;
 }
@@ -1104,9 +1108,9 @@ html, body {
   -webkit-backdrop-filter: none !important;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-xl);
-  padding: 1rem 1.25rem 0.85rem;
-  box-shadow: 0 -6px 25px rgba(24, 32, 51, 0.08);
-  margin-top: 1rem;
+  padding: 0.75rem 1rem 0.65rem;
+  box-shadow: 0 -3px 14px rgba(24, 32, 51, 0.04);
+  margin-top: 0.75rem;
 }
 
 .composer-container-group {
@@ -1132,13 +1136,13 @@ html, body {
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
-  padding: 0 1.15rem;
+  padding: 0 0.95rem;
   background-color: #FFFDF8;
   color: #B45309;
   border: 1.5px solid #FCD34D;
   border-radius: var(--radius-sm);
   font-family: inherit;
-  font-size: 0.95rem;
+  font-size: 0.925rem;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -1183,9 +1187,9 @@ html, body {
   height: 52px;
   min-height: 52px;
   max-height: 140px;
-  padding: 0.8rem 1rem;
+  padding: 0.75rem 0.9rem;
   font-family: inherit;
-  font-size: 0.975rem;
+  font-size: 0.95rem;
   line-height: 1.5;
   color: var(--text-primary);
   background-color: #FFFFFF;
@@ -1218,13 +1222,13 @@ html, body {
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
-  padding: 0 1.25rem;
+  padding: 0 1rem;
   background: var(--gradient-brand);
   color: #FFFFFF;
   border: none;
   border-radius: var(--radius-sm);
   font-family: inherit;
-  font-size: 0.95rem;
+  font-size: 0.925rem;
   font-weight: 700;
   cursor: pointer;
   box-shadow: 0 4px 14px rgba(91, 95, 239, 0.3);
@@ -1262,20 +1266,20 @@ html, body {
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  margin-top: 0.5rem;
-  padding: 0.45rem 0.35rem 0;
+  margin-top: 0.35rem;
+  padding: 0.35rem 0.25rem 0;
   border-top: 1px solid #F1F5F9;
-  font-size: 0.8rem;
+  font-size: 0.75rem; /* ~12px */
   color: var(--text-muted);
 }
 
 .composer-helper-note {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: #64748B;
 }
 
 .composer-char-counter {
-  font-size: 0.775rem;
+  font-size: 0.75rem;
   font-family: monospace;
   direction: ltr;
   font-variant-numeric: tabular-nums;
@@ -1599,9 +1603,9 @@ html, body {
 
 @media (max-width: 1365px) {
   .mentor-workspace-layout {
-    grid-template-columns: 250px minmax(0, 1fr);
+    grid-template-columns: 232px minmax(0, 1fr);
     grid-template-areas: "journey main";
-    gap: 1.25rem;
+    gap: 1.15rem;
   }
 
   .agent-compass-rail {
@@ -1615,8 +1619,8 @@ html, body {
 
 @media (max-width: 1024px) {
   .mentor-workspace-layout {
-    grid-template-columns: 230px minmax(0, 1fr);
-    gap: 1rem;
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: 0.9rem;
   }
 }
 
@@ -1700,6 +1704,34 @@ html, body {
 }
 
 @media (max-width: 480px) {
+  .mentor-chat-header-content {
+    padding: 0 0.75rem;
+    gap: 0.5rem;
+  }
+
+  .mentor-title {
+    font-size: 0.95rem;
+    white-space: nowrap;
+  }
+
+  .mentor-avatar-icon {
+    width: 30px;
+    height: 30px;
+    font-size: 0.95rem;
+  }
+
+  .mentor-user-greeting {
+    font-size: 0.75rem;
+  }
+
+  .mentor-user-code {
+    font-size: 0.7rem;
+    padding: 0.1rem 0.35rem;
+    max-width: 130px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   .mentor-workspace-container {
     padding: 0.5rem 0.5rem 1.25rem;
   }
