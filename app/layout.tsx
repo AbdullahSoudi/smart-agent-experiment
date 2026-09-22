@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import { Alexandria } from "next/font/google";
+import { Readex_Pro } from "next/font/google";
 import "./globals.css";
 
-const alexandria = Alexandria({
+const readexPro = Readex_Pro({
   subsets: ["arabic", "latin"],
-  weight: ["400", "500", "600", "700", "800"],
-  variable: "--font-alexandria",
+  weight: ["300", "400", "500", "600", "700"],
+  variable: "--font-readex",
   display: "swap",
 });
 
@@ -20,7 +20,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ar" dir="rtl" className={alexandria.variable}>
+    <html lang="ar" dir="rtl" className={readexPro.variable}>
       <body>{children}</body>
     </html>
   );

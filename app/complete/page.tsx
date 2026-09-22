@@ -35,9 +35,7 @@ export default function CompletePage() {
           <section className="completion-panel" aria-label="رسالة إتمام الرحلة" style={{
             backgroundColor: "#FFFFFF",
             border: "1px solid var(--border-subtle)",
-            borderRadius: "24px",
-            padding: "2.5rem 2.25rem",
-            boxShadow: "var(--shadow-workspace)",
+            borderRadius: "18px", padding: "2rem 2rem", boxShadow: "0 4px 20px -2px rgba(24, 32, 51, 0.05)",
             position: "relative",
             overflow: "hidden"
           }}>
@@ -78,8 +76,7 @@ export default function CompletePage() {
                       padding: "1.1rem 1.35rem",
                       backgroundColor: "#FFFFFF",
                       border: `1.5px solid ${theme.border}`,
-                      borderRadius: "16px",
-                      boxShadow: "0 2px 8px rgba(24, 32, 51, 0.03)",
+                      borderRadius: "12px", boxShadow: "none",
                       transition: "transform 0.15s ease",
                     }}
                   >
