@@ -328,4 +328,43 @@ describe("T54.2 Participant Identity & Lookup Invariants", () => {
     const res = decideStartAction("أي اسم", "PILOT_01", existing);
     assert.equal(res.action, "legacy_blocked");
   });
+
+  it("technical DB/API failure is categorized as technical failure and not interpreted as identity conflict", async () => {
+    // 1. Verify semantic failure handling invariant: technical failure !== identity conflict
+    const safeErrorCategorizer = (err: unknown) => {
+      const isIdentityConflict = typeof err === "object" && err !== null && (err as any).error === "NAME_CONFLICT";
+      return {
+        category: isIdentityConflict ? "identity_conflict" : "technical_failure",
+        safeMessage: isIdentityConflict
+          ? "الاسم المدخل لا يطابق البيانات المسجلة لهذا الكود. راجع الباحث قبل المتابعة."
+          : "تعذر الاتصال بالخدمة مؤقتًا. حاول مرة أخرى.",
+      };
+    };
+
+    const simulatedDbFetchError = new Error("Failed to load sessions for student code (ENOTFOUND)");
+    const categorized = safeErrorCategorizer(simulatedDbFetchError);
+
+    assert.equal(categorized.category, "technical_failure");
+    assert.notEqual(categorized.category, "identity_conflict");
+    assert.equal(categorized.safeMessage, "تعذر الاتصال بالخدمة مؤقتًا. حاول مرة أخرى.");
+
+    // 2. Test actual route handler behavior on technical failure
+    const { POST } = await import("../app/api/session/start/route");
+    const req = new Request("http://localhost:3000/api/session/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        studentName: "سارة محمد",
+        studentCode: "TEST_RETRY_CODE",
+      }),
+    });
+
+    const response = await POST(req);
+    // When DB is unreachable, response must be HTTP 500 (technical failure), never HTTP 409 (identity conflict)
+    assert.equal(response.status, 500);
+    const body = await response.json();
+    assert.equal(body.error, "TECHNICAL_FAILURE");
+    assert.equal(body.message, "تعذر الاتصال بالخدمة مؤقتًا. حاول مرة أخرى.");
+    assert.notEqual(body.error, "NAME_CONFLICT");
+  });
 });

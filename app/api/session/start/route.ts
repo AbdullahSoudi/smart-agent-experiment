@@ -164,9 +164,13 @@ export async function POST(request: Request) {
       },
       { status: 200 }
     );
-  } catch {
+  } catch (error) {
+    console.error("POST /api/session/start failure:", error);
     return NextResponse.json(
-      { error: "تعذر بدء الجلسة. حاول مرة أخرى." },
+      {
+        error: "TECHNICAL_FAILURE",
+        message: "تعذر الاتصال بالخدمة مؤقتًا. حاول مرة أخرى.",
+      },
       { status: 500 }
     );
   }

@@ -61,7 +61,7 @@ export default function HomePage() {
 
       if (!res.ok) {
         setErrorMessage(
-          data.message || data.error || "تعذر بدء الجلسة. حاول مرة أخرى."
+          data.message || data.error || "تعذر الاتصال بالخدمة مؤقتًا. حاول مرة أخرى."
         );
         setIsSubmitting(false);
         return;
@@ -72,11 +72,13 @@ export default function HomePage() {
         sessionStorage.setItem("experiment_session_id", data.sessionId);
         router.push("/chat");
       } else {
-        setErrorMessage("تعذر بدء الجلسة. حاول مرة أخرى.");
+        setErrorMessage(
+          data.message || data.error || "تعذر بدء الجلسة. حاول مرة أخرى."
+        );
         setIsSubmitting(false);
       }
     } catch {
-      setErrorMessage("تعذر بدء الجلسة. حاول مرة أخرى.");
+      setErrorMessage("تعذر الاتصال بالخدمة مؤقتًا. حاول مرة أخرى.");
       setIsSubmitting(false);
     }
   };
