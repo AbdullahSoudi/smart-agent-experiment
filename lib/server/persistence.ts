@@ -1,5 +1,6 @@
 /**
  * Server-only persistence layer for research experiment sessions and interactions.
+ * Powered by Neon PostgreSQL serverless driver.
  *
  * Source of Truth: PROJECT.md Section 6, SCENARIO_SPEC.md, PILOT_ISSUES.md, and research/scenarios/JOURNEY.md
  * Architecture Invariant:
@@ -10,7 +11,11 @@
 
 import { isSequentialJourneyVersion, type NodeId } from "../scenario";
 import type { Classification } from "../transitions";
-import { getSupabaseServerClient } from "./supabase";
+
+async function getDatabase() {
+  const { getDb } = await import("./db");
+  return getDb();
+}
 
 export type TurnKind =
   | "evaluated_answer"
@@ -79,152 +84,6 @@ export interface UpdateSessionStateInput {
   finishedAt?: string | null;
 }
 
-/**
- * Creates a new research session row in public.sessions.
- * Database generates id and started_at, leaving finished_at as null.
- */
-export async function createSession(
-  input: CreateSessionInput
-): Promise<SessionRecord> {
-  const supabase = getSupabaseServerClient();
-
-  const { data, error } = await supabase
-    .from("sessions")
-    .insert({
-      student_name: input.studentName ?? null,
-      student_code: input.studentCode,
-      status: input.status,
-      current_scenario: input.currentScenario ?? null,
-      current_node: input.currentNode,
-      scenario_version: input.scenarioVersion,
-      prompt_version: input.promptVersion,
-      provider: input.provider,
-      model_id: input.modelId,
-    })
-    .select()
-    .single();
-
-  if (error || !data) {
-    throw new Error("Failed to create session", { cause: error });
-  }
-
-  return data as SessionRecord;
-}
-
-/**
- * Persists an interaction turn in public.interactions.
- * Supports evaluated turns, conversational support, off-topic turns, and non-evaluated turns.
- * Supports nullable scenario_id for five-scenario journey tracking.
- */
-export async function recordInteraction(
-  input: RecordInteractionInput
-): Promise<InteractionRecord> {
-  const supabase = getSupabaseServerClient();
-
-  const { data, error } = await supabase
-    .from("interactions")
-    .insert({
-      session_id: input.sessionId,
-      scenario_id: input.scenarioId ?? null,
-      node_id: input.nodeId,
-      student_answer: input.studentAnswer ?? null,
-      classification: input.classification ?? null,
-      agent_feedback: input.agentFeedback ?? null,
-      next_node: input.nextNode ?? null,
-      decision_time_ms: input.decisionTimeMs ?? null,
-      turn_kind: input.turnKind ?? null,
-    })
-    .select()
-    .single();
-
-  if (error || !data) {
-    throw new Error("Failed to record interaction", { cause: error });
-  }
-
-  return data as InteractionRecord;
-}
-
-/**
- * Updates an existing session's current_node, current_scenario, status, and/or finished_at
- * in public.sessions based on already-decided application state.
- */
-export async function updateSessionState(
-  input: UpdateSessionStateInput
-): Promise<SessionRecord> {
-  const supabase = getSupabaseServerClient();
-
-  const updatePayload: Record<string, unknown> = {};
-
-  if (input.currentNode !== undefined) {
-    updatePayload.current_node = input.currentNode;
-  }
-  if (input.currentScenario !== undefined) {
-    updatePayload.current_scenario = input.currentScenario;
-  }
-  if (input.status !== undefined) {
-    updatePayload.status = input.status;
-  }
-  if (input.finishedAt !== undefined) {
-    updatePayload.finished_at = input.finishedAt;
-  }
-
-  const { data, error } = await supabase
-    .from("sessions")
-    .update(updatePayload)
-    .eq("id", input.sessionId)
-    .select()
-    .single();
-
-  if (error || !data) {
-    throw new Error("Failed to update session state", { cause: error });
-  }
-
-  return data as SessionRecord;
-}
-
-/**
- * Loads an existing session record by its primary ID.
- * Returns null if the session does not exist.
- */
-export async function getSessionById(
-  sessionId: string
-): Promise<SessionRecord | null> {
-  const supabase = getSupabaseServerClient();
-
-  const { data, error } = await supabase
-    .from("sessions")
-    .select("*")
-    .eq("id", sessionId)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error("Failed to load session", { cause: error });
-  }
-
-  return data as SessionRecord | null;
-}
-
-/**
- * Retrieves all sessions for a given student_code, ordered by started_at descending.
- */
-export async function getSessionsByStudentCode(
-  studentCode: string
-): Promise<SessionRecord[]> {
-  const supabase = getSupabaseServerClient();
-
-  const { data, error } = await supabase
-    .from("sessions")
-    .select("*")
-    .eq("student_code", studentCode)
-    .order("started_at", { ascending: false });
-
-  if (error) {
-    throw new Error("Failed to load sessions for student code", { cause: error });
-  }
-
-  return (data || []) as SessionRecord[];
-}
-
 export interface RestorationInteraction {
   scenario_id?: number | null;
   node_id: NodeId;
@@ -235,6 +94,223 @@ export interface RestorationInteraction {
   created_at: string;
 }
 
+function normalizeSessionRow(row: any): SessionRecord {
+  return {
+    id: row.id,
+    student_name: row.student_name ?? null,
+    student_code: row.student_code,
+    status: row.status,
+    current_scenario: row.current_scenario ?? null,
+    current_node: row.current_node as NodeId,
+    scenario_version: row.scenario_version,
+    prompt_version: row.prompt_version,
+    provider: row.provider,
+    model_id: row.model_id,
+    started_at:
+      row.started_at instanceof Date
+        ? row.started_at.toISOString()
+        : String(row.started_at),
+    finished_at:
+      row.finished_at instanceof Date
+        ? row.finished_at.toISOString()
+        : row.finished_at
+        ? String(row.finished_at)
+        : null,
+  };
+}
+
+function normalizeInteractionRow(row: any): InteractionRecord {
+  return {
+    id: row.id,
+    session_id: row.session_id,
+    scenario_id: row.scenario_id ?? null,
+    node_id: row.node_id as NodeId,
+    student_answer: row.student_answer ?? null,
+    classification: (row.classification as Classification) ?? null,
+    agent_feedback: row.agent_feedback ?? null,
+    next_node: (row.next_node as NodeId) ?? null,
+    decision_time_ms: row.decision_time_ms ?? null,
+    turn_kind: (row.turn_kind as TurnKind) ?? null,
+    created_at:
+      row.created_at instanceof Date
+        ? row.created_at.toISOString()
+        : String(row.created_at),
+  };
+}
+
+/**
+ * Creates a new research session row in sessions.
+ * Database generates id and started_at, leaving finished_at as null.
+ */
+export async function createSession(
+  input: CreateSessionInput
+): Promise<SessionRecord> {
+  const sql = await getDatabase();
+
+  const rows = (await sql`
+    INSERT INTO sessions (
+      student_name,
+      student_code,
+      status,
+      current_scenario,
+      current_node,
+      scenario_version,
+      prompt_version,
+      provider,
+      model_id
+    ) VALUES (
+      ${input.studentName ?? null},
+      ${input.studentCode},
+      ${input.status},
+      ${input.currentScenario ?? null},
+      ${input.currentNode},
+      ${input.scenarioVersion},
+      ${input.promptVersion},
+      ${input.provider},
+      ${input.modelId}
+    )
+    RETURNING *;
+  `) as unknown[];
+
+  if (!rows || rows.length === 0) {
+    throw new Error("Failed to create session");
+  }
+
+  return normalizeSessionRow(rows[0]);
+}
+
+/**
+ * Persists an interaction turn in interactions.
+ * Supports evaluated turns, conversational support, off-topic turns, and non-evaluated turns.
+ * Supports nullable scenario_id for five-scenario journey tracking.
+ */
+export async function recordInteraction(
+  input: RecordInteractionInput
+): Promise<InteractionRecord> {
+  const sql = await getDatabase();
+
+  const rows = (await sql`
+    INSERT INTO interactions (
+      session_id,
+      scenario_id,
+      node_id,
+      student_answer,
+      classification,
+      agent_feedback,
+      next_node,
+      decision_time_ms,
+      turn_kind
+    ) VALUES (
+      ${input.sessionId},
+      ${input.scenarioId ?? null},
+      ${input.nodeId},
+      ${input.studentAnswer ?? null},
+      ${input.classification ?? null},
+      ${input.agentFeedback ?? null},
+      ${input.nextNode ?? null},
+      ${input.decisionTimeMs ?? null},
+      ${input.turnKind ?? null}
+    )
+    RETURNING *;
+  `) as unknown[];
+
+  if (!rows || rows.length === 0) {
+    throw new Error("Failed to record interaction");
+  }
+
+  return normalizeInteractionRow(rows[0]);
+}
+
+/**
+ * Updates an existing session's current_node, current_scenario, status, and/or finished_at
+ * in sessions based on already-decided application state.
+ */
+export async function updateSessionState(
+  input: UpdateSessionStateInput
+): Promise<SessionRecord> {
+  const sql = await getDatabase();
+
+  const setClauses: string[] = [];
+  const params: unknown[] = [];
+  let paramIdx = 1;
+
+  if (input.currentNode !== undefined) {
+    setClauses.push(`current_node = $${paramIdx++}`);
+    params.push(input.currentNode);
+  }
+  if (input.currentScenario !== undefined) {
+    setClauses.push(`current_scenario = $${paramIdx++}`);
+    params.push(input.currentScenario);
+  }
+  if (input.status !== undefined) {
+    setClauses.push(`status = $${paramIdx++}`);
+    params.push(input.status);
+  }
+  if (input.finishedAt !== undefined) {
+    setClauses.push(`finished_at = $${paramIdx++}`);
+    params.push(input.finishedAt);
+  }
+
+  if (setClauses.length === 0) {
+    const existing = await getSessionById(input.sessionId);
+    if (!existing) {
+      throw new Error("Failed to update session state: session not found");
+    }
+    return existing;
+  }
+
+  params.push(input.sessionId);
+  const query = `UPDATE sessions SET ${setClauses.join(", ")} WHERE id = $${paramIdx} RETURNING *;`;
+  const rows = (await sql.query(query, params)) as unknown[];
+
+  if (!rows || rows.length === 0) {
+    throw new Error("Failed to update session state");
+  }
+
+  return normalizeSessionRow(rows[0]);
+}
+
+/**
+ * Loads an existing session record by its primary ID.
+ * Returns null if the session does not exist.
+ */
+export async function getSessionById(
+  sessionId: string
+): Promise<SessionRecord | null> {
+  const sql = await getDatabase();
+
+  const rows = (await sql`
+    SELECT *
+    FROM sessions
+    WHERE id = ${sessionId}
+    LIMIT 1;
+  `) as unknown[];
+
+  if (!rows || rows.length === 0) {
+    return null;
+  }
+
+  return normalizeSessionRow(rows[0]);
+}
+
+/**
+ * Retrieves all sessions for a given student_code, ordered by started_at descending.
+ */
+export async function getSessionsByStudentCode(
+  studentCode: string
+): Promise<SessionRecord[]> {
+  const sql = await getDatabase();
+
+  const rows = (await sql`
+    SELECT *
+    FROM sessions
+    WHERE student_code = ${studentCode}
+    ORDER BY started_at DESC;
+  `) as unknown[];
+
+  return (rows || []).map(normalizeSessionRow);
+}
+
 /**
  * Retrieves past interactions for a session in deterministic chronological order.
  * Selects only the fields necessary for client-side transcript reconstruction.
@@ -242,20 +318,27 @@ export interface RestorationInteraction {
 export async function getInteractionsForSession(
   sessionId: string
 ): Promise<RestorationInteraction[]> {
-  const supabase = getSupabaseServerClient();
+  const sql = await getDatabase();
 
-  const { data, error } = await supabase
-    .from("interactions")
-    .select("node_id, student_answer, agent_feedback, next_node, turn_kind, created_at, scenario_id")
-    .eq("session_id", sessionId)
-    .order("created_at", { ascending: true })
-    .order("id", { ascending: true });
+  const rows = (await sql`
+    SELECT node_id, student_answer, agent_feedback, next_node, turn_kind, created_at, scenario_id
+    FROM interactions
+    WHERE session_id = ${sessionId}
+    ORDER BY created_at ASC, id ASC;
+  `) as any[];
 
-  if (error) {
-    throw new Error("Failed to load interactions for session", { cause: error });
-  }
-
-  return (data || []) as RestorationInteraction[];
+  return (rows || []).map((row) => ({
+    scenario_id: row.scenario_id ?? null,
+    node_id: row.node_id as NodeId,
+    student_answer: row.student_answer ?? null,
+    agent_feedback: row.agent_feedback ?? null,
+    next_node: (row.next_node as NodeId) ?? null,
+    turn_kind: (row.turn_kind as TurnKind) ?? null,
+    created_at:
+      row.created_at instanceof Date
+        ? row.created_at.toISOString()
+        : String(row.created_at),
+  }));
 }
 
 /**
@@ -266,18 +349,26 @@ export async function getSupportTurnCount(
   sessionId: string,
   nodeId: NodeId
 ): Promise<number> {
-  const supabase = getSupabaseServerClient();
-  const { count, error } = await supabase
-    .from("interactions")
-    .select("*", { count: "exact", head: true })
-    .eq("session_id", sessionId)
-    .eq("node_id", nodeId)
-    .eq("turn_kind", "conversational_support");
+  // eq("turn_kind", "conversational_support")
+  const sql = await getDatabase();
 
-  if (error) {
+  try {
+    const rows = (await sql`
+      SELECT COUNT(*)::text AS count
+      FROM interactions
+      WHERE session_id = ${sessionId}
+        AND node_id = ${nodeId}
+        AND turn_kind = 'conversational_support';
+    `) as Array<{ count?: string }>;
+
+    if (!rows || rows.length === 0 || !rows[0].count) {
+      return 0;
+    }
+
+    return parseInt(rows[0].count, 10) || 0;
+  } catch {
     return 0;
   }
-  return count ?? 0;
 }
 
 /**
@@ -287,19 +378,27 @@ export async function getRecentInteractionsForSession(
   sessionId: string,
   limit: number = 6
 ): Promise<Array<{ student_answer: string | null; agent_feedback: string | null; turn_kind: TurnKind | null }>> {
-  const supabase = getSupabaseServerClient();
-  const { data, error } = await supabase
-    .from("interactions")
-    .select("student_answer, agent_feedback, turn_kind")
-    .eq("session_id", sessionId)
-    .order("created_at", { ascending: false })
-    .limit(limit);
+  const sql = await getDatabase();
 
-  if (error || !data) {
+  try {
+    const rows = (await sql`
+      SELECT student_answer, agent_feedback, turn_kind
+      FROM interactions
+      WHERE session_id = ${sessionId}
+      ORDER BY created_at DESC
+      LIMIT ${limit};
+    `) as Array<{ student_answer: string | null; agent_feedback: string | null; turn_kind: TurnKind | null }>;
+
+    if (!rows || rows.length === 0) {
+      return [];
+    }
+
+    return [...rows].reverse();
+  } catch {
     return [];
   }
-  return (data as Array<{ student_answer: string | null; agent_feedback: string | null; turn_kind: TurnKind | null }>).reverse();
 }
+
 /**
  * Atomically advances the session currentNode if and only if the session is currently
  * at `fromNode` and in `scenarioId`. Returns true if this transition won the race,
@@ -311,16 +410,18 @@ export async function advanceCrisisDecisionConditional(
   toNode: string,
   scenarioId: number
 ): Promise<boolean> {
-  const supabase = getSupabaseServerClient();
-  const { data, error } = await supabase
-    .from("sessions")
-    .update({ current_node: toNode })
-    .eq("id", sessionId)
-    .eq("current_node", fromNode)
-    .eq("current_scenario", scenarioId)
-    .select("id");
+  const sql = await getDatabase();
 
-  return !error && Array.isArray(data) && data.length > 0;
+  const rows = (await sql`
+    UPDATE sessions
+    SET current_node = ${toNode}
+    WHERE id = ${sessionId}
+      AND current_node = ${fromNode}
+      AND current_scenario = ${scenarioId}
+    RETURNING id;
+  `) as Array<{ id: string }>;
+
+  return Array.isArray(rows) && rows.length > 0;
 }
 
 /**
@@ -329,20 +430,21 @@ export async function advanceCrisisDecisionConditional(
 export async function getCrisisStartInteraction(
   sessionId: string
 ): Promise<InteractionRecord | null> {
-  const supabase = getSupabaseServerClient();
-  const { data, error } = await supabase
-    .from("interactions")
-    .select("*")
-    .eq("session_id", sessionId)
-    .eq("scenario_id", 4)
-    .eq("node_id", "N2")
-    .eq("student_answer", "CRISIS_START")
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+  const sql = await getDatabase();
 
-  if (error || !data) return null;
-  return data as InteractionRecord;
+  const rows = (await sql`
+    SELECT *
+    FROM interactions
+    WHERE session_id = ${sessionId}
+      AND scenario_id = 4
+      AND node_id = 'N2'
+      AND student_answer = 'CRISIS_START'
+    ORDER BY created_at ASC
+    LIMIT 1;
+  `) as unknown[];
+
+  if (!rows || rows.length === 0) return null;
+  return normalizeInteractionRow(rows[0]);
 }
 
 /**
@@ -374,21 +476,23 @@ export async function ensureCrisisStartInteraction(
 export async function getCrisisDecisionInteraction(
   sessionId: string
 ): Promise<InteractionRecord | null> {
-  const supabase = getSupabaseServerClient();
-  const { data, error } = await supabase
-    .from("interactions")
-    .select("*")
-    .eq("session_id", sessionId)
-    .eq("scenario_id", 4)
-    .eq("node_id", "N2")
-    .neq("student_answer", "CRISIS_START")
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+  const sql = await getDatabase();
 
-  if (error || !data) return null;
-  return data as InteractionRecord;
+  const rows = (await sql`
+    SELECT *
+    FROM interactions
+    WHERE session_id = ${sessionId}
+      AND scenario_id = 4
+      AND node_id = 'N2'
+      AND (student_answer IS NULL OR student_answer != 'CRISIS_START')
+    ORDER BY created_at ASC
+    LIMIT 1;
+  `) as unknown[];
+
+  if (!rows || rows.length === 0) return null;
+  return normalizeInteractionRow(rows[0]);
 }
+
 /**
  * Predicate to determine if a session qualifies as a sequential research participant.
  * Must have structural participant identity (student_name, current_scenario)
@@ -407,16 +511,18 @@ export function isSequentialParticipantSession(
  * Excludes legacy 1.x pilot sessions without student identity.
  */
 export async function getSequentialSessions(): Promise<SessionRecord[]> {
-  const supabase = getSupabaseServerClient();
-  const { data, error } = await supabase
-    .from("sessions")
-    .select("*")
-    .not("student_name", "is", null)
-    .not("current_scenario", "is", null)
-    .order("started_at", { ascending: false });
+  const sql = await getDatabase();
 
-  if (error || !data) return [];
-  return (data as SessionRecord[]).filter(isSequentialParticipantSession);
+  const rows = (await sql`
+    SELECT *
+    FROM sessions
+    WHERE student_name IS NOT NULL
+      AND current_scenario IS NOT NULL
+    ORDER BY started_at DESC;
+  `) as unknown[];
+
+  if (!rows || rows.length === 0) return [];
+  return rows.map(normalizeSessionRow).filter(isSequentialParticipantSession);
 }
 
 /**
@@ -426,13 +532,38 @@ export async function getInteractionsForMultipleSessions(
   sessionIds: string[]
 ): Promise<InteractionRecord[]> {
   if (sessionIds.length === 0) return [];
-  const supabase = getSupabaseServerClient();
-  const { data, error } = await supabase
-    .from("interactions")
-    .select("*")
-    .in("session_id", sessionIds)
-    .order("created_at", { ascending: true });
+  const sql = await getDatabase();
 
-  if (error || !data) return [];
-  return data as InteractionRecord[];
+  const placeholders = sessionIds.map((_, i) => `$${i + 1}`).join(", ");
+  const query = `
+    SELECT *
+    FROM interactions
+    WHERE session_id IN (${placeholders})
+    ORDER BY created_at ASC;
+  `;
+
+  const rows = (await sql.query(query, sessionIds)) as unknown[];
+  if (!rows || rows.length === 0) return [];
+  return rows.map(normalizeInteractionRow);
+}
+
+/**
+ * Retrieves initial student idea from Scenario 2 Node 1 for bounded evolution context.
+ */
+export async function getScenario2InitialIdea(
+  sessionId: string
+): Promise<string | null> {
+  const sql = await getDatabase();
+
+  const rows = (await sql`
+    SELECT student_answer
+    FROM interactions
+    WHERE session_id = ${sessionId}
+      AND scenario_id = 2
+      AND node_id = 'N1'
+    ORDER BY created_at DESC
+    LIMIT 1;
+  `) as Array<{ student_answer: string | null }>;
+
+  return rows[0]?.student_answer ?? null;
 }

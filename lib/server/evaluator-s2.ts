@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Evaluator Service for Scenario 2 (توليد الأفكار الابتكارية)
  *
  * Source of Truth: research/scenarios/scenario-2.md & AI_EVALUATION.md
@@ -15,7 +15,7 @@ import type { NodeIdS2 } from "../scenarios/scenario-2";
 import { getScenario2Node } from "../scenarios/scenario-2";
 import type { Classification } from "../transitions";
 import type { EvaluationIntent, EvaluationResult } from "./evaluator";
-import { getSupabaseServerClient } from "./supabase";
+import { getScenario2InitialIdea } from "./persistence";
 
 const SYSTEM_INSTRUCTION_S2 = `أنت "الوكيل الذكي لتوليد الأفكار الابتكارية"، مرشد حواري تعليمي وودود يساعد رائد أعمال مبتدئاً في تحويل مشكلة إلى فكرة مشروع رقمي مبتكر، وتطويرها أمام قيود واقعية (ميزانية تسويق صفرية، ومنافس يقدم خدمة مجانية، وقابلية التوسع).
 
@@ -65,18 +65,9 @@ export async function evaluateScenario2Answer({
   let initialIdeaContext = "";
   if (nodeId === "N4" && sessionId) {
     try {
-      const supabase = getSupabaseServerClient();
-      const { data } = await supabase
-        .from("interactions")
-        .select("student_answer")
-        .eq("session_id", sessionId)
-        .eq("scenario_id", 2)
-        .eq("node_id", "N1")
-        .order("created_at", { ascending: false })
-        .limit(1);
-
-      if (data && data[0]?.student_answer) {
-        initialIdeaContext = `\nسياق إضافي - فكرة الطالب الأولية في N1 كانت:\n"${data[0].student_answer}"\nقارن فكرته المطورة بالفكرة الأولية لملاحظة مدى التطور.\n`;
+      const initialIdea = await getScenario2InitialIdea(sessionId);
+      if (initialIdea) {
+        initialIdeaContext = `\nسياق إضافي - فكرة الطالب الأولية في N1 كانت:\n"${initialIdea}"\nقارن فكرته المطورة بالفكرة الأولية لملاحظة مدى التطور.\n`;
       }
     } catch {
       // Non-blocking

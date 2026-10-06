@@ -15,11 +15,12 @@
     "test:scenarios": "tsx --test tests/scenario-canonical-text.test.ts tests/scenario-2-transitions.test.ts tests/scenario-3-transitions.test.ts tests/scenario-3-strict-ai.test.ts tests/scenario-4-transitions.test.ts tests/scenario-5-transitions.test.ts tests/session-resume-guard.test.ts tests/research-auth.test.ts tests/research-report.test.ts tests/research-csv.test.ts tests/full-journey-e2e.test.ts"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.116.0",
+    "@neondatabase/serverless": "^1.2.0",
     "groq-sdk": "^1.6.0",
     "next": "^16.3.4",
     "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "react-dom": "^19.3.0",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@types/node": "^22.20.2",
