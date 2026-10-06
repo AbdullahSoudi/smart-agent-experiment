@@ -7,11 +7,11 @@ export const metadata: Metadata = {
 };
 
 const STAGE_THEMES: Record<number, { color: string; bg: string; border: string; icon: string }> = {
-  1: { color: "#1AA7EC", bg: "#EBF7FE", border: "#BAE6FD", icon: "💡" },
-  2: { color: "#7C4DFF", bg: "#F5F1FE", border: "#DDD6FE", icon: "🚀" },
-  3: { color: "#F4B942", bg: "#FEF9EB", border: "#FDE68A", icon: "📊" },
-  4: { color: "#FF6B6B", bg: "#FFF0F0", border: "#FECDD3", icon: "⚡" },
-  5: { color: "#00A99D", bg: "#EBF9F8", border: "#99F6E4", icon: "📈" },
+  1: { color: "#0EA5E9", bg: "#F0F9FF", border: "#BAE6FD", icon: "💡" },
+  2: { color: "#8B5CF6", bg: "#F5F3FF", border: "#DDD6FE", icon: "🚀" },
+  3: { color: "#F59E0B", bg: "#FFFBEB", border: "#FDE68A", icon: "📊" },
+  4: { color: "#F97360", bg: "#FFF1F2", border: "#FECDD3", icon: "⚡" },
+  5: { color: "#14B8A6", bg: "#F0FDFA", border: "#99F6E4", icon: "📈" },
 };
 
 export default function CompletePage() {

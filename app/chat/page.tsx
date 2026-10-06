@@ -1379,7 +1379,7 @@ export default function ChatPage() {
 
   const safeCheckpointTitle = getSafeCheckpointTitle(currentScenario, currentNodeId);
   return (
-    <div className={`mentor-chat-viewport ${isS4CrisisActive ? "crisis-mode-active" : ""}`} dir="rtl">
+    <div className={`mentor-chat-viewport ${isS4CrisisActive ? "crisis-mode-active" : ""}`} data-stage={currentScenario} dir="rtl">
       {/* 1. Persistent Restrained Header (3 Calm Zones) */}
       <header className="mentor-chat-header">
         <div className="mentor-chat-header-content">
