@@ -1604,14 +1604,6 @@ export default function ChatPage() {
               key={msg.id}
               className={`chat-message-row chat-message-${msg.sender}`}
             >
-              {msg.sender === "assistant" && (
-                <div className="bubble-avatar" aria-hidden="true">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <circle cx="12" cy="12" r="9" />
-                    <path d="m9 12 2 2 4-4" />
-                  </svg>
-                </div>
-              )}
               <div className={`chat-bubble chat-bubble-${msg.sender} ${msg.sender}`}>
                 <div className={`chat-message-role-label role-label-${msg.sender}`}>
                   {msg.sender === "student" ? "إجابتك" : "المساعد"}
@@ -1624,11 +1616,6 @@ export default function ChatPage() {
           {/* Thinking Indicator */}
           {isSubmitting && (
             <div className="chat-message-row chat-message-assistant">
-              <div className="bubble-avatar" aria-hidden="true">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <circle cx="12" cy="12" r="9" />
-                </svg>
-              </div>
               <div className="chat-bubble chat-bubble-thinking">
                 <span className="thinking-dot" />
                 <span className="thinking-dot" />
@@ -1744,7 +1731,7 @@ export default function ChatPage() {
               aria-label="مهمتك الآن"
             >
               <div className="current-task-compact-header">
-                <span className="current-task-badge">📌 مهمتك الآن:</span>
+                <span className="current-task-badge">مهمتك الآن</span>
                 {currentScenario === 2 && (currentNodeId === "N2" || currentNodeId === "N3") && (
                   <span className="current-task-challenge-tag">
                     {currentNodeId === "N2" ? "تحدي الميزانية" : "تحدي المنافسة"}
@@ -2222,21 +2209,6 @@ export default function ChatPage() {
             /* Standard Clean Single-Line Composer with Single Hint Button */
             <div className="composer-container-group">
               <div className="composer-row">
-                {isHintAvailable && (
-                  <button
-                    type="button"
-                    id="hint-button"
-                    className="btn-hint"
-                    onClick={handleRequestHint}
-                    disabled={isSubmitting}
-                    aria-label="طلب تلميح"
-                    title="طلب تلميح لمساعدتك في التفكير"
-                  >
-                    <span aria-hidden="true">💡</span>
-                    <span>تلميح</span>
-                  </button>
-                )}
-
                 <div className="composer-input-wrapper">
                   <textarea
                     ref={textareaRef}
@@ -2252,6 +2224,21 @@ export default function ChatPage() {
                     aria-label="إجابتك للمرشد الذكي"
                   />
                 </div>
+
+                {isHintAvailable && (
+                  <button
+                    type="button"
+                    id="hint-button"
+                    className="btn-hint"
+                    onClick={handleRequestHint}
+                    disabled={isSubmitting}
+                    aria-label="طلب تلميح"
+                    title="طلب تلميح لمساعدتك في التفكير"
+                  >
+                    <span aria-hidden="true">💡</span>
+                    <span>تلميح</span>
+                  </button>
+                )}
 
                 <button
                   type="button"
