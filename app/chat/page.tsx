@@ -22,6 +22,8 @@ import {
   formatElapsedActiveTime,
   getSafeCheckpointTitle,
   SCENARIOS_JOURNEY,
+  SCENARIO_DISPLAY_NAMES,
+  getScenarioDisplayName,
 } from "@/lib/journey";
 import {
   SCENARIO_2_CANONICAL_OPENING,
@@ -1406,7 +1408,7 @@ export default function ChatPage() {
                   <span
                     key={stageNum}
                     className={`mentor-header-dot ${isCurrent ? "dot-active" : isCompleted ? "dot-completed" : "dot-upcoming"}`}
-                    title={`المرحلة ${stageNum}: ${stageMeta?.skillTitle || ""}`}
+                    title={`المرحلة ${stageNum}: ${SCENARIO_DISPLAY_NAMES[stageNum as ScenarioId] || stageMeta?.skillTitle || ""}`}
                   >
                     {isCompleted ? "✓" : isCurrent ? "●" : "○"}
                   </span>
@@ -1432,7 +1434,7 @@ export default function ChatPage() {
         <div className="journey-mobile-header">
           <div>
             <span className="journey-mobile-badge">المرحلة {currentScenario} من 5 · </span>
-            <span className="journey-mobile-title">{activeSkillMeta?.skillTitle || "اكتشاف الفرص الرقمية"}</span>
+            <span className="journey-mobile-title">{SCENARIO_DISPLAY_NAMES[currentScenario] || activeSkillMeta?.skillTitle || "اكتشاف الفرص الرقمية"}</span>
           </div>
           <span className="journey-mobile-timer">⏱ {formatElapsedActiveTime(activeElapsedSeconds)}</span>
         </div>
@@ -1459,7 +1461,7 @@ export default function ChatPage() {
             <div className="journey-rail-card">
               <div className="journey-rail-stage-badge">المرحلة {currentScenario} من 5</div>
               <div className="journey-rail-stage-title">
-                {activeSkillMeta?.skillTitle || "اكتشاف الفرص الرقمية"}
+                {SCENARIO_DISPLAY_NAMES[currentScenario] || activeSkillMeta?.skillTitle || "اكتشاف الفرص الرقمية"}
               </div>
 
               <div className="journey-rail-progress-section">
@@ -1488,14 +1490,7 @@ export default function ChatPage() {
                   const isCompleted = item.state === "completed";
                   const icon = isCompleted ? "✓" : isCurrent ? "●" : "○";
                   const stateLabel = isCompleted ? "مكتملة" : isCurrent ? "حالية" : "قادمة";
-                  const stepperTitles: Record<number, string> = {
-                    1: "اكتشاف الفرص",
-                    2: "توليد الأفكار",
-                    3: "نموذج العمل",
-                    4: "المخاطر",
-                    5: "التسويق",
-                  };
-                  const stepperTitle = stepperTitles[item.id] || item.shortTitle;
+                  const stepperTitle = SCENARIO_DISPLAY_NAMES[item.id as ScenarioId] || item.skillTitle;
 
                   return (
                     <div
@@ -1529,7 +1524,7 @@ export default function ChatPage() {
             <div className="compass-compact-strip" role="region" aria-label="بوصلة المرحلة">
               <div className="compass-compact-title-group">
                 <span className="compass-compact-badge">🧭 بوصلة المرحلة:</span>
-                <span>{activeSkillMeta?.skillTitle} · {safeCheckpointTitle}</span>
+                <span>{SCENARIO_DISPLAY_NAMES[currentScenario] || activeSkillMeta?.skillTitle} · {safeCheckpointTitle}</span>
               </div>
               <div className="compass-compact-status-group">
                 <span>
@@ -2285,7 +2280,7 @@ export default function ChatPage() {
 
               <div className="agent-compass-section">
                 <span className="agent-compass-label">المهارة المستهدفة</span>
-                <p className="agent-compass-value">{activeSkillMeta?.skillTitle}</p>
+                <p className="agent-compass-value">{SCENARIO_DISPLAY_NAMES[currentScenario] || activeSkillMeta?.skillTitle}</p>
               </div>
 
               <div className="agent-compass-section">

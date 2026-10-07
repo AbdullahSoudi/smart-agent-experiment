@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { SCENARIO_DISPLAY_NAMES, type ScenarioId } from "@/lib/journey";
 
 const STAGES_PREVIEW = [
-  { id: 1, title: "اكتشاف الفرص", color: "var(--stage-s1, #0EA5E9)", bg: "var(--stage-s1-light, #F0F9FF)", border: "var(--stage-s1-border, #BAE6FD)", icon: "💡" },
-  { id: 2, title: "توليد الأفكار", color: "var(--stage-s2, #8B5CF6)", bg: "var(--stage-s2-light, #F5F3FF)", border: "var(--stage-s2-border, #DDD6FE)", icon: "🚀" },
-  { id: 3, title: "نموذج العمل", color: "var(--stage-s3, #F59E0B)", bg: "var(--stage-s3-light, #FFFBEB)", border: "var(--stage-s3-border, #FDE68A)", icon: "📊" },
-  { id: 4, title: "القرار والمخاطر", color: "var(--stage-s4, #F97360)", bg: "var(--stage-s4-light, #FFF1F2)", border: "var(--stage-s4-border, #FECDD3)", icon: "⚡" },
-  { id: 5, title: "التسويق والبيانات", color: "var(--stage-s5, #14B8A6)", bg: "var(--stage-s5-light, #F0FDFA)", border: "var(--stage-s5-border, #99F6E4)", icon: "📈" },
+  { id: 1 as ScenarioId, title: SCENARIO_DISPLAY_NAMES[1], color: "var(--stage-s1, #0EA5E9)", bg: "var(--stage-s1-light, #F0F9FF)", border: "var(--stage-s1-border, #BAE6FD)", icon: "💡" },
+  { id: 2 as ScenarioId, title: SCENARIO_DISPLAY_NAMES[2], color: "var(--stage-s2, #8B5CF6)", bg: "var(--stage-s2-light, #F5F3FF)", border: "var(--stage-s2-border, #DDD6FE)", icon: "🚀" },
+  { id: 3 as ScenarioId, title: SCENARIO_DISPLAY_NAMES[3], color: "var(--stage-s3, #F59E0B)", bg: "var(--stage-s3-light, #FFFBEB)", border: "var(--stage-s3-border, #FDE68A)", icon: "📊" },
+  { id: 4 as ScenarioId, title: SCENARIO_DISPLAY_NAMES[4], color: "var(--stage-s4, #F97360)", bg: "var(--stage-s4-light, #FFF1F2)", border: "var(--stage-s4-border, #FECDD3)", icon: "⚡" },
+  { id: 5 as ScenarioId, title: SCENARIO_DISPLAY_NAMES[5], color: "var(--stage-s5, #14B8A6)", bg: "var(--stage-s5-light, #F0FDFA)", border: "var(--stage-s5-border, #99F6E4)", icon: "📈" },
 ];
 
 export default function HomePage() {

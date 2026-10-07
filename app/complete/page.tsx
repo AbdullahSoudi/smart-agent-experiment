@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { SCENARIOS_JOURNEY } from "@/lib/journey";
+import { SCENARIOS_JOURNEY, SCENARIO_DISPLAY_NAMES, type ScenarioId } from "@/lib/journey";
 
 export const metadata: Metadata = {
   title: "أتممت الرحلة كاملة · تجربة الوكيل الذكي",
@@ -105,7 +105,7 @@ export default function CompletePage() {
                           المرحلة {scenario.id}
                         </span>
                         <span className="completion-skill-title" style={{ fontSize: "1.05rem", fontWeight: 700, color: "var(--text-primary)" }}>
-                          {scenario.skillTitle}
+                          {SCENARIO_DISPLAY_NAMES[scenario.id as ScenarioId] || scenario.skillTitle}
                         </span>
                       </div>
                     </div>

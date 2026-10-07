@@ -28,13 +28,25 @@ export const SHORT_SKILL_TITLES: Record<ScenarioId, string> = {
   5: "التسويق",
 } as const;
 
-export const STEPPER_SKILL_TITLES: Record<ScenarioId, string> = {
-  1: "اكتشاف الفرص",
-  2: "توليد الأفكار",
-  3: "نموذج العمل",
-  4: "المخاطر",
-  5: "التسويق",
+/**
+ * Canonical Stage Display Names (Authoritative Presentation Mapping)
+ *
+ * Source of Truth: research/scenarios/JOURNEY.md & scenario-1.md through scenario-5.md
+ * Standardizes the official complete titles across all participant and researcher UI views.
+ */
+export const SCENARIO_DISPLAY_NAMES: Record<ScenarioId, string> = {
+  1: "اكتشاف الفرص الرقمية",
+  2: "توليد الأفكار الابتكارية",
+  3: "تخطيط نموذج العمل التجاري",
+  4: "اتخاذ القرار وإدارة المخاطر",
+  5: "التسويق الرقمي",
 } as const;
+
+export function getScenarioDisplayName(id: ScenarioId): string {
+  return SCENARIO_DISPLAY_NAMES[id] || "";
+}
+
+export const STEPPER_SKILL_TITLES: Record<ScenarioId, string> = SCENARIO_DISPLAY_NAMES;
 
 export const SCENARIOS_JOURNEY: readonly ScenarioMeta[] = [
   {

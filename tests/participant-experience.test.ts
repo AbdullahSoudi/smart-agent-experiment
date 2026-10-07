@@ -12,6 +12,8 @@ import {
   getJourneyProgressPercent,
   formatElapsedActiveTime,
   getSafeCheckpointTitle,
+  SCENARIO_DISPLAY_NAMES,
+  getScenarioDisplayName,
   type ScenarioId,
 } from "../lib/journey";
 import {
@@ -515,4 +517,46 @@ test("Post-v1.0 Visual Recovery Invariants: Desktop Summary, Sticky Rails & Hier
   assert.ok(css.includes("position: sticky"), "Sticky architecture must be retained");
   assert.ok(css.includes(".agent-compass-rail"), "Agent compass rail must exist");
   assert.ok(css.includes(".journey-rail"), "Journey rail must exist");
+});
+
+test("T57 Canonical Scenario Terminology Standardization Invariants", () => {
+  // 1. Centralized mapping defines all 5 canonical research titles exactly
+  assert.equal(SCENARIO_DISPLAY_NAMES[1], "اكتشاف الفرص الرقمية");
+  assert.equal(SCENARIO_DISPLAY_NAMES[2], "توليد الأفكار الابتكارية");
+  assert.equal(SCENARIO_DISPLAY_NAMES[3], "تخطيط نموذج العمل التجاري");
+  assert.equal(SCENARIO_DISPLAY_NAMES[4], "اتخاذ القرار وإدارة المخاطر");
+  assert.equal(SCENARIO_DISPLAY_NAMES[5], "التسويق الرقمي");
+
+  // Helper returns canonical names correctly
+  for (const id of [1, 2, 3, 4, 5] as ScenarioId[]) {
+    assert.equal(getScenarioDisplayName(id), SCENARIO_DISPLAY_NAMES[id]);
+  }
+
+  // 2. Chat page uses SCENARIO_DISPLAY_NAMES and does not define abbreviated stepperTitles
+  const chatPage = fs.readFileSync(path.resolve(process.cwd(), "app/chat/page.tsx"), "utf8");
+  assert.ok(chatPage.includes("SCENARIO_DISPLAY_NAMES"), "Chat page must import and use SCENARIO_DISPLAY_NAMES");
+  assert.ok(!chatPage.includes("stepperTitles: Record<ScenarioId, string>"), "Chat page must not define local abbreviated stepperTitles");
+  assert.ok(chatPage.includes("SCENARIO_DISPLAY_NAMES[item.id as ScenarioId]"), "Journey rail items must render canonical display names");
+
+  // 3. Start page uses SCENARIO_DISPLAY_NAMES for preview cards
+  const startPage = fs.readFileSync(path.resolve(process.cwd(), "app/page.tsx"), "utf8");
+  assert.ok(startPage.includes("SCENARIO_DISPLAY_NAMES"), "Start page must import and use SCENARIO_DISPLAY_NAMES");
+  assert.ok(startPage.includes("title: SCENARIO_DISPLAY_NAMES[1]"), "Start page preview must use canonical S1 name");
+  assert.ok(startPage.includes("title: SCENARIO_DISPLAY_NAMES[5]"), "Start page preview must use canonical S5 name");
+
+  // 4. Complete page uses SCENARIO_DISPLAY_NAMES for completed list
+  const completePage = fs.readFileSync(path.resolve(process.cwd(), "app/complete/page.tsx"), "utf8");
+  assert.ok(completePage.includes("SCENARIO_DISPLAY_NAMES"), "Complete page must import and use SCENARIO_DISPLAY_NAMES");
+
+  // 5. Research page uses SCENARIO_DISPLAY_NAMES for tabs and report headers
+  const researchPage = fs.readFileSync(path.resolve(process.cwd(), "app/research/page.tsx"), "utf8");
+  assert.ok(researchPage.includes("SCENARIO_DISPLAY_NAMES"), "Research page must import and use SCENARIO_DISPLAY_NAMES");
+  assert.ok(researchPage.includes("SCENARIO_DISPLAY_NAMES[1]"), "Research page tabs must use canonical S1 name");
+
+  // 6. CSS allows natural Arabic line wrapping without truncation or ellipsis on journey step items
+  const css = fs.readFileSync(path.resolve(process.cwd(), "app/globals.css"), "utf8");
+  assert.ok(!css.match(/\.journey-step-item\s*\{[^}]*text-overflow:\s*ellipsis/), "Journey step item must not truncate with ellipsis");
+  assert.ok(!css.match(/\.journey-step-title\s*\{[^}]*text-overflow:\s*ellipsis/), "Journey step title must not truncate with ellipsis");
+  assert.ok(!css.match(/\.journey-step-title\s*\{[^}]*white-space:\s*nowrap/), "Journey step title must allow wrapping");
+  assert.ok(css.includes("overflow-wrap: break-word"), "Journey step title must allow natural word wrapping");
 });

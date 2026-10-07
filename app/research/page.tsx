@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import type { FullParticipantReport } from "@/lib/research/report";
+import { SCENARIO_DISPLAY_NAMES } from "@/lib/journey";
 
 // Domain-friendly Arabic labels for internal analytical codes
 const S3_GAP_LABELS: Record<string, string> = {
@@ -41,11 +42,11 @@ export default function ResearcherReportPage() {
 
   const TAB_CONFIG = [
     { id: "overview", label: "نظرة عامة", color: "#5B5FEF" },
-    { id: "s1", label: "السيناريو 1 (الفرص)", color: "#1AA7EC" },
-    { id: "s2", label: "السيناريو 2 (الأفكار)", color: "#7C4DFF" },
-    { id: "s3", label: "السيناريو 3 (نموذج العمل)", color: "#F4B942" },
-    { id: "s4", label: "السيناريو 4 (المخاطر)", color: "#FF6B6B" },
-    { id: "s5", label: "السيناريو 5 (التسويق)", color: "#00A99D" },
+    { id: "s1", label: `السيناريو 1 (${SCENARIO_DISPLAY_NAMES[1]})`, color: "#1AA7EC" },
+    { id: "s2", label: `السيناريو 2 (${SCENARIO_DISPLAY_NAMES[2]})`, color: "#7C4DFF" },
+    { id: "s3", label: `السيناريو 3 (${SCENARIO_DISPLAY_NAMES[3]})`, color: "#F4B942" },
+    { id: "s4", label: `السيناريو 4 (${SCENARIO_DISPLAY_NAMES[4]})`, color: "#FF6B6B" },
+    { id: "s5", label: `السيناريو 5 (${SCENARIO_DISPLAY_NAMES[5]})`, color: "#00A99D" },
     { id: "log", label: "السجل الكامل", color: "#182033" },
   ];
   const [searchQuery, setSearchQuery] = useState("");
@@ -832,11 +833,11 @@ export default function ResearcherReportPage() {
                 >
                   {[
                     { id: "overview", label: "نظرة عامة" },
-                    { id: "s1", label: "س1: الفرص" },
-                    { id: "s2", label: "س2: الأفكار" },
-                    { id: "s3", label: "س3: نموذج العمل" },
-                    { id: "s4", label: "س4: الأزمة والمخاطر" },
-                    { id: "s5", label: "س5: التسويق واختبار A/B" },
+                    { id: "s1", label: `س1: ${SCENARIO_DISPLAY_NAMES[1]}` },
+                    { id: "s2", label: `س2: ${SCENARIO_DISPLAY_NAMES[2]}` },
+                    { id: "s3", label: `س3: ${SCENARIO_DISPLAY_NAMES[3]}` },
+                    { id: "s4", label: `س4: ${SCENARIO_DISPLAY_NAMES[4]}` },
+                    { id: "s5", label: `س5: ${SCENARIO_DISPLAY_NAMES[5]}` },
                     { id: "log", label: "السجل الكامل" },
                   ].map((tab) => (
                     <button
@@ -904,7 +905,7 @@ export default function ResearcherReportPage() {
                 {activeTab === "s1" && (
                   <div style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
-                      <h3 style={{ margin: 0, fontSize: "1.1rem", color: "var(--text-primary)" }}>السيناريو 1: استكشاف الفرص الرقمية</h3>
+                      <h3 style={{ margin: 0, fontSize: "1.1rem", color: "var(--text-primary)" }}>السيناريو 1: {SCENARIO_DISPLAY_NAMES[1]}</h3>
                       <span style={{ fontSize: "0.82rem", color: "var(--text-muted)" }}>
                         المسار المسلوك: <code>{selectedParticipant.scenario1.path.join(" → ") || "—"}</code>
                       </span>
@@ -971,7 +972,7 @@ export default function ResearcherReportPage() {
                 {activeTab === "s2" && (
                   <div style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
-                      <h3 style={{ margin: 0, fontSize: "1.1rem", color: "var(--text-primary)" }}>السيناريو 2: اختبار الجدوى وإعادة البناء</h3>
+                      <h3 style={{ margin: 0, fontSize: "1.1rem", color: "var(--text-primary)" }}>السيناريو 2: {SCENARIO_DISPLAY_NAMES[2]}</h3>
                       <span style={{ fontSize: "0.82rem", color: "var(--text-muted)" }}>
                         المسار المسلوك: <code>{selectedParticipant.scenario2.path.join(" → ") || "—"}</code>
                       </span>
@@ -1030,7 +1031,7 @@ export default function ResearcherReportPage() {
                 {activeTab === "s3" && (
                   <div style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
-                      <h3 style={{ margin: 0, fontSize: "1.1rem", color: "var(--text-primary)" }}>السيناريو 3: هندسة نموذج العمل والمواءمة المنطقية</h3>
+                      <h3 style={{ margin: 0, fontSize: "1.1rem", color: "var(--text-primary)" }}>السيناريو 3: {SCENARIO_DISPLAY_NAMES[3]}</h3>
                       <span style={{ fontSize: "0.82rem", color: "var(--text-muted)" }}>
                         المسار: <code>{selectedParticipant.scenario3.path.join(" → ") || "—"}</code>
                       </span>
@@ -1103,7 +1104,7 @@ export default function ResearcherReportPage() {
                 {activeTab === "s4" && (
                   <div style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
-                      <h3 style={{ margin: 0, fontSize: "1.1rem", color: "var(--text-primary)" }}>السيناريو 4: إدارة الأزمات والسمعة الرقمية</h3>
+                      <h3 style={{ margin: 0, fontSize: "1.1rem", color: "var(--text-primary)" }}>السيناريو 4: {SCENARIO_DISPLAY_NAMES[4]}</h3>
                       <span style={{ fontSize: "0.82rem", color: "var(--text-muted)" }}>
                         المسار: <code>{selectedParticipant.scenario4.path.join(" → ") || "—"}</code>
                       </span>
@@ -1171,7 +1172,7 @@ export default function ResearcherReportPage() {
                 {activeTab === "s5" && (
                   <div style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
-                      <h3 style={{ margin: 0, fontSize: "1.1rem", color: "var(--text-primary)" }}>السيناريو 5: التسويق الرقمي واختبار A/B</h3>
+                      <h3 style={{ margin: 0, fontSize: "1.1rem", color: "var(--text-primary)" }}>السيناريو 5: {SCENARIO_DISPLAY_NAMES[5]}</h3>
                       <span style={{ fontSize: "0.82rem", color: "var(--text-muted)" }}>
                         المسار: <code>{selectedParticipant.scenario5.path.join(" → ") || "—"}</code>
                       </span>
