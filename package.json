@@ -12,7 +12,7 @@
     "spike:n1": "tsx spike/evaluate-n1.ts",
     "eval:n1": "tsx spike/run-n1-eval.ts",
     "test:conversational": "tsx --env-file=.env.local --test tests/conversational_evaluator.test.ts",
-    "test:scenarios": "tsx --test tests/scenario-canonical-text.test.ts tests/scenario-2-transitions.test.ts tests/scenario-3-transitions.test.ts tests/scenario-3-strict-ai.test.ts tests/scenario-4-transitions.test.ts tests/scenario-5-transitions.test.ts tests/session-resume-guard.test.ts tests/research-auth.test.ts tests/research-report.test.ts tests/research-csv.test.ts tests/full-journey-e2e.test.ts"
+    "test:scenarios": "tsx --test tests/scenario-canonical-text.test.ts tests/scenario-2-transitions.test.ts tests/scenario-3-transitions.test.ts tests/scenario-3-strict-ai.test.ts tests/scenario-4-transitions.test.ts tests/scenario-5-transitions.test.ts tests/session-resume-guard.test.ts tests/research-auth.test.ts tests/research-report.test.ts tests/research-csv.test.ts tests/full-journey-e2e.test.ts tests/participant-experience.test.ts tests/api-route-contract.test.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",

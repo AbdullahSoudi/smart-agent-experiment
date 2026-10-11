@@ -111,7 +111,7 @@ export default function ChatPage() {
   // S5 Marketing states
   const [headlineA, setHeadlineA] = useState<string>("");
   const [headlineB, setHeadlineB] = useState<string>("");
-  const [s5SelectedChoice, setS5SelectedChoice] = useState<CampaignDecisionChoice>("choose_b");
+  const [s5SelectedChoice, setS5SelectedChoice] = useState<CampaignDecisionChoice | null>(null);
   const [s5Reasoning, setS5Reasoning] = useState<string>("");
 
   // Active visible UI timer (sessionStorage only, no DB interaction)
@@ -682,11 +682,12 @@ export default function ChatPage() {
     setCrisisTimerActive(false);
     setErrorMessage(null);
 
+    const optimisticMsgId = `msg-${Date.now()}-student-crisis`;
     const displayMsg = formatCrisisDecisionDisplay({ choice, timeout });
     setMessages((prev) => [
       ...prev,
       {
-        id: `msg-${Date.now()}-student-crisis`,
+        id: optimisticMsgId,
         sender: "student",
         text: displayMsg,
       },
@@ -719,6 +720,7 @@ export default function ChatPage() {
         ]);
       }
     } catch (err: any) {
+      setMessages((prev) => prev.filter((m) => m.id !== optimisticMsgId));
       setErrorMessage(err.message || "تعذر تسجيل قرار الأزمة. يرجى المحاولة ثانية.");
     } finally {
       setIsSubmitting(false);
@@ -764,11 +766,12 @@ export default function ChatPage() {
     setIsSubmitting(true);
     setErrorMessage(null);
 
+    const optimisticMsgId = `msg-${Date.now()}-student-recovery`;
     const displayMsg = formatRecoveryDecisionDisplay({ choice });
     setMessages((prev) => [
       ...prev,
       {
-        id: `msg-${Date.now()}-student-recovery`,
+        id: optimisticMsgId,
         sender: "student",
         text: displayMsg,
       },
@@ -801,6 +804,7 @@ export default function ChatPage() {
         ]);
       }
     } catch (err: any) {
+      setMessages((prev) => prev.filter((m) => m.id !== optimisticMsgId));
       setErrorMessage(err.message || "تعذر تسجيل قرار التعافي.");
     } finally {
       setIsSubmitting(false);
@@ -812,11 +816,12 @@ export default function ChatPage() {
     setIsSubmitting(true);
     setErrorMessage(null);
 
+    const optimisticMsgId = `msg-${Date.now()}-headlines`;
     const displayCard = formatHeadlinesDisplay({ headlineA, headlineB });
     setMessages((prev) => [
       ...prev,
       {
-        id: `msg-${Date.now()}-headlines`,
+        id: optimisticMsgId,
         sender: "student",
         text: displayCard,
       },
@@ -852,6 +857,7 @@ export default function ChatPage() {
         ]);
       }
     } catch (err: any) {
+      setMessages((prev) => prev.filter((m) => m.id !== optimisticMsgId));
       setErrorMessage(err.message || "حدث خطأ أثناء إطلاق الحملة.");
     } finally {
       setIsSubmitting(false);
@@ -860,10 +866,11 @@ export default function ChatPage() {
 
   // Scenario 5: Submit Campaign Decision
   const handleCampaignDecisionSubmit = async () => {
-    if (!sessionId || isSubmitting) return;
+    if (!sessionId || isSubmitting || !s5SelectedChoice) return;
     setIsSubmitting(true);
     setErrorMessage(null);
 
+    const optimisticMsgId = `msg-${Date.now()}-student-decision`;
     const displayMsg = formatCampaignDecisionDisplay({
       selectedChoice: s5SelectedChoice,
       reasoning: s5Reasoning,
@@ -872,7 +879,7 @@ export default function ChatPage() {
     setMessages((prev) => [
       ...prev,
       {
-        id: `msg-${Date.now()}-student-decision`,
+        id: optimisticMsgId,
         sender: "student",
         text: displayMsg,
       },
@@ -905,6 +912,7 @@ export default function ChatPage() {
         ]);
       }
     } catch (err: any) {
+      setMessages((prev) => prev.filter((m) => m.id !== optimisticMsgId));
       setErrorMessage(err.message || "تعذر إرسال القرار التسويقي.");
     } finally {
       setIsSubmitting(false);
@@ -961,10 +969,11 @@ export default function ChatPage() {
     setIsSubmitting(true);
     setErrorMessage(null);
 
+    const optimisticMsgId = `msg-${Date.now()}-budget-alloc`;
     setMessages((prev) => [
       ...prev,
       {
-        id: `msg-${Date.now()}-budget-alloc`,
+        id: optimisticMsgId,
         sender: "student",
         text: "توجيه باقي الميزانية (800 دولار) للحملة (B) لتحقيق أقصى عائد مالي (ROI)",
       },
@@ -991,6 +1000,7 @@ export default function ChatPage() {
         ]);
       }
     } catch (err: any) {
+      setMessages((prev) => prev.filter((m) => m.id !== optimisticMsgId));
       setErrorMessage(err.message || "تعذر إتمام السيناريو الخامس.");
     } finally {
       setIsSubmitting(false);
@@ -1004,10 +1014,11 @@ export default function ChatPage() {
     setIsSubmitting(true);
     setErrorMessage(null);
 
+    const optimisticMsgId = `msg-${Date.now()}-student`;
     setMessages((prev) => [
       ...prev,
       {
-        id: `msg-${Date.now()}-student`,
+        id: optimisticMsgId,
         sender: "student",
         text: choiceText,
       },
@@ -1057,6 +1068,7 @@ export default function ChatPage() {
         ]);
       }
     } catch (err: any) {
+      setMessages((prev) => prev.filter((m) => m.id !== optimisticMsgId));
       setErrorMessage(err.message || "حدث خطأ أثناء إرسال الخيار. حاول مرة أخرى.");
     } finally {
       setIsSubmitting(false);
@@ -1078,10 +1090,11 @@ export default function ChatPage() {
     setIsSubmitting(true);
     setErrorMessage(null);
 
+    const optimisticMsgId = `msg-${Date.now()}-student`;
     setMessages((prev) => [
       ...prev,
       {
-        id: `msg-${Date.now()}-student`,
+        id: optimisticMsgId,
         sender: "student",
         text: displayOverride || trimmed,
       },
@@ -1102,7 +1115,7 @@ export default function ChatPage() {
     }
 
     try {
-      let endpoint = "/api/chat";
+      let endpoint = "";
       if (currentScenario === 1) {
         endpoint =
           currentNodeId === "N1"
@@ -1119,15 +1132,21 @@ export default function ChatPage() {
             ? "/api/n4/submit"
             : currentNodeId === "N4_REV"
             ? "/api/n4-rev/submit"
+            : currentNodeId === "N4_H"
+            ? "/api/n4-h/submit"
             : currentNodeId === "N5"
             ? "/api/n5/submit"
             : currentNodeId === "N5_H"
             ? "/api/n5-h/submit"
-            : "/api/chat";
+            : "";
       } else if (currentScenario === 2) {
         endpoint = "/api/s2/submit";
       } else if (currentScenario === 3) {
         endpoint = "/api/s3/submit";
+      }
+
+      if (!endpoint) {
+        throw new Error(`لا يوجد مسار معتمد للخطوة الحالية (${currentScenario}:${currentNodeId})`);
       }
 
       const res = await fetch(endpoint, {
@@ -1181,6 +1200,10 @@ export default function ChatPage() {
         }
       }
     } catch (err: any) {
+      setMessages((prev) => prev.filter((m) => m.id !== optimisticMsgId));
+      if (!textOverride) {
+        setStudentAnswer(trimmed);
+      }
       setErrorMessage(err.message || "حدث خطأ أثناء معالجة الإجابة. حاول مرة أخرى.");
     } finally {
       setIsSubmitting(false);
@@ -1207,11 +1230,12 @@ export default function ChatPage() {
     setIsSubmitting(true);
     setErrorMessage(null);
 
+    const optimisticMsgId = `msg-${Date.now()}-student`;
     const displayCard = formatBusinessModelDisplay(s3Blocks);
     setMessages((prev) => [
       ...prev,
       {
-        id: `msg-${Date.now()}-student`,
+        id: optimisticMsgId,
         sender: "student",
         text: displayCard,
       },
@@ -1252,6 +1276,7 @@ export default function ChatPage() {
         setCurrentNodeId(nextNode);
       }
     } catch (err: any) {
+      setMessages((prev) => prev.filter((m) => m.id !== optimisticMsgId));
       setErrorMessage(err.message || "حدث خطأ أثناء إرسال نموذج العمل. حاول مرة أخرى.");
     } finally {
       setIsSubmitting(false);
@@ -1268,10 +1293,11 @@ export default function ChatPage() {
     setIsSubmitting(true);
     setErrorMessage(null);
 
+    const optimisticMsgId = `msg-${Date.now()}-student`;
     setMessages((prev) => [
       ...prev,
       {
-        id: `msg-${Date.now()}-student`,
+        id: optimisticMsgId,
         sender: "student",
         text: trimmed,
       },
@@ -1302,6 +1328,8 @@ export default function ChatPage() {
         ]);
       }
     } catch (err: any) {
+      setMessages((prev) => prev.filter((m) => m.id !== optimisticMsgId));
+      setS3SupportQuery(trimmed);
       setErrorMessage(err.message || "حدث خطأ أثناء إرسال السؤال. حاول مرة أخرى.");
     } finally {
       setIsSubmitting(false);
@@ -2020,7 +2048,7 @@ export default function ChatPage() {
                   className="btn-mentor-send"
                   style={{ flex: 1 }}
                   onClick={handleCampaignDecisionSubmit}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || !s5SelectedChoice}
                 >
                   إرسال القرار والتحليل ←
                 </button>
