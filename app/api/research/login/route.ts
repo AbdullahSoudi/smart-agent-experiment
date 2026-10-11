@@ -4,6 +4,14 @@ import {
   verifyResearcherPassword,
   createResearcherSessionCookieValue,
 } from "@/lib/server/research-auth";
+import {
+  getClientIp,
+  hashClientIdentity,
+  checkResearcherRateLimit,
+  recordResearcherFailedAttempt,
+  clearResearcherRateLimit,
+  GENERIC_RATE_LIMIT_ERROR,
+} from "@/lib/server/research-rate-limit";
 
 export async function POST(request: Request) {
   try {
@@ -12,6 +20,20 @@ export async function POST(request: Request) {
         { error: "خدمة تقرير الباحث غير مهيأة على الخادم. يرجى مراجعة متغير البيئة RESEARCHER_REPORT_PASSWORD." },
         { status: 503 }
       );
+    }
+
+    const clientIp = getClientIp(request);
+    const clientHash = hashClientIdentity(clientIp);
+
+    // 1. Distributed brute-force rate limit check
+    const rateLimit = await checkResearcherRateLimit(clientHash);
+    if (!rateLimit.allowed) {
+      const response = NextResponse.json(
+        { error: GENERIC_RATE_LIMIT_ERROR },
+        { status: 429 }
+      );
+      response.headers.set("Retry-After", String(rateLimit.retryAfterSeconds));
+      return response;
     }
 
     let body: unknown;
@@ -26,10 +48,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "يرجى إدخال كلمة المرور." }, { status: 400 });
     }
 
+    // 2. Strict timing-safe password verification
     const isValid = verifyResearcherPassword(password);
     if (!isValid) {
+      // Record failed attempt atomically in database
+      await recordResearcherFailedAttempt(clientHash);
+
       return NextResponse.json({ error: "كلمة المرور غير صحيحة." }, { status: 401 });
     }
+
+    // 3. Successful login: clear failed attempts and issue secure session cookie
+    await clearResearcherRateLimit(clientHash);
 
     const cookieValue = createResearcherSessionCookieValue();
     const response = NextResponse.json({ ok: true });

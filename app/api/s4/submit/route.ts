@@ -136,12 +136,30 @@ export async function POST(request: Request) {
 
     // Case 3: Crisis Decision at N2 (or Timeout)
     if (currentNode === "N2") {
-      const isTimeout = Boolean(timeout);
-      let selectedChoice: "A" | "B" | "C" | null = null;
+      // Timing anchor & duration calculation from authoritative server record
+      const startInter = await ensureCrisisStartInteraction(session.id);
+      const now = Date.now();
+      const startMs = Date.parse(startInter.created_at);
+      const safeStartMs = Number.isFinite(startMs) ? startMs : 0;
+      const elapsedMs = Math.max(0, now - safeStartMs);
 
-      if (!isTimeout) {
+      // Server-authoritative 60-second boundary check:
+      // At or after 60,000 ms, deadline has passed according to canonical 60-second boundary.
+      // Do not trust client's timeout flag or client-reported elapsed time.
+      const isServerTimeout = elapsedMs >= 60000 || !Number.isFinite(startMs);
+      const isTimeout = Boolean(timeout) || isServerTimeout;
+
+      let selectedChoice: "A" | "B" | "C" | null = null;
+      let decisionTimeMs: number;
+
+      if (isTimeout) {
+        // Enforce deterministic worst-case timeout behavior
+        selectedChoice = null;
+        decisionTimeMs = Math.max(60000, elapsedMs);
+      } else {
         if (choice === "A" || choice === "B" || choice === "C") {
           selectedChoice = choice;
+          decisionTimeMs = Math.min(59999, Math.max(1, elapsedMs));
         } else {
           return NextResponse.json(
             { error: "يجب اختيار أحد البدائل الثلاثة (أ، ب، ج) أو حدوث انتهاء الوقت." },
@@ -149,16 +167,6 @@ export async function POST(request: Request) {
           );
         }
       }
-
-      // Timing anchor & duration calculation
-      const startInter = await ensureCrisisStartInteraction(session.id);
-      const now = Date.now();
-      const startMs = Date.parse(startInter.created_at);
-      const elapsedMs = Math.max(0, now - startMs);
-
-      const decisionTimeMs = isTimeout
-        ? Math.max(60000, elapsedMs)
-        : Math.min(60000, Math.max(1, elapsedMs));
 
       const nextNode: NodeIdS4 = getNextNodeS4Crisis(selectedChoice, isTimeout);
       const feedback = SCENARIO_4_NODES[nextNode].prompt;
@@ -173,12 +181,18 @@ export async function POST(request: Request) {
 
       if (!wonRace) {
         // Race condition / duplicate submission / late arrival
-        const existing = await getCrisisDecisionInteraction(session.id);
-        const resolvedNode = existing?.next_node || nextNode;
+        const [existing, currentSess] = await Promise.all([
+          getCrisisDecisionInteraction(session.id),
+          getSessionById(session.id),
+        ]);
+        const resolvedNode =
+          (existing?.next_node as NodeIdS4) ||
+          (currentSess?.current_node as NodeIdS4) ||
+          nextNode;
         const resolvedFeedback =
           existing?.agent_feedback ||
           (resolvedNode in SCENARIO_4_NODES
-            ? SCENARIO_4_NODES[resolvedNode as NodeIdS4].prompt
+            ? SCENARIO_4_NODES[resolvedNode].prompt
             : feedback);
 
         return NextResponse.json({
