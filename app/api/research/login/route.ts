@@ -27,6 +27,12 @@ export async function POST(request: Request) {
 
     // 1. Distributed brute-force rate limit check
     const rateLimit = await checkResearcherRateLimit(clientHash);
+    if (rateLimit.serviceUnavailable) {
+      return NextResponse.json(
+        { error: "خدمة تسجيل الدخول غير متاحة مؤقتاً لتعذر التحقق من نظام الأمان. يرجى المحاولة لاحقاً." },
+        { status: 503 }
+      );
+    }
     if (!rateLimit.allowed) {
       const response = NextResponse.json(
         { error: GENERIC_RATE_LIMIT_ERROR },
@@ -51,8 +57,14 @@ export async function POST(request: Request) {
     // 2. Strict timing-safe password verification
     const isValid = verifyResearcherPassword(password);
     if (!isValid) {
-      // Record failed attempt atomically in database
-      await recordResearcherFailedAttempt(clientHash);
+      // Record failed attempt in database (fail-closed if DB recording fails)
+      const recorded = await recordResearcherFailedAttempt(clientHash);
+      if (!recorded) {
+        return NextResponse.json(
+          { error: "خدمة تسجيل الدخول غير متاحة مؤقتاً لتعذر التحقق من نظام الأمان. يرجى المحاولة لاحقاً." },
+          { status: 503 }
+        );
+      }
 
       return NextResponse.json({ error: "كلمة المرور غير صحيحة." }, { status: 401 });
     }
