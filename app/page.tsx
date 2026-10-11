@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { SCENARIO_DISPLAY_NAMES, type ScenarioId } from "@/lib/journey";
+import { CopyrightFooter } from "@/components/CopyrightFooter";
 
 const STAGES_PREVIEW = [
   { id: 1 as ScenarioId, title: SCENARIO_DISPLAY_NAMES[1], color: "var(--stage-s1, #0EA5E9)", bg: "var(--stage-s1-light, #F0F9FF)", border: "var(--stage-s1-border, #BAE6FD)", icon: "💡" },
@@ -262,6 +263,7 @@ export default function HomePage() {
             </div>
           </section>
         </div>
+        <CopyrightFooter />
       </div>
     </main>
   );

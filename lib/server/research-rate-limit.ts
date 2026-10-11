@@ -147,6 +147,11 @@ export interface RateLimitCheckResult {
  * Checks whether the client identity has exceeded the failed login attempts threshold
  * in the rolling 15-minute window.
  *
+ * Concurrency Guarantee:
+ *   Approximate distributed throttling. Without global distributed locking or serialized
+ *   transaction isolation across serverless replicas, simultaneous sub-millisecond concurrent
+ *   bursts may interleave before the threshold locks out the client identity for 15 minutes.
+ *
  * Fail-Closed Invariant: If database is unreachable, returns serviceUnavailable=true (HTTP 503),
  * guaranteeing that rate-limit protection cannot be bypassed during datastore outages.
  */

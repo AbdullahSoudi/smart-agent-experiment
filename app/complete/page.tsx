@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { SCENARIOS_JOURNEY, SCENARIO_DISPLAY_NAMES, type ScenarioId } from "@/lib/journey";
+import { CopyrightFooter } from "@/components/CopyrightFooter";
 
 export const metadata: Metadata = {
   title: "أتممت الرحلة كاملة · تجربة الوكيل الذكي",
@@ -135,6 +136,7 @@ export default function CompletePage() {
             </div>
           </footer>
         </div>
+        <CopyrightFooter />
       </div>
     </main>
   );
