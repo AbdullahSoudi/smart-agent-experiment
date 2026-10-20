@@ -1984,9 +1984,239 @@ html, body {
 }
 
 /* ==========================================================================
-   Minimal Copyright Footer
+   Researcher Two-Screen Onboarding Layout
    ========================================================================== */
-.copyright-footer {
+
+/* Login Viewport (Screen 1) */
+.login-viewport {
+  justify-content: center;
+  align-items: center;
+  padding: 2rem 1.25rem;
+  box-sizing: border-box;
+}
+
+.login-page-container {
+  max-width: 460px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.login-card {
+  width: 100%;
+  background-color: #FFFFFF;
+  border: 1px solid var(--border-subtle, #E2E8F0);
+  border-radius: var(--radius-xl, 20px);
+  padding: 2.25rem 2rem;
+  box-shadow: 0 10px 30px -5px rgba(24, 32, 51, 0.08), 0 4px 12px -2px rgba(24, 32, 51, 0.03);
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.login-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--gradient-brand, linear-gradient(135deg, #5B5FEF 0%, #7C4DFF 100%));
+}
+
+.login-card-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-primary, #182033);
+  text-align: center;
+  margin: 0 0 1.5rem 0;
+  letter-spacing: -0.01em;
+}
+
+.login-submit-btn {
+  width: 100%;
+  margin-top: 1rem;
+}
+
+/* Intro Screen (Screen 2) */
+.intro-workspace-frame {
+  max-width: 1000px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 4rem;
+  box-sizing: border-box;
+}
+
+.intro-hero-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  background-color: transparent;
+}
+
+.intro-header-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.intro-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.9rem;
+  border-radius: 9999px;
+  background-color: rgba(91, 95, 239, 0.08);
+  color: var(--color-primary, #5B5FEF);
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+.intro-participant-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1.25rem;
+  background-color: #FFFFFF;
+  border: 1px solid var(--border-subtle, #E2E8F0);
+  border-radius: var(--radius-md, 12px);
+  box-shadow: var(--shadow-sm);
+}
+
+.participant-info-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.925rem;
+}
+
+.participant-label {
+  color: var(--text-muted, #64748B);
+  font-weight: 500;
+}
+
+.participant-value {
+  color: var(--text-primary, #182033);
+  font-weight: 700;
+}
+
+.participant-divider {
+  color: var(--border-strong, #CBD5E1);
+}
+
+.participant-code-tag {
+  color: var(--color-primary, #5B5FEF);
+  font-weight: 700;
+  background-color: rgba(91, 95, 239, 0.08);
+  padding: 0.15rem 0.55rem;
+  border-radius: 6px;
+  letter-spacing: 0.03em;
+}
+
+.btn-link-edit {
+  background: none;
+  border: none;
+  color: var(--color-primary, #5B5FEF);
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  text-decoration: underline;
+}
+
+.btn-link-edit:hover:not(:disabled) {
+  background-color: rgba(91, 95, 239, 0.06);
+  color: var(--color-primary-hover, #4A4DE6);
+}
+
+.intro-actions-container {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.start-cta-btn {
+  height: 52px;
+  padding: 0 2.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: var(--gradient-brand, linear-gradient(135deg, #5B5FEF 0%, #7C4DFF 100%));
+  color: #FFFFFF;
+  font-family: inherit;
+  font-size: 1.05rem;
+  font-weight: 700;
+  border: none;
+  border-radius: var(--radius-sm, 10px);
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(91, 95, 239, 0.35);
+  transition: transform 0.12s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.start-cta-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(91, 95, 239, 0.42);
+}
+
+.start-cta-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.start-cta-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-back-action {
+  height: 52px;
+  padding: 0 1.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #FFFFFF;
+  color: var(--text-secondary, #475467);
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border: 1.5px solid var(--border-strong, #D0D5DD);
+  border-radius: var(--radius-sm, 10px);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.btn-back-action:hover:not(:disabled) {
+  background-color: #F8FAFC;
+  color: var(--text-primary, #182033);
+  border-color: var(--text-muted, #94A3B8);
+}
+
+.btn-back-action:active:not(:disabled) {
+  background-color: #F1F5F9;
+}
+
+.btn-back-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ==========================================================================
+   Academic Research Attribution Footer
+   ========================================================================== */
+.research-credits-footer {
   width: 100%;
   margin-top: 2rem;
   padding-top: 1rem;
@@ -1994,55 +2224,53 @@ html, body {
   display: flex;
   justify-content: center;
   align-items: center;
-  font-size: 0.75rem;
+  font-size: 0.75rem; /* 12px */
   line-height: 1.5;
-  color: var(--text-muted, #667085);
+  color: var(--text-muted, #64748B);
   direction: rtl;
   text-align: center;
 }
 
-.copyright-footer-inner {
+.research-credits-inner {
   display: inline-flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
+  gap: 0.6rem;
 }
 
-.copyright-text {
-  font-weight: 400;
-  color: var(--text-muted, #667085);
+.research-credit-item {
+  font-weight: 500;
+  color: var(--text-muted, #64748B);
 }
 
-.copyright-separator {
+.research-credits-separator {
   color: var(--border-subtle, #CBD5E1);
   user-select: none;
 }
 
-.copyright-whatsapp-link {
-  color: var(--color-primary, #5B5FEF);
-  text-decoration: none;
-  font-weight: 500;
-  border-radius: 4px;
-  padding: 0.1rem 0.35rem;
-  transition: color 0.15s ease, background-color 0.15s ease;
-}
-
-.copyright-whatsapp-link:hover {
-  text-decoration: underline;
-  color: var(--color-primary-hover, #4A4DE6);
-  background-color: var(--color-primary-subtle, #EEF0FD);
-}
-
-.copyright-whatsapp-link:focus-visible {
-  outline: 2px solid var(--color-primary, #5B5FEF);
-  outline-offset: 2px;
-}
-
 @media (max-width: 480px) {
-  .copyright-footer {
+  .login-card {
+    padding: 1.75rem 1.25rem;
+    border-radius: 16px;
+  }
+  .intro-actions-container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .start-cta-btn, .btn-back-action {
+    width: 100%;
+  }
+  .research-credits-footer {
     margin-top: 1.5rem;
     padding-top: 0.75rem;
-    font-size: 0.7rem;
+    font-size: 0.7rem; /* 11px */
+  }
+  .research-credits-inner {
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+  .research-credits-separator {
+    display: none;
   }
 }

@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { SCENARIOS_JOURNEY, SCENARIO_DISPLAY_NAMES, type ScenarioId } from "@/lib/journey";
-import { CopyrightFooter } from "@/components/CopyrightFooter";
+import { ResearchCreditsFooter } from "@/components/ResearchCreditsFooter";
 
 export const metadata: Metadata = {
-  title: "أتممت الرحلة كاملة · تجربة الوكيل الذكي",
+  title: "أتممت الرحلة كاملة · ريادة الأعمال الرقمية",
   description: "اكتمال المسار التعليمي لجميع المهارات الريادية الخمس",
 };
 
@@ -22,7 +22,7 @@ export default function CompletePage() {
         {/* Workspace Masthead */}
         <header className="workspace-masthead" style={{ marginBottom: "2rem" }}>
           <div className="masthead-meta">
-            <span className="masthead-badge">المرشد الريادي الذكي</span>
+            <span className="masthead-badge">ريادة الأعمال الرقمية</span>
             <span className="masthead-divider" aria-hidden="true">·</span>
             <span className="masthead-context">اكتمال المسار التجريبي</span>
           </div>
@@ -136,7 +136,7 @@ export default function CompletePage() {
             </div>
           </footer>
         </div>
-        <CopyrightFooter />
+        <ResearchCreditsFooter />
       </div>
     </main>
   );
